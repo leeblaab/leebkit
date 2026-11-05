@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>REELKIT by LEEBLAAB</title>
+<style>
+@font-face{font-family:'Archivo Black';src:url('/assets/fonts/ArchivoBlack-Regular.ttf')}
+@font-face{font-family:'Inter';src:url('/assets/fonts/Inter-var.ttf') format('truetype-variations');font-weight:100 900}
+@font-face{font-family:'JetBrains Mono';src:url('/assets/fonts/JetBrainsMono-var.ttf') format('truetype-variations');font-weight:100 800}
+:root{--bg:#0a0a0e;--panel:#12121a;--panel2:#181824;--line:#23233a;--txt:#e8e8f0;--dim:#8a8aa0;
+--acc:#00e5ff;--acc2:#00b8cc;--err:#ff5060;--ok:#3ddc84;--mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;font-size:14px;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:16px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:50}
+.logo{font-family:'Archivo Black';font-size:20px;letter-spacing:.04em}
+.logo b{color:var(--acc)}
+.brand-sub{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.18em;text-transform:uppercase}
+header .spacer{flex:1}
+button{font-family:'Archivo Black';background:var(--panel2);color:var(--txt);border:1px solid var(--line);
+padding:9px 16px;border-radius:4px;cursor:pointer;font-size:13px;letter-spacing:.03em;transition:all .15s}
+button:hover{border-color:var(--acc);color:var(--acc)}
+button.primary{background:var(--acc);color:#001318;border-color:var(--acc)}
+button.primary:hover{background:#4df0ff;color:#001318}
+button:disabled{opacity:.35;cursor:not-allowed}
+kbd{font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.4);padding:2px 6px;border-radius:3px;margin-left:8px}
+main{display:grid;grid-template-columns:1fr 340px;gap:20px;padding:20px 24px;max-width:1500px;margin:0 auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+.panel h3{font-family:'Archivo Black';font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
+/* drop zone */
+#drop{border:2px dashed var(--line);border-radius:8px;padding:26px;text-align:center;color:var(--dim);cursor:pointer;transition:all .2s}
+#drop.hot{border-color:var(--acc);color:var(--acc);background:rgba(0,229,255,.05)}
+/* shot cards */
+#shots{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:12px;display:grid;
+grid-template-columns:auto 96px 1fr auto;gap:12px;align-items:start;cursor:grab;transition:border-color .15s}
+.card:hover{border-color:#34345a}
+.card.dragging{opacity:.4}
+.card.flagged{border-color:var(--err)}
+.grip{font-family:var(--mono);color:var(--dim);padding-top:6px;user-select:none}
+.thumbwrap{position:relative;width:96px;height:170px;border-radius:4px;overflow:hidden;background:#000;border:1px solid var(--line)}
+.thumbwrap img{width:100%;height:100%;object-fit:cover}
+.thumbwrap .rm{position:absolute;top:0;right:0;width:34px;height:34px;display:flex;align-items:center;
+justify-content:center;background:rgba(0,0,0,.55);color:#fff;font-size:19px;line-height:1;cursor:pointer;
+border-bottom-left-radius:6px;z-index:5;-webkit-app-region:no-drag}
+.thumbwrap .rm:hover{background:var(--err)}
+.card:hover .rm{background:rgba(255,80,96,.75)}
+.thumbwrap.drophot{outline:2px dashed var(--acc);outline-offset:-2px}
+.fields label{display:block;font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin:8px 0 3px}
+.fields input,.fields textarea,.fields select{width:100%;background:#0c0c14;border:1px solid var(--line);color:var(--txt);
+border-radius:4px;padding:7px 9px;font-family:'Inter';font-size:13px}
+.fields textarea{resize:vertical;min-height:40px}
+.fields input:focus,.fields textarea:focus{outline:none;border-color:var(--acc)}
+.durchips{display:flex;gap:6px;margin-top:8px}
+.durchips button{font-family:var(--mono);padding:5px 10px;font-size:12px;border-radius:3px}
+.durchips button.on{background:var(--acc);color:#001318;border-color:var(--acc)}
+.cardright{display:flex;flex-direction:column;gap:6px;align-items:flex-end;padding-top:4px}
+.durtag{font-family:var(--mono);font-size:12px;color:var(--acc)}
+.volen{font-family:var(--mono);font-size:10px;color:var(--dim)}
+/* right rail */
+.rail{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.row label{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;width:74px}
+.row select,.row input[type=number]{flex:1;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px;font-size:13px}
+#totals{font-family:'Archivo Black';font-size:26px;letter-spacing:.02em}
+#totals span{color:var(--acc)}
+.totsub{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:4px}
+#flags{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.flag{font-family:var(--mono);font-size:11.5px;padding:7px 9px;border-radius:4px;background:rgba(255,80,96,.08);border-left:3px solid var(--err)}
+.flag.warn{background:rgba(255,190,60,.08);border-color:#ffbe3c}
+.noflags{font-family:var(--mono);font-size:11.5px;color:var(--ok)}
+#stripwrap{margin-top:10px;overflow-x:auto}
+#stripwrap img{max-width:100%;border-radius:4px;border:1px solid var(--line)}
+/* progress */
+#prog{display:none;margin-top:12px}
+.bar{height:6px;background:#0c0c14;border-radius:3px;overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:var(--acc);width:0%;transition:width .3s}
+.pstate{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:6px}
+#outputs{display:flex;flex-direction:column;gap:8px}
+.outrow{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px}
+.outrow a{color:var(--acc);text-decoration:none}.outrow a:hover{text-decoration:underline}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--acc);
+padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-index:99;display:none}
+@media(max-width:1100px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">REELKIT<b>.</b></div>
+  <div class="brand-sub">by LEEBLAAB &middot; offline kinetic promos</div>
+  <div class="spacer"></div>
+  <button id="btn-save">Save project</button>
+  <button id="btn-preview">Storyboard<span style="color:var(--acc)"> ⚑</span></button>
+  <button id="btn-render" class="primary">Render MP4<kbd>Ctrl+Enter</kbd></button>
+</header>
+
+<main>
+<section>
+  <div class="panel">
+    <h3>Images — drop, or click to pick</h3>
+    <div id="drop">Drop images here (1–10) &mdash; they become shots in order<br>
+      <span style="font-size:11px;color:var(--dim)">to replace a shot: drag a new image onto its card thumbnail</span></div>
+    <input type="file" id="filepick" multiple accept="image/*" hidden>
+    <div id="shots"></div>
+  </div>
+</section>
+
+<aside class="rail">
+  <div class="panel">
+    <h3>Project</h3>
+    <div class="row"><label>Name</label><input id="pname" value="my_promo" style="flex:1;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px"></div>
+    <div class="row"><label>Preset</label><select id="preset"></select></div>
+    <div class="row"><label>Voice</label><select id="voice"></select></div>
+    <div class="row"><label>Music</label><select id="music"></select></div>
+    <div id="totals">0.0s <span>/</span> <i id="target" style="font-style:normal;color:var(--dim)">30.0s</i></div>
+    <div class="totsub" id="shotcount"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Storyboard &amp; red flags</h3>
+    <div id="flags"><span class="noflags">Run Storyboard to check layout, timing, slots &amp; VO.</span></div>
+    <div id="stripwrap"></div>
+    <div id="prog"><div class="bar"><i id="barfill"></i></div><div class="pstate" id="pstate"></div></div>
+  </div>
+
+  <div class="panel">
+    <h3>Outputs</h3>
+    <div id="outputs"><span class="noflags">none yet</span></div>
+  </div>
+</aside>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+let META={presets:[],music:[],voices:[]};
+let P={schema:1,name:'my_promo',size:'1080x1920',fps:30,target:30,preset:'leebdark',music:{bed:'synthwave'},voice:'none',vo_lines:[],shots:[]};
+
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2600)};
+async function api(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.detail||r.status);return j}
+
+// ---------- meta ----------
+async function boot(){
+  META=await api('/api/meta');
+  $('#preset').innerHTML=META.presets.map(p=>`<option value="${p.id}" ${p.id===P.preset?'selected':''}>${p.id} — ${p.label}</option>`).join('');
+  $('#music').innerHTML=META.music.map(m=>`<option value="${m.id}">${m.id}${m.procedural?' (procedural)':' (your file)'}</option>`).join('');
+  $('#voice').innerHTML=META.voices.map(v=>`<option value="${v.id}" ${v.id===P.voice?'selected':''}>${v.label||v.id}</option>`).join('');
+  refreshOutputs();
+}
+
+// ---------- shots ----------
+function addShot(img){P.shots.push({image:img,t:4.0,transition:'cut',captions:[],vo:''});renderShots()}
+function renderShots(){
+  $('#shots').innerHTML=P.shots.map((s,i)=>`
+  <div class="card" draggable="true" data-i="${i}">
+    <div class="grip">⠿<br><span style="font-size:11px">${String(i+1).padStart(2,'0')}</span></div>
+    <div class="thumbwrap"><img src="/${s.image}">
+      <div class="rm" data-rm="${i}" title="Remove this shot">×</div></div>
+    <div class="fields">
+      <label>Caption lines (one per line)</label>
+      <textarea data-cap="${i}" placeholder="BUILT BY&#10;PROMPT ENGINEERING">${(s.captions[0]&&s.captions[0].lines||[]).join('\n')}</textarea>
+      <label>Voice-over for this shot</label>
+      <div style="display:flex;gap:6px">
+        <input data-vo="${i}" value="${esc(s.vo)}" placeholder="spoken line..." style="flex:1">
+        <button data-voprev="${i}" title="Audition this line in the project voice" style="padding:0 12px;align-self:stretch">▶</button>
+      </div>
+      <div class="durchips">${[2,3,4,5,6].map(d=>`<button data-dur="${i}" data-v="${d}" class="${s.t==d?'on':''}">${d}s</button>`).join('')}</div>
+    </div>
+    <div class="cardright"><span class="durtag">${s.t.toFixed(1)}s</span>
+      <button data-up="${i}" style="padding:4px 8px">↑</button><button data-dn="${i}" style="padding:4px 8px">↓</button></div>
+  </div>`).join('');
+  const sum=P.shots.reduce((a,s)=>a+s.t,0);
+  $('#totals').innerHTML=`${sum.toFixed(1)}s <span>/</span> <i style="font-style:normal;color:var(--dim)">${P.target.toFixed(1)}s</i>`;
+  $('#shotcount').textContent=P.shots.length+' shots'+(sum>P.target?' — OVER TARGET':'');
+  $$('.card').forEach(c=>{c.ondragstart=e=>{e.dataTransfer.setData('text/plain',c.dataset.i);c.classList.add('dragging')};
+    c.ondragend=()=>c.classList.remove('dragging');
+    c.ondragover=e=>e.preventDefault();
+    c.ondrop=async e=>{e.preventDefault();e.stopPropagation();
+      const tw=c.querySelector('.thumbwrap');tw&&tw.classList.remove('drophot');
+      if(e.dataTransfer.files.length){            // file dropped on a card = replace its image
+        const i=+c.dataset.i, f=e.dataTransfer.files[0];
+        if(f.type.startsWith('image/')){const fd=new FormData();fd.append('file',f);
+          const r=await fetch('/api/upload',{method:'POST',body:fd});const j=await r.json();
+          if(r.ok){P.shots[i].image=j.path;renderShots();toast('shot '+(i+1)+' image replaced')}else toast('upload failed')}
+        return}
+      const f=+e.dataTransfer.getData('text/plain'),t=+c.dataset.i;   // card-on-card = reorder
+      if(f!==t&&Number.isInteger(f)){const[m]=P.shots.splice(f,1);P.shots.splice(t,0,m);renderShots()}}});
+  $$('.thumbwrap').forEach(tw=>{tw.ondragover=e=>{if([...e.dataTransfer.types].includes('Files')){e.preventDefault();tw.classList.add('drophot')}};
+    tw.ondragleave=()=>tw.classList.remove('drophot')});
+}
+const esc=s=>(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+
+// delegated events
+document.addEventListener('input',e=>{
+  if(e.target.dataset.cap!=null){const i=+e.target.dataset.cap;const lines=e.target.value.split('\n').map(x=>x.trim()).filter(Boolean);
+    P.shots[i].captions=lines.length?[{kind:'panel_top',at:0.2,lines}]:[];}
+  if(e.target.dataset.vo!=null)P.shots[+e.target.dataset.vo].vo=e.target.value;
+  if(e.target.id==='pname')P.name=e.target.value;
+});
+document.addEventListener('click',async e=>{
+  const b=e.target;
+  if(b.dataset.rm!=null){P.shots.splice(+b.dataset.rm,1);renderShots();toast('shot removed')}
+  if(b.dataset.dur!=null){P.shots[+b.dataset.dur].t=+b.dataset.v;renderShots()}
+  if(b.dataset.up!=null){const i=+b.dataset.up;if(i>0){const[m]=P.shots.splice(i,1);P.shots.splice(i-1,0,m);renderShots()}}
+  if(b.dataset.dn!=null){const i=+b.dataset.dn;if(i<P.shots.length-1){const[m]=P.shots.splice(i,1);P.shots.splice(i+1,0,m);renderShots()}}
+  if(b.dataset.voprev!=null)await voPreviewShot(+b.dataset.voprev,b);
+});
+
+// ---------- voice-over audition ----------
+let _voAudio=null;
+async function voPreviewShot(i,btn){
+  const line=(P.shots[i].vo||'').trim();
+  if(!line)return toast('type a voice-over line first');
+  if(P.voice==='none')return toast('pick a voice in the Project panel first');
+  if(btn){btn.disabled=true;btn.textContent='…'}
+  try{
+    const j=await api('/api/vo_preview',{text:line,voice:P.voice});
+    if(_voAudio){_voAudio.pause()}
+    _voAudio=new Audio(j.url+'?t='+Date.now());
+    _voAudio.onended=()=>toast('VO line: '+j.duration.toFixed(1)+'s');
+    await _voAudio.play();
+  }catch(e){toast('voice preview: '+e.message)}
+  finally{if(btn){btn.disabled=false;btn.textContent='▶'}}
+}
+
+// ---------- drop zone ----------
+$('#drop').onclick=()=>$('#filepick').click();
+$('#filepick').onchange=async e=>{await uploadFiles([...e.target.files]);e.target.value=''};
+['dragover','dragenter'].forEach(ev=>$('#drop').addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.add('hot')}));
+['dragleave','drop'].forEach(ev=>$('#drop').addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.remove('hot')}));
+$('#drop').addEventListener('drop',async e=>await uploadFiles([...e.dataTransfer.files]));
+async function uploadFiles(files){
+  const imgs=files.filter(f=>f.type.startsWith('image/'));
+  for(const f of imgs){const fd=new FormData();fd.append('file',f);
+    const r=await fetch('/api/upload',{method:'POST',body:fd});const j=await r.json();
+    if(r.ok)addShot(j.path);else toast('upload failed: '+f.name)}
+  if(imgs.length)toast(imgs.length+' image'+(imgs.length>1?'s':'')+' added');
+}
+
+// ---------- project config ----------
+$('#preset').onchange=e=>{P.preset=e.target.value};
+$('#voice').onchange=e=>{P.voice=e.target.value;
+  if(P.voice!=='none'&&!META.piper_ready)toast('Tip: pip install piper-tts — voice models found in vo/models/')}
+$('#music').onchange=e=>{P.music=/\.mp3$|\.wav$|\.ogg$/.test(e.target.value)?{file:e.target.value}:{bed:e.target.value}};
+
+// ---------- sync VO lines into project ----------
+function syncVoLines(){
+  P.vo_lines=[];
+  let acc=0;const starts=[];P.shots.forEach(s=>{starts.push(acc);acc+=s.t});
+  P.shots.forEach((s,i)=>{if(s.vo&&s.vo.trim())P.vo_lines.push({shot:i,offset:0.35,text:s.vo.trim()})});
+}
+
+// ---------- save / preview / render ----------
+$('#btn-save').onclick=async()=>{syncVoLines();try{const j=await api('/api/project',P);toast('saved → projects/'+j.file)}catch(e){toast('save: '+e.message)}};
+$('#btn-preview').onclick=async()=>{
+  syncVoLines();$('#flags').innerHTML='<span class="noflags">checking…</span>';
+  try{const j=await api('/api/preview',P);
+    $('#flags').innerHTML=j.flags.length?j.flags.map(f=>`<div class="flag ${f.severity}">${esc(f.message)}</div>`).join(''):'<span class="noflags">✓ no flags — all clear</span>';
+    $('#stripwrap').innerHTML=`<img src="${j.strip}?t=${Date.now()}">`;
+    j.flags.forEach(f=>{const c=$(`.card[data-i="${f.shot}"]`);if(c)c.classList.add('flagged')});
+  }catch(e){$('#flags').innerHTML=`<div class="flag">${esc(e.message)}</div>`}
+};
+$('#btn-render').onclick=async()=>{
+  syncVoLines();
+  try{const j=await api('/api/render',P);toast('render queued ('+j.job.id+')');$('#prog').style.display='block'}catch(e){toast(e.message)}
+};
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')$('#btn-render').click()});
+
+// ---------- websocket progress ----------
+let ws;function connectWS(){ws=new WebSocket(`ws://${location.host}/ws/progress`);
+  ws.onmessage=e=>{const d=JSON.parse(e.data);const j=d.jobs[d.jobs.length-1];if(!j)return;
+    $('#barfill').style.width=j.pct+'%';$('#pstate').textContent=`${j.state} — ${j.frames_done}/${j.frames_total} frames (${j.pct}%)`+(j.error?' — '+j.error:'');
+    if(j.state==='done'||j.state==='error'){refreshOutputs();if(j.state==='done')toast('✓ render complete: '+j.out)}};
+  ws.onclose=()=>setTimeout(connectWS,1500)}
+
+async function refreshOutputs(){const j=await api('/api/outputs');
+  $('#outputs').innerHTML=j.outputs.length?j.outputs.map(o=>`<div class="outrow"><a href="${o.url}" target="_blank">${o.file}</a><span style="color:var(--dim)">${(o.size/1048576).toFixed(1)} MB</span></div>`).join(''):'<span class="noflags">none yet</span>'}
+
+boot();renderShots();connectWS();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# frames scratch, audio scratch, outputs
+output/
+frames/
+*.wav.tmp
+__pycache__/
+.venv/
+
+# piper voice models (61MB — download via setup_vo.bat, do not commit)
+vo/models/
+
+# user media + uploaded images (re-uploadable; keep samples/ only)
+media/
