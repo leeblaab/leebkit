@@ -1,0 +1,236 @@
+{
+  "schema": 1,
+  "name": "leebdark_sample",
+  "preset": "leebdark.json",
+  "target": 30.0,
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "music": {
+    "mode": "procedural",
+    "bed": "synthwave"
+  },
+  "voice": "none",
+  "shots": [
+    {
+      "image": "img_00010.png",
+      "fill": "solid",
+      "t": 2.5,
+      "dim": 0.0,
+      "trans": null,
+      "cam": null,
+      "ov": 0.0,
+      "captions": [
+        {
+          "kind": "title_block",
+          "text": "LEEBLAAB",
+          "sub": "AI IMAGE STUDIO",
+          "at": 0.15
+        }
+      ]
+    },
+    {
+      "image": "img_00186.png",
+      "t": 3.5,
+      "dim": 0.5,
+      "trans": "slideL",
+      "cam": "pushin",
+      "ov": 0.9,
+      "captions": [
+        {
+          "kind": "panel_top",
+          "lines": [
+            "EVERY IMAGE",
+            "STARTS WITH",
+            "A PROMPT."
+          ],
+          "at": 0.2
+        }
+      ]
+    },
+    {
+      "image": "img_00048.png",
+      "t": 4.0,
+      "dim": 0.25,
+      "trans": "whip",
+      "cam": "panup",
+      "ov": 0.3,
+      "captions": [
+        {
+          "kind": "terminal",
+          "at": 0.3,
+          "rows": [
+            "> PROMPT",
+            "cinematic portrait, dramatic...",
+            "> MODEL  qwen-image / z-image",
+            "> RATIO 9:16   BATCH 08",
+            "> RENDERING...",
+            "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588  100%"
+          ]
+        }
+      ]
+    },
+    {
+      "image": "img_00056.png",
+      "fill": "grid",
+      "t": 4.0,
+      "dim": 0.55,
+      "trans": "flashdip",
+      "cam": "pushout",
+      "ov": 1.1,
+      "captions": [
+        {
+          "kind": "panel_mid",
+          "lines": [
+            "ONE PROMPT.",
+            "INFINITE",
+            "VARIATIONS."
+          ],
+          "at": 0.3
+        }
+      ]
+    },
+    {
+      "image": "img_00184.png",
+      "t": 4.0,
+      "dim": 0.6,
+      "trans": "slideR",
+      "cam": "pandiag",
+      "ov": 0.5,
+      "captions": [
+        {
+          "kind": "panel_top",
+          "lines": [
+            "POWERED BY"
+          ],
+          "at": 0.3
+        },
+        {
+          "kind": "accent_word",
+          "text": "ComfyUI",
+          "at": 1.0
+        },
+        {
+          "kind": "small",
+          "text": "Your GPU. Your models. Your style.",
+          "at": 1.9
+        }
+      ]
+    },
+    {
+      "image": "img_00020.png",
+      "t": 4.0,
+      "dim": 0.78,
+      "trans": "whip",
+      "cam": "pandown",
+      "ov": 0.3,
+      "captions": [
+        {
+          "kind": "panel_top",
+          "lines": [
+            "TEXT TO IMAGE,",
+            "FULLY LOCAL."
+          ],
+          "at": 0.3
+        },
+        {
+          "kind": "chips",
+          "items": [
+            "PROMPT DATASETS",
+            "TEXT-TO-IMAGE",
+            "9:16"
+          ],
+          "at": 1.4
+        }
+      ]
+    },
+    {
+      "image": "img_00030.png",
+      "fill": "collage",
+      "t": 3.0,
+      "dim": 0.78,
+      "trans": "slideL",
+      "cam": "pushin2",
+      "ov": 0.9,
+      "captions": [
+        {
+          "kind": "big_number",
+          "text": "6000+",
+          "at": 0.3
+        },
+        {
+          "kind": "cap_lines",
+          "lines": [
+            "PROMPTS IN",
+            "THIS DATASET"
+          ],
+          "at": 1.0
+        }
+      ]
+    },
+    {
+      "image": "img_00039.png",
+      "fill": "solid",
+      "t": 5.0,
+      "dim": 0.0,
+      "trans": "flashdip",
+      "cam": null,
+      "ov": 1.2,
+      "captions": [
+        {
+          "kind": "title_block",
+          "text": "LEEBLAAB",
+          "sub": "",
+          "at": 0.2
+        },
+        {
+          "kind": "cta",
+          "text": "FOLLOW @LEEBLAAB",
+          "at": 1.3
+        },
+        {
+          "kind": "small",
+          "text": "ComfyUI  \u00b7  Prompt Datasets  \u00b7  Text-to-Image",
+          "at": 2.2
+        },
+        {
+          "kind": "handle",
+          "text": "@LEEBLAAB",
+          "at": 3.4
+        }
+      ]
+    }
+  ],
+  "vo_lines": [
+    {
+      "shot": 1,
+      "offset": 0.5,
+      "text": "Every image starts with a prompt."
+    },
+    {
+      "shot": 3,
+      "offset": 0.6,
+      "text": "One prompt. Infinite variations."
+    },
+    {
+      "shot": 4,
+      "offset": 0.4,
+      "text": "Powered by Comfy UI. Your GPU, your models, your style."
+    },
+    {
+      "shot": 5,
+      "offset": 0.4,
+      "text": "Text to image, fully local."
+    },
+    {
+      "shot": 6,
+      "offset": 0.4,
+      "text": "Six thousand prompts in this dataset."
+    },
+    {
+      "shot": 7,
+      "offset": 0.6,
+      "text": "Follow Lee Blab on Instagram."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "Light neutral (light panels, no grain)",
+  "colors": { "bg": "#101318", "white": "#ffffff", "accent": "#26c6da", "dim": "#b8bec9", "panel": "#1a1e26" },
+  "fonts": {
+    "display": "ArchivoBlack-Regular.ttf",
+    "body": "Inter-var.ttf",
+    "mono": "JetBrainsMono-var.ttf"
+  },
+  "sizes": { "logo": 124, "h1": 92, "body": 52, "small": 42, "mono": 44, "mono_s": 34, "big": 288 },
+  "tracking": { "logo": 4, "sub": 12 },
+  "panel_alpha": 236,
+  "term_alpha": 245,
+  "grain_points": 0,
+  "camera_zoom_keyframes": [
+    [0.0, 1.08], [4.0, 1.12], [9.0, 1.05], [15.0, 1.13], [21.0, 1.06], [30.0, 1.10]
+  ],
+  "overscan": 1.35,
+  "xf": 0.5
+}
