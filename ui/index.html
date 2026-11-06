@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>REELKIT by LEEBLAAB</title>
+<title>LEEBKIT by LEEBLAAB</title>
 <style>
 @font-face{font-family:'Archivo Black';src:url('/assets/fonts/ArchivoBlack-Regular.ttf')}
 @font-face{font-family:'Inter';src:url('/assets/fonts/Inter-var.ttf') format('truetype-variations');font-weight:100 900}
@@ -23,7 +23,7 @@ button.primary{background:var(--acc);color:#001318;border-color:var(--acc)}
 button.primary:hover{background:#4df0ff;color:#001318}
 button:disabled{opacity:.35;cursor:not-allowed}
 kbd{font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.4);padding:2px 6px;border-radius:3px;margin-left:8px}
-main{display:grid;grid-template-columns:1fr 340px;gap:20px;padding:20px 24px;max-width:1500px;margin:0 auto}
+main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;padding:20px 24px;width:100%;margin:0}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
 .panel h3{font-family:'Archivo Black';font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
 /* drop zone */
@@ -60,7 +60,7 @@ border-radius:4px;padding:7px 9px;font-family:'Inter';font-size:13px}
 .rail{display:flex;flex-direction:column;gap:16px}
 .row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .row label{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;width:74px}
-.row select,.row input[type=number]{flex:1;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px;font-size:13px}
+.row select,.row input[type=number]{flex:1;min-width:0;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px;font-size:13px}
 #animlist .abox{display:flex;align-items:center;gap:8px;background:#0c0c14;border:1px solid var(--line);border-radius:4px;padding:6px 9px;font-family:var(--mono);font-size:11.5px}
 #animlist .abox b{color:var(--acc);font-weight:600}
 #animlist .abox span{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -90,7 +90,7 @@ padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-ind
 </head>
 <body>
 <header>
-  <div class="logo">REELKIT<b>.</b></div>
+  <div class="logo">LEEBKIT<b>.</b></div>
   <div class="brand-sub">by LEEBLAAB &middot; offline kinetic promos</div>
   <div class="spacer"></div>
   <button id="btn-save">Save project</button>
@@ -113,7 +113,7 @@ padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-ind
   <div class="panel">
     <h3>Project</h3>
     <div class="row"><label>Name</label><input id="pname" value="my_promo" style="flex:1;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px"></div>
-    <div class="row"><label>Preset</label><select id="preset"></select></div>
+  <div class="row"><label>Preset</label><select id="preset"></select></div>
     <div class="row"><label>Voice</label><select id="voice"></select><button id="voiceprev" title="Audition this voice" style="padding:0 12px">&#9654;</button></div>
     <div class="row"><label>Music</label><select id="music"></select></div>
     <div class="row"><label>FPS</label><select id="fps"><option value="30">30 fps (smooth)</option><option value="24">24 fps (filmic, faster render)</option></select></div>
@@ -161,15 +161,16 @@ padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-ind
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 let META={presets:[],music:[],voices:[]};
+const PRESET_SHORT={leebdark:'LEEBLAAB house style'};  // keep dropdown rows short
 let P={schema:1,name:'my_promo',size:'1080x1920',fps:30,target:30,preset:'leebdark',music:{bed:'synthwave'},voice:'none',vo_lines:[],shots:[]};
 
 const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2600)};
-async function api(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.detail||r.status);return j}
+async function api(path,body){let r;try{r=await fetch(path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined})}catch(e){throw Error('server not reachable — is LEEBKIT still running?')}const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(typeof j.detail==='string'?j.detail:(j.detail?'check failed':r.status));return j}
 
 // ---------- meta ----------
 async function boot(){
   META=await api('/api/meta');
-  $('#preset').innerHTML=META.presets.map(p=>`<option value="${p.id}" ${p.id===P.preset?'selected':''}>${p.id} — ${p.label}</option>`).join('');
+  $('#preset').innerHTML=META.presets.map(p=>`<option value="${p.id}" title="${p.id} — ${p.label}" ${p.id===P.preset?'selected':''}>${p.id}${PRESET_SHORT[p.id]?' — '+PRESET_SHORT[p.id]:''}</option>`).join('');
   $('#music').innerHTML=META.music.map(m=>`<option value="${m.id}">${m.id}${m.procedural?' (procedural)':' (your file)'}</option>`).join('');
   $('#voice').innerHTML=META.voices.map(v=>`<option value="${v.id}" ${v.id===P.voice?'selected':''}>${v.label||v.id}</option>`).join('');
   refreshOutputs();
@@ -406,13 +407,17 @@ function syncVoLines(){
 
 // ---------- save / preview / render ----------
 $('#btn-save').onclick=async()=>{syncVoLines();try{const j=await api('/api/project',P);toast('saved → projects/'+j.file)}catch(e){toast('save: '+e.message)}};
+let _pvBusy=false;
 $('#btn-preview').onclick=async()=>{
-  syncVoLines();$('#flags').innerHTML='<span class="noflags">checking…</span>';
+  if(_pvBusy){toast('storyboard check already running…');return}
+  _pvBusy=true;const btn=$('#btn-preview'),old=btn.textContent;btn.disabled=true;btn.innerHTML='Checking…';
+  syncVoLines();$('#flags').innerHTML='<span class="noflags">checking layout, timing, slots & VO…</span>';
   try{const j=await api('/api/preview',P);
     $('#flags').innerHTML=j.flags.length?j.flags.map(f=>`<div class="flag ${f.severity}">${esc(f.message)}</div>`).join(''):'<span class="noflags">✓ no flags — all clear</span>';
     $('#stripwrap').innerHTML=`<img src="${j.strip}?t=${Date.now()}">`;
     j.flags.forEach(f=>{const c=$(`.card[data-i="${f.shot}"]`);if(c)c.classList.add('flagged')});
-  }catch(e){$('#flags').innerHTML=`<div class="flag">${esc(e.message)}</div>`}
+  }catch(e){$('#flags').innerHTML=`<div class="flag">storyboard: ${esc(e.message)} — save the project, then try again</div>`}
+  finally{_pvBusy=false;btn.disabled=false;btn.innerHTML='Storyboard<span style="color:var(--acc)"> ⚑</span>'}
 };
 $('#btn-render').onclick=async()=>{
   syncVoLines();

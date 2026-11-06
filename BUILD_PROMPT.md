@@ -4,7 +4,7 @@
 
 ---
 
-Build REELKIT v1 at `C:\Products\reelkit\`. First read `C:\Products\reelkit\README.md`
+Build LEEBKIT v1 at `C:\Products\reelkit\`. First read `C:\Products\reelkit\README.md`
 in full — it is the signed-off spec (pillars, brand rules, scope, architecture, pitfalls).
 Load skill `reelkit-project`, and skill `kinetic-text-promo-video` for the proven
 pipeline details. Source scripts to port from:

@@ -1,4 +1,4 @@
-"""REELKIT server — FastAPI app serving the UI + /api/* endpoints. Offline:
+"""LEEBKIT server — FastAPI app serving the UI + /api/* endpoints. Offline:
 binds 127.0.0.1 only, zero network calls."""
 import json
 import os
@@ -13,7 +13,7 @@ from core import audio as A
 from core.checks import storyboard_strip, check_project
 from core.queue import QUEUE, ROOT
 
-app = FastAPI(title="REELKIT by LEEBLAAB")
+app = FastAPI(title="LEEBKIT by LEEBLAAB")
 
 UPLOAD_DIR = os.path.join(ROOT, "media", "uploads")
 PROJECTS_DIR = os.path.join(ROOT, "projects")

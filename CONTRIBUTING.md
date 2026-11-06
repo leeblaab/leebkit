@@ -1,4 +1,4 @@
-# Contributing to REELKIT
+# Contributing to LEEBKIT
 
 Thanks for helping. Keep the three pillars (README): **light, offline, fast**.
 PRs that add a network dependency, a frontend framework or a database will not
