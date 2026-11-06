@@ -61,6 +61,11 @@ border-radius:4px;padding:7px 9px;font-family:'Inter';font-size:13px}
 .row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .row label{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;width:74px}
 .row select,.row input[type=number]{flex:1;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px;font-size:13px}
+#animlist .abox{display:flex;align-items:center;gap:8px;background:#0c0c14;border:1px solid var(--line);border-radius:4px;padding:6px 9px;font-family:var(--mono);font-size:11.5px}
+#animlist .abox b{color:var(--acc);font-weight:600}
+#animlist .abox span{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#animlist .abox i{cursor:pointer;color:var(--dim);font-style:normal;padding:0 4px}
+#animlist .abox i:hover{color:var(--err)}
 #totals{font-family:'Archivo Black';font-size:26px;letter-spacing:.02em}
 #totals span{color:var(--acc)}
 .totsub{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:4px}
@@ -109,10 +114,33 @@ padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-ind
     <h3>Project</h3>
     <div class="row"><label>Name</label><input id="pname" value="my_promo" style="flex:1;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px"></div>
     <div class="row"><label>Preset</label><select id="preset"></select></div>
-    <div class="row"><label>Voice</label><select id="voice"></select></div>
+    <div class="row"><label>Voice</label><select id="voice"></select><button id="voiceprev" title="Audition this voice" style="padding:0 12px">&#9654;</button></div>
     <div class="row"><label>Music</label><select id="music"></select></div>
+    <div class="row"><label>FPS</label><select id="fps"><option value="30">30 fps (smooth)</option><option value="24">24 fps (filmic, faster render)</option></select></div>
+    <div class="totsub" id="fpshint"></div>
+    <div class="row" style="margin-top:6px"><label>Duration</label><input type="range" id="targetslider" min="5" max="45" step="1" value="30" style="flex:1;accent-color:var(--acc)"><span id="targetval" style="font-family:var(--mono);color:var(--acc);width:42px;text-align:right">30s</span></div>
+    <div class="totsub" id="rescalehint">Shot durations rescale proportionally to the target.</div>
     <div id="totals">0.0s <span>/</span> <i id="target" style="font-style:normal;color:var(--dim)">30.0s</i></div>
     <div class="totsub" id="shotcount"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Animations &amp; text boxes</h3>
+    <div class="row"><label>Shot</label><select id="animshot"></select></div>
+    <div class="row"><label>Add box</label><select id="animkind">
+      <option value="panel_top">Title lines (top panel)</option>
+      <option value="title_block">Big title block</option>
+      <option value="accent_word">Accent word pop</option>
+      <option value="big_number">Big number</option>
+      <option value="cap_lines">Caption lines (mid)</option>
+      <option value="chips">Chip row</option>
+      <option value="terminal">Terminal typing</option>
+      <option value="cta">CTA button</option>
+      <option value="handle">Handle / @name</option>
+      <option value="small">Small note</option>
+    </select></div>
+    <div id="animlist" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
+    <div class="totsub" style="margin-top:8px">Each box animates in with its own kinetic style — the Storyboard check verifies it finishes before the shot ends.</div>
   </div>
 
   <div class="panel">
@@ -149,15 +177,41 @@ async function boot(){
 
 // ---------- shots ----------
 function addShot(img){P.shots.push({image:img,t:4.0,transition:'cut',captions:[],vo:''});renderShots()}
+const CAP_DEFAULTS={
+  panel_top:{kind:'panel_top',at:0.2,lines:['NEW LINE']},
+  panel_mid:{kind:'panel_mid',at:0.2,lines:['MID LINE']},
+  cap_lines:{kind:'cap_lines',at:0.3,lines:['CAPTION LINE']},
+  title_block:{kind:'title_block',at:0.2,text:'BIG TITLE',sub:''},
+  accent_word:{kind:'accent_word',at:0.5,text:'POP'},
+  big_number:{kind:'big_number',at:0.3,text:'100+'},
+  cta:{kind:'cta',at:0.6,text:'GET IT NOW'},
+  handle:{kind:'handle',at:0.5,text:'@yourhandle'},
+  small:{kind:'small',at:0.4,text:'a small note'},
+  chips:{kind:'chips',at:0.4,items:['ONE','TWO','THREE']},
+  terminal:{kind:'terminal',at:0.2,rows:['> PROMPT','your prompt here...','> RENDERING...','░░░░░░░░░░░░  0%']}};
+function capEditor(i,j){
+  const c=P.shots[i].captions[j];
+  const w=v=>`value="${esc(v||'')}"`;
+  if(c.kind==='panel_top'||c.kind==='panel_mid'||c.kind==='cap_lines')
+    return `<textarea data-akind="${i}:${j}" data-afield="lines" rows="${Math.max(1,(c.lines||[]).length)}" placeholder="one line per row">${esc((c.lines||[]).join('\n'))}</textarea>`;
+  if(c.kind==='terminal')
+    return `<textarea data-akind="${i}:${j}" data-afield="rows" rows="5" placeholder="&gt; PROMPT&#10;typed prompt line&#10;&gt; MODEL ...">${esc((c.rows||[]).join('\n'))}</textarea>`;
+  if(c.kind==='chips')
+    return `<input data-akind="${i}:${j}" data-afield="items" ${w((c.items||[]).join(', '))} placeholder="comma, separated, chips">`;
+  if(c.kind==='title_block')
+    return `<input data-akind="${i}:${j}" data-afield="text" ${w(c.text)} placeholder="BIG TITLE"><input data-akind="${i}:${j}" data-afield="sub" ${w(c.sub)} placeholder="subtitle (optional)" style="margin-top:6px">`;
+  return `<input data-akind="${i}:${j}" data-afield="text" ${w(c.text)} placeholder="text...">`;
+}
 function renderShots(){
+  renderAnimList();
   $('#shots').innerHTML=P.shots.map((s,i)=>`
   <div class="card" draggable="true" data-i="${i}">
     <div class="grip">⠿<br><span style="font-size:11px">${String(i+1).padStart(2,'0')}</span></div>
     <div class="thumbwrap"><img src="/${s.image}">
       <div class="rm" data-rm="${i}" title="Remove this shot">×</div></div>
     <div class="fields">
-      <label>Caption lines (one per line)</label>
-      <textarea data-cap="${i}" placeholder="BUILT BY&#10;PROMPT ENGINEERING">${(s.captions[0]&&s.captions[0].lines||[]).join('\n')}</textarea>
+      ${s.captions.length?`<label>Caption boxes (edit inline; add more from the Animations panel)</label>${s.captions.map((c,j)=>`<label style="margin-top:6px">${c.kind} #${j+1}</label>${capEditor(i,j)}`).join('')}`:`<label>Caption lines (top panel — quick start)</label>
+      <textarea data-cap="${i}" placeholder="BUILT BY&#10;PROMPT ENGINEERING"></textarea>`}
       <label>Voice-over for this shot</label>
       <div style="display:flex;gap:6px">
         <input data-vo="${i}" value="${esc(s.vo)}" placeholder="spoken line..." style="flex:1">
@@ -193,6 +247,15 @@ const esc=s=>(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 document.addEventListener('input',e=>{
   if(e.target.dataset.cap!=null){const i=+e.target.dataset.cap;const lines=e.target.value.split('\n').map(x=>x.trim()).filter(Boolean);
     P.shots[i].captions=lines.length?[{kind:'panel_top',at:0.2,lines}]:[];}
+  if(e.target.dataset.akind!=null){                       // per-box caption editor
+    const[i,j]=e.target.dataset.akind.split(':').map(Number),f=e.target.dataset.afield;
+    if(!P.shots[i]||!P.shots[i].captions[j])return;
+    const c=P.shots[i].captions[j];
+    if(f==='lines'||f==='rows')c[f]=e.target.value.split('\n').map(x=>x.trim()).filter(Boolean);
+    else if(f==='items')c.items=e.target.value.split(',').map(x=>x.trim()).filter(Boolean);
+    else c[f]=e.target.value;
+    renderAnimList();                                     // keep right-panel list in sync
+  }
   if(e.target.dataset.vo!=null)P.shots[+e.target.dataset.vo].vo=e.target.value;
   if(e.target.id==='pname')P.name=e.target.value;
 });
@@ -242,6 +305,67 @@ $('#voice').onchange=e=>{P.voice=e.target.value;
   if(P.voice!=='none'&&!META.piper_ready)toast('Tip: pip install piper-tts — voice models found in vo/models/')}
 $('#music').onchange=e=>{P.music=/\.mp3$|\.wav$|\.ogg$/.test(e.target.value)?{file:e.target.value}:{bed:e.target.value}};
 
+// ---------- duration slider (5-45s): rescale shot durations proportionally ----------
+function setTarget(v,quiet){
+  P.target=+v;$('#targetval').textContent=v+'s';$('#target').textContent=(+v).toFixed(1)+'s';
+  if(P.shots.length){
+    const sum=P.shots.reduce((a,s)=>a+s.t,0);
+    let f=v/sum,k=0;
+    while(sum*f+k>v-1e-9&&k<50){f-=1e-6;k++}                 // guarantee no over-target drift from rounding
+    P.shots.forEach(s=>{s.t=Math.round(Math.max(0.5,Math.min(15,s.t*f))*10)/10});
+    let rs=P.shots.reduce((a,s)=>a+s.t,0);                   // top up the longest shot so sum==target exactly
+    if(Math.abs(rs-v)>1e-9){const b=P.shots.reduce((x,y)=>x.t>y.t?x:y);b.t=Math.round(Math.min(15,b.t+(v-rs))*10)/10}
+  }
+  if(!quiet)renderShots();else updateTotals();
+}
+function updateTotals(){
+  const sum=P.shots.reduce((a,s)=>a+s.t,0);
+  $('#totals').innerHTML=`${sum.toFixed(1)}s <span>/</span> <span style="color:var(--dim)">${P.target.toFixed(1)}s</span>`;
+  $('#shotcount').textContent=P.shots.length+' shots'+(sum>P.target+1e-9?' — OVER TARGET':'');
+}
+$('#targetslider').oninput=e=>setTarget(e.target.value);
+
+// ---------- fps selector + hint ----------
+$('#fps').onchange=e=>{P.fps=+e.target.value;fpsHint()};
+function fpsHint(){
+  const h=$('#fpshint');
+  if(P.fps===24)h.innerHTML='<span style="color:#ffbe3c">24 fps: cinematic feel, ~20% faster render — fast pans may look slightly less smooth. Good for longer videos.</span>';
+  else h.innerHTML=P.target>35?'<span style="color:#ffbe3c">Tip: for videos over ~35s, 24 fps renders noticeably faster.</span>':'30 fps: smoothest motion — recommended for short promos.';
+}
+
+// ---------- voice audition (right panel) ----------
+$('#voiceprev').onclick=async e=>{
+  if(P.voice==='none')return toast('pick a real voice first');
+  const b=e.currentTarget;b.disabled=true;b.textContent='…';
+  try{const j=await api('/api/vo_preview',{text:'This is how I sound in your promo.',voice:P.voice});
+    new Audio(j.url+'?t='+Date.now()).play();}
+  catch(err){toast('voice preview: '+err.message)}
+  finally{b.disabled=false;b.textContent='▶'}
+};
+
+// ---------- animations & text boxes (right panel) ----------
+function renderAnimShotOptions(){
+  $('#animshot').innerHTML=P.shots.map((s,i)=>`<option value="${i}">shot ${i+1} (${s.t.toFixed(1)}s)</option>`).join('')||'<option value="">no shots yet</option>';
+}
+function renderAnimList(){
+  renderAnimShotOptions();
+  const i=+($('#animshot').value??0);const s=P.shots[i];
+  if(!s){$('#animlist').innerHTML='<span class="noflags">add images first</span>';return}
+  $('#animlist').innerHTML=s.captions.length?s.captions.map((c,j)=>{
+    const t=c.text||c.sub&&(c.text+' / '+c.sub)||'';const v=t||(c.lines||c.rows||[]).join(' · ')||(c.items||[]).join(', ');
+    return `<div class="abox"><b>${c.kind}</b><span title="${esc(v)}">${esc(v.slice(0,42))}</span><i data-del="${i}:${j}" title="remove this box">×</i></div>`}).join('')
+    :'<span class="noflags">no text boxes on this shot — pick a kind above</span>';
+}
+$('#animshot').onchange=renderAnimList;
+$('#animkind').onchange=e=>{
+  const i=+$('#animshot').value;const s=P.shots[i];if(!s)return toast('add images first');
+  s.captions.push(JSON.parse(JSON.stringify(CAP_DEFAULTS[e.target.value])));
+  renderShots();renderAnimList();toast(e.target.value+' box added to shot '+(i+1));
+};
+document.addEventListener('click',e=>{
+  if(e.target.dataset&&e.target.dataset.del!=null){const[i,j]=e.target.dataset.del.split(':').map(Number);
+    P.shots[i].captions.splice(j,1);renderShots();renderAnimList()}});
+
 // ---------- sync VO lines into project ----------
 function syncVoLines(){
   P.vo_lines=[];
@@ -275,7 +399,7 @@ let ws;function connectWS(){ws=new WebSocket(`ws://${location.host}/ws/progress`
 async function refreshOutputs(){const j=await api('/api/outputs');
   $('#outputs').innerHTML=j.outputs.length?j.outputs.map(o=>`<div class="outrow"><a href="${o.url}" target="_blank">${o.file}</a><span style="color:var(--dim)">${(o.size/1048576).toFixed(1)} MB</span></div>`).join(''):'<span class="noflags">none yet</span>'}
 
-boot();renderShots();connectWS();
+boot().then(()=>{setTarget(P.target,true);fpsHint()});renderShots();connectWS();
 </script>
 </body>
 </html>
