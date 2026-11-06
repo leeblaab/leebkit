@@ -73,6 +73,8 @@ start.bat        # first run: creates .venv + installs requirements.txt, opens h
 python render_cli.py samples/leebdark_sample.json --media DIR --out output/sample.mp4 --jobs 4
 ```
 
+(DIR = any folder with your images; the sample JSON references them by filename.)
+
 ## Product pillars (every decision passes these)
 
 1. **Light** — stdlib + FastAPI + Pillow + numpy + Piper only. No frontend framework,
