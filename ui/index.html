@@ -194,8 +194,12 @@ function capEditor(i,j){
   const w=v=>`value="${esc(v||'')}"`;
   if(c.kind==='panel_top'||c.kind==='panel_mid'||c.kind==='cap_lines')
     return `<textarea data-akind="${i}:${j}" data-afield="lines" rows="${Math.max(1,(c.lines||[]).length)}" placeholder="one line per row">${esc((c.lines||[]).join('\n'))}</textarea>`;
-  if(c.kind==='terminal')
-    return `<textarea data-akind="${i}:${j}" data-afield="rows" rows="5" placeholder="&gt; PROMPT&#10;typed prompt line&#10;&gt; MODEL ...">${esc((c.rows||[]).join('\n'))}</textarea>`;
+  if(c.kind==='terminal'){
+    // last row is the AUTO progress bar: engine animates it 0→100% on its own.
+    // Show a fixed hint instead of an editable static value (round-3 request).
+    const rows=(c.rows||[]).slice(0,3);
+    return `<textarea data-akind="${i}:${j}" data-afield="rows" rows="4" placeholder="&gt; PROMPT&#10;typed prompt line&#10;&gt; MODEL ...">${esc(rows.join('\n'))}</textarea><div style="font-size:11px;color:var(--dim);margin-top:4px">▓ progress bar 0→100% is automatic — timed to this shot, nothing to type</div>`;
+  }
   if(c.kind==='chips')
     return `<input data-akind="${i}:${j}" data-afield="items" ${w((c.items||[]).join(', '))} placeholder="comma, separated, chips">`;
   if(c.kind==='title_block')
@@ -254,6 +258,7 @@ document.addEventListener('input',e=>{
     if(f==='lines'||f==='rows')c[f]=e.target.value.split('\n').map(x=>x.trim()).filter(Boolean);
     else if(f==='items')c.items=e.target.value.split(',').map(x=>x.trim()).filter(Boolean);
     else c[f]=e.target.value;
+    if(f==='rows'&&c.kind==='terminal')c.rows=(c.rows||[]).slice(0,3);  // bar row is engine-owned
     renderAnimList();                                     // keep right-panel list in sync
   }
   if(e.target.dataset.vo!=null)P.shots[+e.target.dataset.vo].vo=e.target.value;
