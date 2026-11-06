@@ -401,6 +401,11 @@ class Engine:
             prog = clamp01((lt - at) / 0.32)
             if prog <= 0:
                 continue
+            # panel_* kinds are the shot's message itself (fill=solid frames):
+            # run their clock 0.45s early so a black beat never holds with an
+            # empty card (Yasser's sheet9 QA: dead gaps before word-pop lines).
+            if k in ("panel_top", "panel_mid"):
+                at -= 0.45
             a = int(255 * min(1.0, prog * 1.3))
             slide = int((1 - ease_o(prog)) * 36)
 
@@ -423,7 +428,15 @@ class Engine:
                              fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
                 sub = L.get("sub", "")
                 if sub:
-                    self.draw_center_text(dr, ul_y + int(tsize * 0.42) + 65 - slide, sub, self.SMALL,
+                    # translucent dark plate behind the sub so it stays readable
+                    # even when it lands on bright artwork (white coats, etc.)
+                    sy = ul_y + int(tsize * 0.42) + 65 - slide
+                    sw = self._measure_tracked(dr, sub, self.SMALL, TRK.get("sub", 0))
+                    pad = 18
+                    dr.rounded_rectangle(((W - sw) / 2 - pad, sy - pad,
+                                          (W + sw) / 2 + pad, sy + P["sizes"]["small"] + pad),
+                                         radius=14, fill=(0, 0, 0, int(150 * min(1.0, prog * 1.3))))
+                    self.draw_center_text(dr, sy, sub, self.SMALL,
                                           (DIMC[0], DIMC[1], DIMC[2], a), tracking=TRK.get("sub", 14))
             elif k == "accent_word":
                 self.word_pop(dr, H * 0.415 - slide, self.H1, L["text"], ACCENT, prog, tracking=2)

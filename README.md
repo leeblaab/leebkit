@@ -2,6 +2,10 @@
 
 **Kinetic promo videos. No cloud. No API. No subscription.**
 
+https://github.com/leeblaab/leebkit/assets/leeblaab/demo.mp4
+
+*(12s promo rendered entirely by LEEBKIT on a laptop — 4 stills, captions, procedural music bed.)*
+
 LEEBKIT turns 1–10 still images + captions into a finished vertical promo MP4 — animated
 stills (Ken Burns), kinetic text, transitions, voiceover and music with auto-ducking —
 rendered entirely on your machine by Python + ffmpeg. Double-click `start.bat`, open the
