@@ -3,10 +3,12 @@ setlocal enabledelayedexpansion
 rem LEEBKIT by LEEBLAAB - download piper TTS + voice models into vo/models/ (needs internet once)
 cd /d "%~dp0"
 
-set "PY311=[scrubbed]"
+set "PY311=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
+if not exist "%PY311%" set "PY311=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+if not exist "%PY311%" set "PY311=%LOCALAPPDATA%\Programs\Python\Python313\python.exe"
 if not exist "%PY311%" (
-  echo [LEEBKIT] ERROR: Python 3.11 not found at %PY311%
-  echo           piper TTS needs it - install Python 3.11 or edit PY311 in this file.
+  echo [LEEBKIT] ERROR: Python 3.11-3.13 not found under %LOCALAPPDATA%\Programs\Python
+  echo           piper TTS needs it - install Python 3.11 or set LEEBKIT_PY311 to its python.exe.
   pause & exit /b 1
 )
 

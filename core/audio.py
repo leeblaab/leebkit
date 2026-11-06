@@ -11,6 +11,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import wave
 
 import numpy as np
@@ -19,7 +20,24 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MUSIC_DIR = os.path.join(ROOT, "music")
 VO_MODELS = os.path.join(ROOT, "vo", "models")
 SR_OUT = 48000          # final bed sample rate
-PY311 = r"[scrubbed]"
+def _find_py311():
+    """Locate a Python 3.11-3.13 interpreter for the piper subprocess (piper's CLI
+    breaks on 3.14's wave module). Honors LEEBKIT_PY311, then common install dirs."""
+    import glob as _glob
+    cand = [os.environ.get("LEEBKIT_PY311", "")]
+    local = os.path.expandvars(r"%LOCALAPPDATA%\Programs\Python")
+    for v in ("Python311", "Python312", "Python313"):
+        cand.append(os.path.join(local, v, "python.exe"))
+    cand += sorted(_glob.glob(os.path.join(local, "Python3.1*", "python.exe")))
+    if sys.version_info[:2] in ((3, 11), (3, 12), (3, 13)):
+        cand.append(sys.executable)
+    for c in cand:
+        if c and os.path.isfile(c):
+            return c
+    return cand[0] or sys.executable
+
+
+PY311 = _find_py311()
 
 
 # --------------------------------------------------------------- basic helpers
