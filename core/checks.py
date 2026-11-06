@@ -1,4 +1,4 @@
-"""REELKIT core — storyboard checks (the four auto-red-flags) + thumbnails.
+"""LEEBKIT core — storyboard checks (the four auto-red-flags) + thumbnails.
 
 Implemented as CODE, not eyeballs (pixel-mask QA beats vision-QA per spec):
   1. text overflow      — PIL getlength vs safe width at chosen font/size

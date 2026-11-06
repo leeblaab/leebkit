@@ -1,4 +1,4 @@
-"""REELKIT job queue — single background renderer with websocket-friendly progress.
+"""LEEBKIT job queue — single background renderer with websocket-friendly progress.
 
 One job at a time (simple). Progress = frames rendered / total, exposed via
 get_jobs() polling or pushed to websocket clients by app.py.

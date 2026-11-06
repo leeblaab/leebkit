@@ -1,4 +1,4 @@
-# REELKIT — by LEEBLAAB
+# LEEBKIT — by LEEBLAAB
 
 **Kinetic promo videos. No cloud. No API. No subscription.**
 
@@ -27,7 +27,7 @@ If a feature conflicts with these pillars, cut the feature — and tell Yasser w
 
 ## Brand rules (non-negotiable)
 
-- Product name: **REELKIT**. Byline everywhere: **REELKIT by LEEBLAAB** (maker credit, not co-brand).
+- Product name: **LEEBKIT**. Byline everywhere: **LEEBKIT by LEEBLAAB** (maker credit, not co-brand).
 - Tagline carries the offline promise: "No cloud. No API. No subscription." — never in the logo itself.
 - Author name for this product line: **LEEBLAAB** (coding/AI products line; training kits use "Yasser Awadein" — do NOT mix).
 - Fonts: open licenses only from day one — Archivo Black / Inter (headings, body), JetBrains Mono (terminal/mono). Bundle TTFs in `assets/fonts/`. Ship ATTRIBUTIONS.md (fonts OFL + Piper voices CC-BY credits).

@@ -1,4 +1,4 @@
-"""REELKIT audio: procedural numpy beds + user music files + Piper VO + ducking.
+"""LEEBKIT audio: procedural numpy beds + user music files + Piper VO + ducking.
 
 Ported from the proven make_audio.py (synthwave bed) and make_vo.py (VO bed).
 Pitfalls baked in:

@@ -1,4 +1,4 @@
-# REELKIT Quickstart
+# LEEBKIT Quickstart
 
 ## Run it
 Double-click `start.bat` (first run creates a venv and installs deps), or:

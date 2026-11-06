@@ -1,4 +1,4 @@
-"""REELKIT CLI render entry.
+"""LEEBKIT CLI render entry.
 
   python render_cli.py samples/leebdark_sample.json [--media DIR] [--out FILE]
                        [--no-audio] [--draft] [--jobs N]
@@ -63,7 +63,7 @@ def encode_video(frames_dir, out_mp4, fps=30, crf="18", preset_v="slow"):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="REELKIT CLI renderer")
+    ap = argparse.ArgumentParser(description="LEEBKIT CLI renderer")
     ap.add_argument("project")
     ap.add_argument("--media", default=None, help="dir to resolve shot image paths from")
     ap.add_argument("--out", default=None)

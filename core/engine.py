@@ -1,4 +1,4 @@
-"""REELKIT core — frame builder engine.
+"""LEEBKIT core — frame builder engine.
 
 Generalization of the proven build_video_v4.py pipeline (LEEBLAAB promo).
 Driven entirely by a project JSON (schema:1) + a preset style JSON.

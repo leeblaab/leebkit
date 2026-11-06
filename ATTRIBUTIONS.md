@@ -1,7 +1,7 @@
-# REELKIT — Attribution & Licenses
+# LEEBKIT — Attribution & Licenses
 
 ## Code
-- **REELKIT** (this repository): AGPL-3.0-only, © 2026 LEEBLAAB. See `LICENSE`.
+- **LEEBKIT** (this repository): AGPL-3.0-only, © 2026 LEEBLAAB. See `LICENSE`.
   The AGPL copyleft covers the code only. Generated videos and project files are
   yours; you need no permission to publish them.
 
@@ -19,7 +19,7 @@ without attribution (attribution given here as good practice).
 - **Piper TTS** (MIT, https://github.com/rhasspy/piper) + voice models from
   Hugging Face rhasspy/piper-voices (each model carries its own license — most
   en_US voices are CC BY 4.0 / attribution-free; check the model card).
-  REELKIT runs Piper fully offline once installed.
+  LEEBKIT runs Piper fully offline once installed.
 
 ## Your content
 - Images, captions and voice-over text you supply remain yours. The engine adds
