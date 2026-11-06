@@ -344,27 +344,53 @@ $('#voiceprev').onclick=async e=>{
 };
 
 // ---------- animations & text boxes (right panel) ----------
+let _animShot=0;   // survives re-renders — the old bug: rebuilding <select> reset it to shot 1
 function renderAnimShotOptions(){
-  $('#animshot').innerHTML=P.shots.map((s,i)=>`<option value="${i}">shot ${i+1} (${s.t.toFixed(1)}s)</option>`).join('')||'<option value="">no shots yet</option>';
+  const opts=P.shots.map((s,i)=>`<option value="${i}">shot ${i+1} (${s.t.toFixed(1)}s)</option>`).join('')||'<option value="">no shots yet</option>';
+  const sel=$('#animshot');sel.innerHTML=opts;
+  if(P.shots.length){_animShot=Math.min(_animShot,P.shots.length-1);sel.value=_animShot}
 }
 function renderAnimList(){
   renderAnimShotOptions();
-  const i=+($('#animshot').value??0);const s=P.shots[i];
+  const i=_animShot;const s=P.shots[i];
   if(!s){$('#animlist').innerHTML='<span class="noflags">add images first</span>';return}
   $('#animlist').innerHTML=s.captions.length?s.captions.map((c,j)=>{
     const t=c.text||c.sub&&(c.text+' / '+c.sub)||'';const v=t||(c.lines||c.rows||[]).join(' · ')||(c.items||[]).join(', ');
-    return `<div class="abox"><b>${c.kind}</b><span title="${esc(v)}">${esc(v.slice(0,42))}</span><i data-del="${i}:${j}" title="remove this box">×</i></div>`}).join('')
+    return `<div class="abox"><b>${c.kind}</b><span title="${esc(v)}">${esc(v.slice(0,42))}</span>
+      <i data-aprev="${i}:${j}" title="live preview of this animation" style="cursor:pointer">▶</i><i data-del="${i}:${j}" title="remove this box">×</i></div>`}).join('')
     :'<span class="noflags">no text boxes on this shot — pick a kind above</span>';
 }
-$('#animshot').onchange=renderAnimList;
+$('#animshot').onchange=e=>{_animShot=+e.target.value;renderAnimList()};
 $('#animkind').onchange=e=>{
-  const i=+$('#animshot').value;const s=P.shots[i];if(!s)return toast('add images first');
+  const i=_animShot;const s=P.shots[i];if(!s)return toast('add images first');
   s.captions.push(JSON.parse(JSON.stringify(CAP_DEFAULTS[e.target.value])));
   renderShots();renderAnimList();toast(e.target.value+' box added to shot '+(i+1));
 };
-document.addEventListener('click',e=>{
+document.addEventListener('click',async e=>{
   if(e.target.dataset&&e.target.dataset.del!=null){const[i,j]=e.target.dataset.del.split(':').map(Number);
-    P.shots[i].captions.splice(j,1);renderShots();renderAnimList()}});
+    P.shots[i].captions.splice(j,1);renderShots();renderAnimList()}
+  if(e.target.dataset&&e.target.dataset.aprev!=null){const[i,j]=e.target.dataset.aprev.split(':').map(Number);
+    await animPreview(i,j,e.target)}
+});
+
+// live animation preview: one-frame render of shot i with ONLY caption j visible,
+// at its mid-animation moment (at + 0.16s) — exactly how the box looks coming in
+let _animAudio=null;
+async function animPreview(i,j,btn){
+  if(btn){btn.disabled=true;btn.textContent='…'}
+  try{
+    const shot=JSON.parse(JSON.stringify(P.shots[i]));
+    shot.captions=[shot.captions[j]];
+    const proj={...P,_t:P.target,shots:[shot],target:shot.t,fps:Math.max(10,Math.min(30,P.fps))};
+    const at=+(shot.captions[0].at??0.2);
+    proj._peek=Math.min(shot.t-0.05,at+0.16);       // freeze mid-animation
+    const r=await fetch('/api/anim_preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(proj)});
+    const d=await r.json();if(!r.ok)throw Error(d.detail||r.status);
+    $('#stripwrap').innerHTML=`<div class="pstate" style="margin:0 0 4px">preview — ${shot.captions[0].kind} on shot ${i+1} at ${proj._peek.toFixed(2)}s (mid-animation)</div><img src="${d.img}?t=${Date.now()}">`;
+    toast('animation preview shown below');
+  }catch(err){toast('preview: '+err.message)}
+  finally{if(btn){btn.disabled=false;btn.textContent='▶'}}
+}
 
 // ---------- sync VO lines into project ----------
 function syncVoLines(){
@@ -389,12 +415,28 @@ $('#btn-render').onclick=async()=>{
 };
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')$('#btn-render').click()});
 
-// ---------- websocket progress ----------
-let ws;function connectWS(){ws=new WebSocket(`ws://${location.host}/ws/progress`);
-  ws.onmessage=e=>{const d=JSON.parse(e.data);const j=d.jobs[d.jobs.length-1];if(!j)return;
-    $('#barfill').style.width=j.pct+'%';$('#pstate').textContent=`${j.state} — ${j.frames_done}/${j.frames_total} frames (${j.pct}%)`+(j.error?' — '+j.error:'');
-    if(j.state==='done'||j.state==='error'){refreshOutputs();if(j.state==='done')toast('✓ render complete: '+j.out)}};
-  ws.onclose=()=>setTimeout(connectWS,1500)}
+// ---------- websocket progress (with HTTP polling fallback) ----------
+let ws=null,_wsDead=false;
+function connectWS(){
+  if(_wsDead)return pollJobs();          // no websockets lib on the server — use polling
+  try{ws=new WebSocket(`ws://${location.host}/ws/progress`)}catch(e){_wsDead=true;return pollJobs()}
+  ws.onmessage=e=>{applyJob(JSON.parse(e.data).jobs.slice(-1)[0])};
+  ws.onclose=()=>{_wsDead=true;pollJobs()};   // server without 'websockets' lib: fall back, don't retry forever
+}
+let _pollTimer=null;
+async function pollJobs(){
+  clearTimeout(_pollTimer);
+  try{const j=await api('/api/jobs');applyJob(j.jobs[j.jobs.length-1])}catch(e){}
+  _pollTimer=setTimeout(pollJobs,800);
+}
+function applyJob(j){
+  if(!j)return;
+  $('#prog').style.display='block';
+  $('#barfill').style.width=j.pct+'%';
+  const label={queued:'queued — waiting',frames:'rendering frames',encode:'encoding video',audio:'building audio',mux:'muxing A/V',done:'done',error:'FAILED'}[j.state]||j.state;
+  $('#pstate').textContent=`${label} — ${j.frames_done}/${j.frames_total} frames (${j.pct}%)`+(j.error?' — '+j.error:'');
+  if(j.state==='done'||j.state==='error'){refreshOutputs();if(j.state==='done')toast('✓ render complete: '+j.out)}
+}
 
 async function refreshOutputs(){const j=await api('/api/outputs');
   $('#outputs').innerHTML=j.outputs.length?j.outputs.map(o=>`<div class="outrow"><a href="${o.url}" target="_blank">${o.file}</a><span style="color:var(--dim)">${(o.size/1048576).toFixed(1)} MB</span></div>`).join(''):'<span class="noflags">none yet</span>'}

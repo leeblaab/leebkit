@@ -17,10 +17,10 @@ if not exist vo\models mkdir vo\models
 pushd vo\models
 
 rem --- voices already on this machine are kept; missing ones are fetched ---
-call :get en_US-lessac-medium "en/us/medium"
-call :get en_US-ryan-high     "en/us/high"
-call :get en_US-kristin-medium "en/us/medium"
-call :get en_GB-alba-medium    "en/gb/medium"
+call :get en_US-lessac-medium "en/en_US/medium"
+call :get en_US-ryan-high     "en/en_US/high"
+call :get en_US-kristin-medium "en/en_US/medium"
+call :get en_GB-alba-medium    "en/en_GB/medium"
 
 popd
 echo [REELKIT] voices in vo\models:
