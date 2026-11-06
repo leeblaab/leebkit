@@ -117,6 +117,25 @@ def preview(proj: dict):
     return {"strip": "/output/_previews/strip_%s.png" % h, "flags": flags}
 
 
+@app.post("/api/anim_preview")
+def anim_preview(proj: dict):
+    """One-frame render of a single-shot mini project (built by the UI) frozen
+    at proj['_peek'] local seconds — shows exactly how a caption animation looks
+    mid-in. The _peek key is stripped before Engine validation."""
+    peek = float(proj.pop("_peek", 0.0) or 0.0)
+    try:
+        eng = _proj_engine(proj)
+    except Exception as e:
+        raise HTTPException(422, str(e))
+    import hashlib
+    h = hashlib.sha256(json.dumps([proj, peek], sort_keys=True).encode()).hexdigest()[:12]
+    out_png = os.path.join(PREVIEW_DIR, "anim_%s.png" % h)
+    os.makedirs(PREVIEW_DIR, exist_ok=True)
+    if not os.path.exists(out_png):
+        eng.render_layer(0, peek, 7).save(out_png)
+    return {"img": "/output/_previews/anim_%s.png" % h}
+
+
 @app.post("/api/vo_preview")
 def vo_preview(req: dict):
     text, voice = req.get("text", "").strip(), req.get("voice", "")

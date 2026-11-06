@@ -31,9 +31,18 @@ class Job:
         self.started = time.time()
 
     def snapshot(self):
+        # frames are ~85% of wall time; encode/mux get the tail so the bar
+        # keeps moving after frames finish instead of sticking at 100%
+        pct = round(85.0 * self.frames_done / max(1, self.frames_total), 1)
+        if self.state == "encode":
+            pct = max(pct, 90.0)
+        elif self.state in ("audio", "mux"):
+            pct = max(pct, 95.0)
+        elif self.state == "done":
+            pct = 100.0
         return {"id": self.id, "name": self.name, "state": self.state,
                 "frames_done": self.frames_done, "frames_total": self.frames_total,
-                "pct": round(100.0 * self.frames_done / max(1, self.frames_total), 1),
+                "pct": pct,
                 "error": self.error, "out": os.path.basename(self.out) if self.out else None}
 
 
