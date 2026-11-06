@@ -10,3 +10,4 @@ vo/models/
 
 # user media + uploaded images (re-uploadable; keep samples/ only)
 media/
+_fixcheck.json

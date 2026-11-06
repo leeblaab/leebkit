@@ -57,6 +57,9 @@ def hex2rgb(h):
 
 # ------------------------------------------------------------ project loading
 def load_preset(name):
+    # tolerate preset ids with or without the .json suffix (UI sends bare ids)
+    if not name.endswith(".json"):
+        name += ".json"
     path = name if os.path.isabs(name) else os.path.join(ROOT, "presets", name)
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)

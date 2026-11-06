@@ -56,6 +56,7 @@ class Queue:
             name = j.name + "_" + j.id[:6]
             out_dir = os.path.join(ROOT, "output")
             frames_dir = os.path.join(out_dir, "_frames_%s" % name)
+            shutil.rmtree(frames_dir, ignore_errors=True)   # fresh start; never reuse stale/empty dirs
             os.makedirs(frames_dir, exist_ok=True)
             eng = Engine(j.proj, media_dir=j.media_dir)
             j.state = "frames"
