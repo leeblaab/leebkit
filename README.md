@@ -2,7 +2,7 @@
 
 **Kinetic promo videos. No cloud. No API. No subscription.**
 
-https://github.com/leeblaab/leebkit/assets/leeblaab/demo.mp4
+https://github.com/user-attachments/assets/a43f0081-0f48-bd6e-adb6-688649257680
 
 *(12s promo rendered entirely by LEEBKIT on a laptop — 4 stills, captions, procedural music bed.)*
 
