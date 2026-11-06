@@ -1,4 +1,4 @@
-# BUILD_PROMPT — kick off a new Hermes session with this
+# DESIGN_NOTES — original LEEBKIT v1 design brief (historical)
 
 > **Paste everything below the line as your first message in the new ReelKit session.**
 
