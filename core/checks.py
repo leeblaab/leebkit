@@ -53,7 +53,14 @@ def check_project(engine):
                 for line in L["lines"]:
                     over(line, engine.H1)
             elif k == "title_block":
-                over(L.get("text", ""), engine.LOGO, limit=W - 80, label="title")
+                # wrap-aware measured check: flag each line that STILL overflows
+                lines, tsize, trk = engine.fit_title(
+                    ImageDraw.Draw(Image.new("RGB", (W, 8))), L.get("text", ""),
+                    engine.preset["sizes"]["logo"], W - 80)
+                f_t = engine.LOGO if tsize == engine.preset["sizes"]["logo"] else \
+                    engine._mkfont(engine.preset["fonts"]["display"], tsize)
+                for tl in lines:
+                    over(tl, f_t, limit=W - trk * max(0, len(tl) - 1), label="title")
                 if L.get("sub"):
                     over(L["sub"], engine.SMALL, limit=W - 80, label="subtitle")
             elif k in ("accent_word", "cta", "small", "handle", "big_number"):

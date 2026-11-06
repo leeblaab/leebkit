@@ -237,10 +237,33 @@ def piper_line(text, voice_id, out_wav):
     model = os.path.join(VO_MODELS, voice_id + ".onnx")
     if not os.path.exists(model):
         raise RuntimeError("voice model not found: %s (run setup_vo.bat)" % model)
-    r = subprocess.run([PY311, "-m", "piper", "-m", model, "-f", out_wav],
-                       input=text, text=True, capture_output=True, timeout=60)
-    if r.returncode != 0:
-        raise RuntimeError("piper failed: " + (r.stderr or "")[-400:])
+    # NOTE: piper 1.8's `-f FILE` path crashes on Python 3.14 (wave.py bug), so
+    # synthesize into a temp dir via --output-dir and move the result ourselves.
+    import tempfile
+    os.makedirs(os.path.dirname(out_wav) or ".", exist_ok=True)
+    tmp = tempfile.mkdtemp(prefix="piper_")
+    try:
+        r = subprocess.run([PY311, "-m", "piper", "-m", model, "--output-dir", tmp],
+                           input=text, text=True, capture_output=True, timeout=60)
+        if r.returncode != 0:
+            raise RuntimeError("piper failed: " + (r.stderr or "")[-400:])
+        wavs = sorted(f for f in os.listdir(tmp) if f.endswith(".wav"))
+        if not wavs:
+            raise RuntimeError("piper produced no output")
+        src = os.path.join(tmp, wavs[0])
+        if len(wavs) > 1:  # stitch multi-sentence lines with 250 ms gaps
+            parts = [read_wav_mono(os.path.join(tmp, w))[0] for w in wavs]
+            gap = np.zeros(int(0.25 * 22050), dtype=np.int16)
+            merged = np.concatenate([p for pair in zip(parts, [gap] * len(parts)) for p in pair][:-1])
+            import wave as _w
+            with _w.open(src, "wb") as w:
+                w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050)
+                w.writeframes(merged.tobytes())
+        if os.path.exists(out_wav):
+            os.remove(out_wav)
+        shutil.move(src, out_wav)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
     return out_wav
 
 

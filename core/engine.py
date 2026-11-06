@@ -120,6 +120,7 @@ class Engine:
                     pass
             return f
 
+        self._mkfont = mk   # used later (title shrink-to-fit) outside __init__ scope
         FD = P["fonts"]
         self.LOGO = mk(FD["display"], S["logo"])
         self.H1 = mk(FD["display"], S["h1"])
@@ -264,6 +265,50 @@ class Engine:
             w = dr.textlength(txt, font=fnt)
             dr.text(((W - w) / 2, y), txt, font=fnt, fill=fill)
 
+    def _measure_tracked(self, dr, txt, fnt, tracking):
+        return sum(dr.textlength(c, font=fnt) for c in txt) + tracking * max(0, len(txt) - 1)
+
+    def fit_title(self, dr, txt, base_size, limit, tracking_scale=6 / 128):
+        """Wrap title to <=limit px per line (word-first), shrink font only as a
+        last resort. Returns (lines, size, tracking)."""
+        words = txt.split()
+        if not words:
+            return [], base_size, 0
+        lines, cur = [], ""
+        for wd in words:
+            cand = (cur + " " + wd).strip()
+            if dr.textlength(cand, font=self.LOGO) <= limit or not cur:
+                cur = cand
+            else:
+                lines.append(cur)
+                cur = wd
+        lines.append(cur)
+        size = base_size
+        trk = int(round(tracking_scale * size))
+        while (max(self._measure_tracked(dr, l, self.LOGO, trk) for l in lines) > limit
+               and size > 40):
+            size = max(40, int(size * 0.92))
+            trk = int(round(tracking_scale * size))
+        if size != base_size:
+            # rebuild wrap with the shrunk metrics (fewer lines possible)
+            f_small = self._mkfont(self.preset["fonts"]["display"], size)
+            lines, cur = [], ""
+            for wd in words:
+                cand = (cur + " " + wd).strip()
+                if f_small.getlength(cand) <= limit - trk * max(0, len(cand) - 1) or not cur:
+                    cur = cand
+                else:
+                    lines.append(cur)
+                    cur = wd
+            lines.append(cur)
+        return lines, size, trk
+
+    def draw_title_lines(self, dr, y_center, lines, fnt, fill, tracking, line_h):
+        ys = [y_center - (len(lines) - 1) * line_h / 2 + j * line_h for j in range(len(lines))]
+        for y, l in zip(ys, lines):
+            self.draw_center_text(dr, y, l, fnt, fill, tracking=tracking)
+        return ys
+
     def word_pop(self, dr, y, fnt, txt, color, appear, tracking=0, dy=30):
         """Whole-word staggered pop with overshoot. appear is this call's clock."""
         if appear <= 0:
@@ -307,7 +352,7 @@ class Engine:
         return black
 
     # ------------------------------------------------------------- layer kinds
-    def render_layer(self, i, lt, idx):
+    def render_layer(self, i, lt, idx, cut_mode=False):
         """Render shot i at local time lt (frame seed idx). Returns RGB image."""
         W, H = self.W, self.H
         s = self.shots[i]
@@ -348,6 +393,11 @@ class Engine:
         for L in s.get("captions", []):
             k = L["kind"]
             at = float(L.get("at", 0.2))
+            # incoming caption clocks start before the image (OV early clock) so
+            # their animation NEVER restarts after a cut; hard cuts render zero
+            # text until their own `at` (no ghost of the previous shot's boxes)
+            if cut_mode and lt < at:
+                continue
             prog = clamp01((lt - at) / 0.32)
             if prog <= 0:
                 continue
@@ -356,14 +406,24 @@ class Engine:
 
             if k == "title_block":
                 txt = L.get("text", "")
-                self.draw_center_text(dr, H * 0.38 - slide, txt, self.LOGO,
-                                      (WHITE[0], WHITE[1], WHITE[2], a), tracking=TRK.get("logo", 6))
-                lw = int(560 * ease_o(prog))
-                dr.rectangle(((W - lw) / 2, H * 0.38 + 170 - slide, (W + lw) / 2, H * 0.38 + 178 - slide),
+                # auto-wrap to the safe width (shrink only as last resort) so a
+                # long title can never run past the frame edge
+                lines, tsize, trk = self.fit_title(dr, txt, self.preset["sizes"]["logo"], W - 80)
+                tfnt = self.LOGO if tsize == self.preset["sizes"]["logo"] else \
+                    self._mkfont(self.preset["fonts"]["display"], tsize)
+                line_h = int(tsize * 1.06)
+                nlines = max(1, len(lines))
+                # underline + subtitle ride below the last title line
+                base_y = H * 0.38 - (nlines - 1) * line_h / 2
+                self.draw_title_lines(dr, base_y - slide, lines, tfnt,
+                                      (WHITE[0], WHITE[1], WHITE[2], a), trk, line_h)
+                lw = int(min(560, max(140, tsize * 4)) * ease_o(prog))
+                ul_y = H * 0.38 + (nlines - 1) * line_h / 2 + int(tsize * 0.34)
+                dr.rectangle(((W - lw) / 2, ul_y - slide, (W + lw) / 2, ul_y + 8 - slide),
                              fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
                 sub = L.get("sub", "")
                 if sub:
-                    self.draw_center_text(dr, H * 0.38 + 235 - slide, sub, self.SMALL,
+                    self.draw_center_text(dr, ul_y + int(tsize * 0.42) + 65 - slide, sub, self.SMALL,
                                           (DIMC[0], DIMC[1], DIMC[2], a), tracking=TRK.get("sub", 14))
             elif k == "accent_word":
                 self.word_pop(dr, H * 0.415 - slide, self.H1, L["text"], ACCENT, prog, tracking=2)
@@ -434,11 +494,23 @@ class Engine:
                 prog_t = clamp01((lt - 0.5) / max(0.3, type_end - 0.5))
                 typed = prompt_txt[: int(len(prompt_txt) * prog_t)]
                 cursor = "_" if int(g * 2.4) % 2 == 0 else " "
-                bar = int(12 * clamp01((lt - 2.0) / 1.5))
-                pct = int(100 * clamp01((lt - 2.0) / 1.5))
+                # progress bar is FULLY automatic: any row that starts with the
+                # block glyphs (or a bare percent like "0%") gets replaced by the
+                # live █░ bar + percent — the user never types a static value.
+                # Fill window scales with shot length: starts 1/3 in, ends 0.5s
+                # before shot end (so it lands exactly at 100%).
+                t_shot = float(s["t"])
+                b_start = t_shot / 3.0
+                bt = clamp01((lt - b_start) / max(0.5, t_shot - b_start - 0.5))
+                bar = int(12 * bt)
+                pct = int(100 * bt)
+
+                def _bar_row(x):
+                    xs = x.strip()
+                    return bool(xs) and (xs[0] in "█░" or (xs.endswith("%") and len(xs) <= 6))
                 shown = [rows[0], typed + cursor]
                 for extra in rows[2:]:
-                    if "%" in extra and "█" in extra:
+                    if _bar_row(extra):
                         shown.append("  " + "█" * bar + "░" * (12 - bar) + "  " + str(pct) + "%")
                     else:
                         shown.append(extra)
@@ -499,12 +571,17 @@ class Engine:
                 break
         s = self.shots[i]
         lt = g - self.starts[i]
-        frame = self.render_layer(i, lt, idx)
-        XF = self.XF
-        if i < len(self.shots) - 1 and lt > float(s["t"]) - XF:
+        # UI writes "transition"; legacy JSON used "trans" — honor both.
+        # "cut"/"none" = hard instant switch: no fade window, no incoming-text
+        # ghosting during the boundary frames (Yasser's round-3 complaint).
+        kind = s.get("transition") or s.get("trans") or "fade"
+        cut_mode = kind in ("cut", "none")
+        XF = self.XF if not cut_mode else 0.0
+        frame = self.render_layer(i, lt, idx, cut_mode=cut_mode)
+        if i < len(self.shots) - 1 and XF > 0 and lt > float(s["t"]) - XF:
             p = (lt - (float(s["t"]) - XF)) / XF
             pe = ease_io(p)
-            kind = self.shots[i + 1].get("trans") or "fade"
+            kind = self.shots[i + 1].get("transition") or self.shots[i + 1].get("trans") or "fade"
             # ov-overlap fix: incoming layer runs its OWN clock through the wipe
             OV = float(self.shots[i + 1].get("ov", 0.25))
             nx = self.render_layer(i + 1, max(0.0, p * OV), idx + 90000)
