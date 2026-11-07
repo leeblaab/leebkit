@@ -190,11 +190,33 @@ def jobs():
 def outputs():
     out = []
     od = os.path.join(ROOT, "output")
+    ignored = _ignored_outputs(od)
     for f in sorted(os.listdir(od), reverse=True):
-        if f.endswith(".mp4"):
+        if f.endswith(".mp4") and f not in ignored:
             out.append({"file": f, "url": "/output/" + f,
                         "size": os.path.getsize(os.path.join(od, f))})
     return {"outputs": out}
+
+
+# "Clear all" hides history entries from the UI listing ONLY — the MP4 files
+# themselves are never deleted (Yasser was explicit about this).
+def _ignored_outputs(od):
+    p = os.path.join(od, ".history_ignore")
+    try:
+        with open(p, encoding="utf-8") as fh:
+            return {l.strip() for l in fh if l.strip()}
+    except OSError:
+        return set()
+
+
+@app.post("/api/outputs_clear")
+def outputs_clear():
+    od = os.path.join(ROOT, "output")
+    os.makedirs(od, exist_ok=True)
+    names = [f for f in os.listdir(od) if f.endswith(".mp4")]
+    with open(os.path.join(od, ".history_ignore"), "w", encoding="utf-8") as fh:
+        fh.write("\n".join(sorted(_ignored_outputs(od) | set(names))) + "\n")
+    return {"ok": True, "hidden": len(names)}
 
 
 @app.websocket("/ws/progress")

@@ -303,14 +303,40 @@ class Engine:
             lines.append(cur)
         return lines, size, trk
 
+    def wrap_words(self, dr, words, fnt, limit):
+        """Greedy word-wrap: group `words` so each line measures <= limit px.
+        A single over-long word stays on its own line (checks.py flags it)."""
+        lines, cur = [], []
+        for wd in words:
+            cand = " ".join(cur + [wd])
+            if not cur or dr.textlength(cand, font=fnt) <= limit:
+                cur.append(wd)
+            else:
+                lines.append(" ".join(cur))
+                cur = [wd]
+        if cur:
+            lines.append(" ".join(cur))
+        return lines
+
+    def fit_panel_lines(self, dr, lines, fnt):
+        """Wrap raw panel/cap lines to the text safe width (W-160) so long user
+        input can never clip at the frame edge. Returns wrapped line list."""
+        limit = self.W - 160
+        out = []
+        for l in lines:
+            out.extend(self.wrap_words(dr, l.split(" "), fnt, limit))
+        return out
+
     def draw_title_lines(self, dr, y_center, lines, fnt, fill, tracking, line_h):
         ys = [y_center - (len(lines) - 1) * line_h / 2 + j * line_h for j in range(len(lines))]
         for y, l in zip(ys, lines):
             self.draw_center_text(dr, y, l, fnt, fill, tracking=tracking)
         return ys
 
-    def word_pop(self, dr, y, fnt, txt, color, appear, tracking=0, dy=30):
-        """Whole-word staggered pop with overshoot. appear is this call's clock."""
+    def word_pop(self, dr, y, fnt, txt, color, appear, tracking=0, dy=30, alpha_cap=None):
+        """Whole-word staggered pop with overshoot. appear is this call's clock.
+        alpha_cap: hard ceiling on glyph alpha (outgoing layer inside a
+        transition window must fade even though its pop clock is frozen)."""
         if appear <= 0:
             return
         W = self.W
@@ -326,6 +352,8 @@ class Engine:
                 continue
             e = ease_ow(wt)
             a = int(255 * min(1.0, wt * 1.5))
+            if alpha_cap is not None:
+                a = min(a, alpha_cap)
             yy = y + (1 - e) * dy
             if tracking:
                 for c in w:
@@ -352,7 +380,7 @@ class Engine:
         return black
 
     # ------------------------------------------------------------- layer kinds
-    def render_layer(self, i, lt, idx, cut_mode=False):
+    def render_layer(self, i, lt, idx, cut_mode=False, transition_out=None):
         """Render shot i at local time lt (frame seed idx). Returns RGB image."""
         W, H = self.W, self.H
         s = self.shots[i]
@@ -393,20 +421,38 @@ class Engine:
         for L in s.get("captions", []):
             k = L["kind"]
             at = float(L.get("at", 0.2))
-            # incoming caption clocks start before the image (OV early clock) so
-            # their animation NEVER restarts after a cut; hard cuts render zero
-            # text until their own `at` (no ghost of the previous shot's boxes)
-            if cut_mode and lt < at:
-                continue
             prog = clamp01((lt - at) / 0.32)
-            if prog <= 0:
-                continue
+            # outgoing-side kill switch: inside a transition window the incoming
+            # layer runs its own early clock (OV) while this layer's lt keeps
+            # running past the shot end — freeze each caption's animation clock
+            # at its shot end so nothing GROWS, and fade every element out over
+            # the window (Yasser: outgoing captions bled under the incoming
+            # shot even in the shipped demo). Hard cuts never enter here.
+            if transition_out:
+                prog = min(prog, clamp01((float(s["t"]) - at) / 0.32))
+                fade = 1.0 - clamp01((lt - float(s["t"])) / max(transition_out, 1e-6))
+                if prog <= 0 or fade <= 0:
+                    continue
+                a_gate = int(255 * fade)
+            else:
+                a_gate = None
             # panel_* kinds are the shot's message itself (fill=solid frames):
             # run their clock 0.45s early so a black beat never holds with an
             # empty card (Yasser's sheet9 QA: dead gaps before word-pop lines).
             if k in ("panel_top", "panel_mid"):
                 at -= 0.45
+            if transition_out:
+                # re-apply the freeze to the shifted clock too
+                prog = min(prog, clamp01((float(s["t"]) - at) / 0.32))
+            if cut_mode and lt < at:
+                continue
+            if prog <= 0:
+                continue
             a = int(255 * min(1.0, prog * 1.3))
+            if a_gate is not None:
+                # outgoing layer inside a transition window: cap the alpha at
+                # the fade-out gate so both shots' text never sit visible together
+                a = min(a, a_gate)
             slide = int((1 - ease_o(prog)) * 36)
 
             if k == "title_block":
@@ -439,16 +485,20 @@ class Engine:
                     self.draw_center_text(dr, sy, sub, self.SMALL,
                                           (DIMC[0], DIMC[1], DIMC[2], a), tracking=TRK.get("sub", 14))
             elif k == "accent_word":
-                self.word_pop(dr, H * 0.415 - slide, self.H1, L["text"], ACCENT, prog, tracking=2)
+                self.word_pop(dr, H * 0.415 - slide, self.H1, L["text"], ACCENT, prog, tracking=2, alpha_cap=a_gate)
             elif k in ("panel_top", "panel_mid"):
-                lines = L["lines"]
+                # auto-wrap user lines to the safe text width, then grow the
+                # panel box to fit the wrapped line count (Yasser's shot-3 clip)
+                lines = self.fit_panel_lines(dr, L["lines"], self.H1)
                 n = len(lines)
                 ph = 110 * n + 70
                 py = H * (0.14 if k == "panel_top" else 0.36)
                 pa = clamp01(prog / 0.5)
+                box_a = int(P.get("panel_alpha", 224) * ease_o(pa))
+                if a_gate is not None:
+                    box_a = min(box_a, a_gate)
                 dr.rounded_rectangle((50, py - slide, W - 50, py + ph - slide), radius=26,
-                                     fill=(self.PANEL[0], self.PANEL[1], self.PANEL[2],
-                                           int(P.get("panel_alpha", 224) * ease_o(pa))))
+                                     fill=(self.PANEL[0], self.PANEL[1], self.PANEL[2], box_a))
                 wprog = clamp01((lt - at - 0.28) / 0.95)
                 nw = [len(l.split(" ")) for l in lines]
                 span = max(nw) * 0.18 + 0.36          # word_pop internal stagger window
@@ -456,23 +506,36 @@ class Engine:
                 for j, line in enumerate(lines):
                     col = ACCENT if (j == n - 1 and (line.endswith(".") or k == "panel_mid")) else WHITE
                     self.word_pop(dr, py + 40 + j * 110 - slide, self.H1, line, col,
-                                  wprog * (span / 0.55) - j * Sv, tracking=2)
+                                  wprog * (span / 0.55) - j * Sv, tracking=2, alpha_cap=a_gate)
             elif k == "small":
+                # box rect was miscomputed: x+w+30 (not w+60 -> could invert and
+                # crash rounded_rectangle), and long notes wrap inside a capped
+                # chip instead of running off-frame
                 txt = L["text"]
-                w = dr.textlength(txt, font=self.SMALL)
+                sl_lines = self.wrap_words(dr, txt.split(" "), self.SMALL, W - 260) or [""]
+                w = max(dr.textlength(l, font=self.SMALL) for l in sl_lines)
                 x = (W - w) / 2
-                dr.rounded_rectangle((x - 30, H * 0.615 - slide, w + 60, H * 0.615 + 72 - slide),
+                bh = 72 + (len(sl_lines) - 1) * 46
+                chip_a = int(195 * ease_o(prog))
+                if a_gate is not None:
+                    chip_a = min(chip_a, a_gate)
+                dr.rounded_rectangle((x - 30, H * 0.615 - slide, x + w + 30,
+                                      H * 0.615 + bh - slide),
                                      radius=16, fill=(self.PANEL[0], self.PANEL[1], self.PANEL[2],
-                                                      int(195 * ease_o(prog))))
-                self.draw_center_text(dr, H * 0.615 - slide, txt, self.SMALL,
-                                      (WHITE[0], WHITE[1], WHITE[2], a))
+                                                      chip_a))
+                for j, l in enumerate(sl_lines):
+                    self.draw_center_text(dr, H * 0.615 + j * 46 - slide, l, self.SMALL,
+                                          (WHITE[0], WHITE[1], WHITE[2], a))
             elif k == "cta":
                 txt = L["text"]
                 w = dr.textlength(txt, font=self.BODY)
                 x = (W - w) / 2
                 y = H * 0.545 - slide
                 pad = 34
-                dr.rounded_rectangle((x - pad, y - 18, x + w + pad, y + 92), radius=18,
+                # clamp the outline box to the frame so a long CTA can never
+                # draw past the edge (checks.py flags the overflow instead)
+                dr.rounded_rectangle((max(10, x - pad), y - 18, min(W - 10, x + w + pad), y + 92),
+                                     radius=18,
                                      outline=(ACCENT[0], ACCENT[1], ACCENT[2], a), width=4)
                 dr.text((x, y), txt, font=self.BODY, fill=(WHITE[0], WHITE[1], WHITE[2], a))
             elif k == "handle":
@@ -482,17 +545,24 @@ class Engine:
                 txt = L["text"]
                 w = dr.textlength(txt, font=self.BIG)
                 e = ease_ow(prog)
+                bn_a = int(255 * e)
+                if a_gate is not None:
+                    bn_a = min(bn_a, a_gate)
                 dr.text(((W - w) / 2, H * 0.24 + (1 - e) * 50 - slide), txt, font=self.BIG,
-                        fill=(ACCENT[0], ACCENT[1], ACCENT[2], int(255 * e)))
+                        fill=(ACCENT[0], ACCENT[1], ACCENT[2], bn_a))
             elif k == "cap_lines":
                 wp = clamp01((lt - at) / 0.3)
+                if transition_out:
+                    wp = min(wp, clamp01((float(s["t"]) - at) / 0.3))
                 for j, line in enumerate(L["lines"]):
                     self.word_pop(dr, H * 0.60 + j * 95 - slide, self.BODY, line, WHITE,
-                                  wp - j * 0.45, tracking=3)
+                                  wp - j * 0.45, tracking=3, alpha_cap=a_gate)
             elif k == "terminal":
                 box_h = 700
                 y0 = H * 0.47
                 ta = int(P.get("term_alpha", 238) * ease_o(prog))
+                if a_gate is not None:
+                    ta = min(ta, a_gate)
                 dr.rounded_rectangle((60, y0 - slide, W - 60, y0 + box_h - slide), radius=26,
                                      fill=(10, 12, 16, ta))
                 dr.rounded_rectangle((60, y0 - slide, W - 60, y0 + 70 - slide), radius=26,
@@ -530,6 +600,8 @@ class Engine:
                 yy = y0 + 104
                 for r, line in enumerate(shown):
                     appear = clamp01((lt - 0.4 - r * 0.5) / 0.3)
+                    if transition_out:
+                        appear = min(appear, clamp01((float(s["t"]) - 0.4 - r * 0.5) / 0.3))
                     if appear <= 0:
                         break
                     colr = ACCENT if line.startswith(">") else (205, 210, 220)
@@ -540,8 +612,11 @@ class Engine:
                     maxw = W - 200
                     while fnt.getlength(line) > maxw and len(line) > 1:
                         line = line[:-1]
+                    row_a = int(255 * appear)
+                    if a_gate is not None:
+                        row_a = min(row_a, a_gate)
                     dr.text((100, yy - slide), line, font=fnt,
-                            fill=(colr[0], colr[1], colr[2], int(255 * appear)))
+                            fill=(colr[0], colr[1], colr[2], row_a))
                     yy += 86 if r < 2 else 74
             elif k == "chips":
                 chips = L["items"]
@@ -552,9 +627,14 @@ class Engine:
                 y = H * 0.585
                 for ci, c in enumerate(chips):
                     appear = clamp01((lt - at - ci * 0.35) / 0.4)
+                    if transition_out:
+                        # freeze stagger clock at shot end, then let a_gate fade it
+                        appear = min(appear, clamp01((float(s["t"]) - at - ci * 0.35) / 0.4))
                     if appear <= 0:
                         break
                     aa = int(255 * ease_o(appear))
+                    if a_gate is not None:
+                        aa = min(aa, a_gate)
                     sl = int((1 - ease_o(appear)) * 30)
                     dr.rounded_rectangle((x, y + sl, x + widths[ci], y + 86 + sl), radius=43,
                                          fill=(10, 12, 16, aa),
@@ -595,6 +675,10 @@ class Engine:
             p = (lt - (float(s["t"]) - XF)) / XF
             pe = ease_io(p)
             kind = self.shots[i + 1].get("transition") or self.shots[i + 1].get("trans") or "fade"
+            # outgoing layer must be GONE by the time the wipe/blend lands:
+            # fade its captions across the XF window (transition_out) so the
+            # two shots' text never sit on screen together
+            frame = self.render_layer(i, lt, idx, cut_mode=cut_mode, transition_out=XF)
             # ov-overlap fix: incoming layer runs its OWN clock through the wipe
             OV = float(self.shots[i + 1].get("ov", 0.25))
             nx = self.render_layer(i + 1, max(0.0, p * OV), idx + 90000)

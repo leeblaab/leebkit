@@ -50,8 +50,12 @@ def check_project(engine):
                                   "message": "shot %d %s: '%s' measures %.0fpx > safe %.0fpx"
                                              % (i, label or k, txt[:38], w, limit)})
             if k in ("panel_top", "panel_mid"):
-                for line in L["lines"]:
-                    over(line, engine.H1)
+                # measure the WRAPPED result: the engine auto-wraps long lines
+                # to W-160, so only genuinely unbreakable input (one monster
+                # word) should ever flag overflow here
+                for wl in engine.fit_panel_lines(ImageDraw.Draw(Image.new("RGB", (W, 8))),
+                                                 L["lines"], engine.H1):
+                    over(wl, engine.H1)
             elif k == "title_block":
                 # wrap-aware measured check: flag each line that STILL overflows
                 lines, tsize, trk = engine.fit_title(
@@ -64,12 +68,20 @@ def check_project(engine):
                 if L.get("sub"):
                     over(L["sub"], engine.SMALL, limit=W - 80, label="subtitle")
             elif k in ("accent_word", "cta", "small", "handle", "big_number"):
-                lim = W - 80 if k != "cta" else W - 140
-                over(L.get("text", ""), engine.H1 if k == "accent_word" else
-                     (engine.BODY if k in ("cta", "handle") else engine.SMALL), limit=lim)
+                if k == "small":
+                    # engine wraps the note inside its chip, so only a single
+                    # monster word can actually overflow
+                    wl = max(L.get("text", "").split(" "),
+                             key=lambda w: engine.SMALL.getlength(w), default="")
+                    over(wl, engine.SMALL, limit=W - 260)
+                else:
+                    lim = W - 80 if k != "cta" else W - 140
+                    over(L.get("text", ""), engine.H1 if k == "accent_word" else
+                         (engine.BODY if k in ("cta", "handle") else engine.SMALL), limit=lim)
             elif k == "cap_lines":
-                for line in L["lines"]:
-                    over(line, engine.BODY)
+                for wl in engine.fit_panel_lines(ImageDraw.Draw(Image.new("RGB", (W, 8))),
+                                                 L["lines"], engine.BODY):
+                    over(wl, engine.BODY)
             elif k == "chips":
                 widths = [engine.MONOS.getlength(c) + 60 for c in L["items"]]
                 total = sum(widths) + 26 * (len(L["items"]) - 1)
@@ -85,12 +97,17 @@ def check_project(engine):
 
             # --- flag 2: animation won't finish before shot end ---
             if k in ("panel_top", "mid", "panel_mid"):
-                lines = L["lines"]
+                # timing math runs on the WRAPPED lines (engine auto-wraps), so
+                # the stagger-window flag only fires for genuinely bad input
+                lines = engine.fit_panel_lines(ImageDraw.Draw(Image.new("RGB", (W, 8))),
+                                               L["lines"], engine.H1)
                 n = len(lines)
                 span = max(len(l.split(" ")) for l in lines) * 0.18 + 0.36
-                # wprog reaches 1 at lt = at+0.28+0.95; last line's last word needs
-                # appear >= (nwords-1)*0.18 -> completion clock:
-                done_at = at + 0.28 + 0.95
+                # engine completion clock (mirrors render_layer exactly):
+                # line j's last word lands when wprog*(span/0.55) - j*Sv
+                # reaches span, wprog = (lt-at-0.28)/0.95
+                Sv = (1.0 - span) / (n - 1) if n > 1 else 0.0
+                done_at = at + 0.28 + 0.95 * (1.0 + Sv * 0.55 / max(span, 1e-6))
                 if span > 1.0:
                     flags.append({"shot": i, "kind": "timing", "severity": "error",
                                   "message": "shot %d panel line too many words (stagger window %.2fs > 1s)"

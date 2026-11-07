@@ -151,7 +151,7 @@ padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-ind
   </div>
 
   <div class="panel">
-    <h3>Outputs</h3>
+    <h3 style="display:flex;align-items:center;justify-content:space-between">Outputs<button id="btn-clear-outputs" style="font-family:var(--mono);font-size:11px;padding:4px 10px">clear all</button></h3>
     <div id="outputs"><span class="noflags">none yet</span></div>
   </div>
 </aside>
@@ -164,7 +164,11 @@ let META={presets:[],music:[],voices:[]};
 const PRESET_SHORT={leebdark:'LEEBLAAB house style'};  // keep dropdown rows short
 let P={schema:1,name:'my_promo',size:'1080x1920',fps:30,target:30,preset:'leebdark',music:{bed:'synthwave'},voice:'none',vo_lines:[],shots:[]};
 
-const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2600)};
+# toast: one-shot (done/error fire ONCE per job id; polling re-applies the
+# same terminal job every 800ms and used to reset the hide timer forever)
+const _toastSeen=new Set();
+const toast=(m,onceKey)=>{if(onceKey){if(_toastSeen.has(onceKey))return;_toastSeen.add(onceKey);}
+ const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',5000)};
 async function api(path,body){let r;try{r=await fetch(path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined})}catch(e){throw Error('server not reachable — is LEEBKIT still running?')}const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(typeof j.detail==='string'?j.detail:(j.detail?'check failed':r.status));return j}
 
 // ---------- meta ----------
@@ -272,6 +276,7 @@ document.addEventListener('click',async e=>{
   if(b.dataset.up!=null){const i=+b.dataset.up;if(i>0){const[m]=P.shots.splice(i,1);P.shots.splice(i-1,0,m);renderShots()}}
   if(b.dataset.dn!=null){const i=+b.dataset.dn;if(i<P.shots.length-1){const[m]=P.shots.splice(i,1);P.shots.splice(i+1,0,m);renderShots()}}
   if(b.dataset.voprev!=null)await voPreviewShot(+b.dataset.voprev,b);
+  if(b.id==='btn-clear-outputs'){try{await api('/api/outputs_clear',{});refreshOutputs();toast('history cleared (files kept on disk)')}catch(e){toast('clear: '+e.message)}}
 });
 
 // ---------- voice-over audition ----------
@@ -445,7 +450,7 @@ function applyJob(j){
   $('#barfill').style.width=j.pct+'%';
   const label={queued:'queued — waiting',frames:'rendering frames',encode:'encoding video',audio:'building audio',mux:'muxing A/V',done:'done',error:'FAILED'}[j.state]||j.state;
   $('#pstate').textContent=`${label} — ${j.frames_done}/${j.frames_total} frames (${j.pct}%)`+(j.error?' — '+j.error:'');
-  if(j.state==='done'||j.state==='error'){refreshOutputs();if(j.state==='done')toast('✓ render complete: '+j.out)}
+  if(j.state==='done'||j.state==='error'){refreshOutputs();if(j.state==='done')toast('✓ render complete: '+j.out,'done:'+j.id);else toast('render failed — see progress bar','err:'+j.id)}
 }
 
 async function refreshOutputs(){const j=await api('/api/outputs');
