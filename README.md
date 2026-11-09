@@ -28,10 +28,11 @@ rendered entirely on your machine by Python + ffmpeg. Double-click `start.bat`, 
 webUI, get an MP4.
 
 **Status: v1.2 — November 2026.** Everything listed below is built and in daily use.
-v1.2 adds: sub-line auto-wrap, path-confinement + upload hardening (all project-supplied
-image paths are confined to `media/`, absolute/traversal paths rejected, 32MB upload cap +
-magic-byte sniff), missing-image abort instead of black frames, and this README's benchmark
-block. Project JSON image paths are relative to `media/` from v1.2 on (e.g. `"uploads/x.png"`).
+v1.2 adds: 9:16 + 1:1 + 16:9 format selector, sub-line auto-wrap, path-confinement + upload
+hardening (all project-supplied image paths are confined to `media/`, absolute/traversal paths
+rejected, 32MB upload cap + magic-byte sniff), missing-image abort instead of black frames,
+one-click `LEEBKIT-setup.bat`, and this README's benchmark block. Project JSON image paths
+are relative to `media/` from v1.2 on (e.g. `"uploads/x.png"`).
 License: AGPL-3.0-only (code) — presets and commercial content packs stay proprietary to LEEBLAAB.
 
 ---
@@ -45,8 +46,8 @@ same project JSON you'd get from `samples/promo_v12.json`:
 
 ## What it does
 
-- **9:16 only** — 1080×1920 @30fps (1:1 / 16:9 planned for a later v1.x — decision pending
-  real-user feedback on which ratio matters first).
+- **Three formats** — 9:16 (1080×1920), 1:1 (1080×1080) and 16:9 (1920×1080) @30fps, chosen
+  per project in the UI; layouts are preset-driven (`core/layout.py`).
 - **Upload up to 10 images** — drag-drop or file picker; reorder shots by dragging cards.
 - **Shot planner** — one card per shot: image, on-screen caption lines, spoken VO line,
   duration chips (4s / 4.8s / 6s…), transition-in style, camera-move style. Durations
@@ -72,6 +73,9 @@ same project JSON you'd get from `samples/promo_v12.json`:
 - **CLI renderer** — `render_cli.py` runs the same engine headless, with parallel frame
   jobs (`--jobs N`) and `--draft` / `--no-audio` modes.
 - **Incremental render** — unchanged shots are not re-rendered.
+- **Path confinement + input hardening** — project-supplied image paths can never escape
+  `media/` (absolute and `..` paths rejected); uploads capped at 32MB with magic-byte sniff;
+  a missing shot image aborts the render with a clear error instead of black frames.
 - **Projects are files** — one human-readable JSON per promo in `projects/` (`"schema": 1`;
   old project files stay loadable forever). No database.
 
@@ -93,7 +97,8 @@ a template filler, not AI. Batch multi-project render and 2K/4K are future-tier 
 ## Quick start
 
 ```
-start.bat        # first run: creates .venv + installs requirements.txt, opens http://127.0.0.1:8735
+LEEBKIT-setup.bat   # one-click: checks Python, fetches portable ffmpeg if missing, launches the app
+start.bat           # or straight to the app: creates .venv + installs deps, opens http://127.0.0.1:8735
 ```
 
 `docs/QUICKSTART.md` walks a first video in under 5 minutes. CLI render without the browser:
@@ -128,11 +133,13 @@ If a feature conflicts with these pillars, cut the feature.
 ## Repo layout
 
 ```
+LEEBKIT-setup.bat    one-click installer: Python check + portable ffmpeg fetch, launches app
 start.bat            first-run venv + deps, opens http://127.0.0.1:8735
 setup_vo.bat         one-time Piper voice download (SHA256-verified)
 app.py               FastAPI: static UI + /api/* endpoints + websocket progress
 render_cli.py        headless renderer (parallel --jobs, ffmpeg encode, ffprobe gate)
 core/engine.py       frame compositor: Ken Burns, kinetic text, transitions, terminal bar
+core/layout.py       per-format layout tables (9:16 / 1:1 / 16:9)
 core/audio.py        Piper VO pipeline, procedural music, ducking, mux
 core/checks.py       pre-render red-flag checks (pixel-measured, not eyeballed)
 core/queue.py        background render queue with progress broadcast
