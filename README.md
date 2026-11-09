@@ -2,10 +2,12 @@
 
 **Kinetic promo videos. No cloud. No API. No subscription.**
 
-https://github.com/leeblaab/leebkit/releases/download/v1.0/demo.mp4
+![LEEBKIT 12s promo — looped preview (full voiced MP4 links below)](docs/leebkit_promo.gif)
 
-*(12s 9:16 promo rendered entirely by LEEBKIT — 4 stills, kinetic captions, Piper voiceover,
-procedural music bed. Made with the tool itself, on a laptop, in seconds.)*
+Full video with voiceover + music:
+https://github.com/leeblaab/leebkit/releases/download/v1.0/demo.mp4
+*(v1.2 release swaps this link for the new `promo_v12.mp4` — same project JSON in
+`samples/promo_v12.json`, reproducible with one command below.)*
 
 **Hardware floor: any machine that runs Python 3.11+/ffmpeg — no GPU, no cloud.** The whole
 pipeline is pure Pillow/numpy + ffmpeg; if Python and ffmpeg run, LEEBKIT renders.
