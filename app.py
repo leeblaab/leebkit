@@ -23,7 +23,7 @@ os.makedirs(PROJECTS_DIR, exist_ok=True)
 
 
 def _proj_engine(proj):
-    return Engine(proj, media_dir=ROOT)
+    return Engine(proj, media_dir=os.path.join(ROOT, "media"))
 
 
 # ------------------------------------------------------------------ meta APIs
@@ -49,6 +49,20 @@ def images():
     return {"images": sorted(out)}
 
 
+MAX_UPLOAD_BYTES = 32 * 1024 * 1024  # 32 MB cap (A2 hardening)
+
+
+def _sniff_image(head):
+    """Magic-byte check: png/jpeg/webp only, regardless of filename."""
+    if head.startswith(b"\x89PNG" + b"\x0d\x0a\x1a\x0a"):
+        return True
+    if head.startswith(b"\xff\xd8\xff"):
+        return True
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return True
+    return False
+
+
 @app.post("/api/upload")
 async def upload(file: UploadFile = File(...)):
     if not file.filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
@@ -60,8 +74,26 @@ async def upload(file: UploadFile = File(...)):
     while os.path.exists(dest):
         dest = os.path.join(UPLOAD_DIR, "%s_%d%s" % (base, n, ext))
         n += 1
-    with open(dest, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+    # stream with size cap + content sniffing: no oversized uploads, and the
+    # bytes must actually be a png/jpeg/webp image (A2 hardening)
+    head = await file.read(16)
+    if not _sniff_image(head):
+        raise HTTPException(400, "file contents are not a png/jpeg/webp image")
+    total = len(head)
+    with open(dest + ".part", "wb") as f:
+        f.write(head)
+        while True:
+            chunk = await file.read(1 << 20)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > MAX_UPLOAD_BYTES:
+                f.close()
+                os.remove(dest + ".part")
+                raise HTTPException(413, "image too large (max %d MB)"
+                                    % (MAX_UPLOAD_BYTES // (1024 * 1024)))
+            f.write(chunk)
+    os.replace(dest + ".part", dest)
     rel = os.path.relpath(dest, ROOT).replace("\\", "/")
     return {"path": rel, "url": "/" + rel}
 
@@ -177,7 +209,7 @@ def render(proj: dict):
         validate_project(proj)
     except ValueError as e:
         raise HTTPException(422, str(e))
-    j = QUEUE.submit(proj, media_dir=ROOT)
+    j = QUEUE.submit(proj, media_dir=os.path.join(ROOT, "media"))
     return {"job": j.snapshot()}
 
 

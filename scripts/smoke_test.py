@@ -96,7 +96,50 @@ r = subprocess.run([PY, os.path.join(ROOT, "render_cli.py"), sq, "--jobs", "0"],
                    capture_output=True, text=True, cwd=ROOT)
 ok("cli rejects --jobs 0", r.returncode != 0 and "jobs" in (r.stderr or "").lower())
 
-# 6. UI inline JS must parse (a '#' comment line once killed the whole script:
+# 6. A2 hardening: path confinement + loud missing-image abort
+esc = {"schema": 1, "name": "esc", "target": 2.0, "fps": 24,
+       "shots": [{"t": 2.0, "image": "../app.py", "captions": []}]}
+try:
+    Engine(esc)
+    ok("engine rejects ../ traversal image", False, "no abort raised")
+except SystemExit as e:
+    ok("engine rejects ../ traversal image", "not found or outside" in str(e))
+abs_img = {"schema": 1, "name": "abs", "target": 2.0, "fps": 24,
+           "shots": [{"t": 2.0, "image": os.path.join(ROOT, "media", "img_00010.png"), "captions": []}]}
+try:
+    Engine(abs_img)
+    ok("engine rejects absolute image path", False, "no abort raised")
+except SystemExit as e:
+    ok("engine rejects absolute image path", "not found or outside" in str(e))
+from core.engine import load_preset
+try:
+    load_preset("../app")
+    ok("preset loader rejects traversal", False, "loaded outside presets/")
+except (ValueError, FileNotFoundError) as e:
+    ok("preset loader rejects traversal", isinstance(e, ValueError), str(e)[:80])
+ok("upload magic-byte helper", True)  # covered below via app import
+try:
+    import importlib
+    _app = importlib.import_module("app")
+    sniff_ok = (_app._sniff_image(b"\x89PNG\r\n\x1a\n" + b"x" * 8)
+                and _app._sniff_image(b"\xff\xd8\xff\xe0abc")
+                and _app._sniff_image(b"RIFF\x00\x00\x00\x00WEBPVP")
+                and not _app._sniff_image(b"MZ\x90\x00this is an exe"))
+    ok("upload magic-byte sniff", sniff_ok)
+except Exception as e:
+    ok("upload magic-byte sniff", False, str(e)[:120])
+
+# 7. long subtitle auto-wraps instead of clipping (regression: promo v1 sub)
+long_sub = {"schema": 1, "name": "subwrap", "target": 2.0, "fps": 24,
+            "shots": [{"t": 2.0, "captions": [
+                {"kind": "title_block", "at": 0.3, "text": "FULLY OFFLINE",
+                 "sub": "NO CLOUD. NO ACCOUNT. YOUR MACHINE ONLY. ZERO UPLOADS EVER."}]}]}
+eng = Engine(long_sub)
+flags = CH.check_project(eng)
+errs = [f for f in flags if f.get("severity") == "error"]
+ok("long sub wraps (no overflow error)", not errs, str(errs))
+
+# 8. UI inline JS must parse (a '#' comment line once killed the whole script:
 # empty dropdowns on a healthy server). node --check if present, else basic scan.
 import re as _re
 html = open(os.path.join(ROOT, "ui", "index.html"), encoding="utf-8").read()

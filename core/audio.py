@@ -77,13 +77,20 @@ def resample(data, sr_in, sr_out):
 
 def load_music_file(path):
     """Any mp3/wav via ffmpeg -> 48k mono float."""
-    tmp = path + ".tmp48k.wav"
+    import tempfile
+    fd, tmp = tempfile.mkstemp(suffix=".tmp48k.wav")
+    os.close(fd)
     r = subprocess.run(["ffmpeg", "-y", "-i", path, "-ar", str(SR_OUT), "-ac", "1", tmp],
                        capture_output=True, text=True)
-    if r.returncode != 0:
-        raise RuntimeError("cannot decode music file %s:\n%s" % (path, r.stderr[-800:]))
-    d, sr = read_wav_mono(tmp)
-    os.remove(tmp)
+    try:
+        if r.returncode != 0:
+            raise RuntimeError("cannot decode music file %s:\n%s" % (path, r.stderr[-800:]))
+        d, sr = read_wav_mono(tmp)
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
     return d
 
 

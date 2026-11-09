@@ -84,7 +84,7 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     out_mp4 = args.out or os.path.join(out_dir, "%s.mp4" % name)
     frames_dir = os.path.join(out_dir, "_frames_%s" % name)
-    media_dir = args.media or ROOT
+    media_dir = args.media or os.path.join(ROOT, "media")
 
     n = int(round(proj["target"] * proj.get("fps", 30)))
     print("rendering %d frames (%d jobs)..." % (n, args.jobs), flush=True)

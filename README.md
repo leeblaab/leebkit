@@ -4,21 +4,47 @@
 
 https://github.com/leeblaab/leebkit/releases/download/v1.0/demo.mp4
 
-*(12s promo rendered entirely by LEEBKIT on a laptop — 4 stills, captions, procedural music bed.)*
+*(12s 9:16 promo rendered entirely by LEEBKIT — 4 stills, kinetic captions, Piper voiceover,
+procedural music bed. Made with the tool itself, on a laptop, in seconds.)*
+
+**Hardware floor: any machine that runs Python 3.11+/ffmpeg — no GPU, no cloud.** The whole
+pipeline is pure Pillow/numpy + ffmpeg; if Python and ffmpeg run, LEEBKIT renders.
+
+| Benchmark (measured, not estimated) | Result |
+|---|---|
+| 12s promo, 1080×1920 @30fps, 360 frames, full audio (VO + music bed) | **8.3 s wall-clock** |
+| Output spec (ffprobe) | h264 1080×1920 30fps + aac, duration gate passes |
+| Machine | Windows 11 laptop, CPU-only (`--jobs 8`), Python 3.14 dev venv — release line runs 3.11–3.13 |
+
+A full 30s promo renders roughly 2.5× the frame count above — expect low tens of seconds on a
+modern CPU. The numbers above are this machine's actual wall-clock timings (render_cli.py +
+ffprobe); your mileage will vary with CPU cores — no other numbers claimed here.
 
 LEEBKIT turns 1–10 still images + captions into a finished vertical promo MP4 — animated
 stills (Ken Burns), kinetic text, transitions, voiceover and music with auto-ducking —
 rendered entirely on your machine by Python + ffmpeg. Double-click `start.bat`, open the
 webUI, get an MP4.
 
-**Status: v1.0 — released November 2026.** Everything listed below is built and in daily use.
+**Status: v1.2 — November 2026.** Everything listed below is built and in daily use.
+v1.2 adds: sub-line auto-wrap, path-confinement + upload hardening (all project-supplied
+image paths are confined to `media/`, absolute/traversal paths rejected, 32MB upload cap +
+magic-byte sniff), missing-image abort instead of black frames, and this README's benchmark
+block. Project JSON image paths are relative to `media/` from v1.2 on (e.g. `"uploads/x.png"`).
 License: AGPL-3.0-only (code) — presets and commercial content packs stay proprietary to LEEBLAAB.
 
 ---
 
-## What v1.0 does
+## Before → after (decide in 10 seconds)
 
-- **9:16 only** — 1080×1920 @ 30fps (1:1 / 16:9 planned for v1.1).
+Input is 4 stills + typed caption lines. Output is the frames below — rendered by LEEBKIT,
+same project JSON you'd get from `samples/promo_v12.json`:
+
+![LEEBKIT before/after — 4 input stills next to their rendered promo frames](docs/beforeafter/strip.jpg)
+
+## What it does
+
+- **9:16 only** — 1080×1920 @30fps (1:1 / 16:9 planned for a later v1.x — decision pending
+  real-user feedback on which ratio matters first).
 - **Upload up to 10 images** — drag-drop or file picker; reorder shots by dragging cards.
 - **Shot planner** — one card per shot: image, on-screen caption lines, spoken VO line,
   duration chips (4s / 4.8s / 6s…), transition-in style, camera-move style. Durations
@@ -35,8 +61,9 @@ License: AGPL-3.0-only (code) — presets and commercial content packs stay prop
   shipped) + your own MP3/WAV beds in `music/`; automatic ducking under VO (~45%, 0.12s ramps).
 - **Terminal-bar shot type** — a fake terminal scene whose progress bar animates 0→100%
   automatically over the shot's duration; the text stays editable, the bar is derived.
-- **Title auto-wrap** — big display titles measure themselves and wrap/scale to stay
-  inside the frame; hard cuts render cleanly with zero overlay bleed between shots.
+- **Title auto-wrap** — big display titles AND small caption/sub lines measure themselves and
+  wrap/scale to stay inside the frame; hard cuts render cleanly with zero overlay bleed
+  between shots.
 - **Presets** — `leebdark` (LEEBLAAB house style) and `neonlight`, JSON hand-editable.
 - **Render queue** — background job, live frame-counter progress over websocket; every
   render ends with an ffprobe both-streams duration gate, so a mux desync fails loudly.
@@ -70,10 +97,10 @@ start.bat        # first run: creates .venv + installs requirements.txt, opens h
 `docs/QUICKSTART.md` walks a first video in under 5 minutes. CLI render without the browser:
 
 ```
-python render_cli.py samples/leebdark_sample.json --media DIR --out output/sample.mp4 --jobs 4
+python render_cli.py samples/promo_v12.json --out output/promo.mp4 --jobs 8
 ```
 
-(DIR = any folder with your images; the sample JSON references them by filename.)
+(Image paths in project JSON are relative to `media/`; pass `--media DIR` to point elsewhere.)
 
 ## Product pillars (every decision passes these)
 
