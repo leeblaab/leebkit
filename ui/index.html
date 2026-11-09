@@ -166,8 +166,8 @@ let META={presets:[],music:[],voices:[]};
 const PRESET_SHORT={leebdark:'LEEBLAAB house style'};  // keep dropdown rows short
 let P={schema:1,name:'my_promo',size:'1080x1920',fps:30,target:30,preset:'leebdark',music:{bed:'synthwave'},voice:'none',vo_lines:[],shots:[]};
 
-# toast: one-shot (done/error fire ONCE per job id; polling re-applies the
-# same terminal job every 800ms and used to reset the hide timer forever)
+// toast: one-shot (done/error fire ONCE per job id; polling re-applies the
+// same terminal job every 800ms and used to reset the hide timer forever)
 const _toastSeen=new Set();
 const toast=(m,onceKey)=>{if(onceKey){if(_toastSeen.has(onceKey))return;_toastSeen.add(onceKey);}
  const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',5000)};
