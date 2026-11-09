@@ -1,10 +1,12 @@
 """LEEBKIT job queue — single background renderer with websocket-friendly progress.
 
-One job at a time (simple). Progress = frames rendered / total, exposed via
+One job at a time (simple): submissions go to a FIFO and one worker thread
+renders them in order. Progress = frames rendered / total, exposed via
 get_jobs() polling or pushed to websocket clients by app.py.
 """
 import json
 import os
+import queue as _queue
 import shutil
 import subprocess
 import threading
@@ -51,14 +53,25 @@ class Queue:
         self.jobs = []
         self.current = None
         self._lock = threading.Lock()
+        self._pending = _queue.Queue()
+        self._worker = threading.Thread(target=self._worker_loop, daemon=True)
+        self._worker.start()
 
     def submit(self, proj, media_dir=None):
         with self._lock:
             j = Job(proj, media_dir or ROOT)
             self.jobs.append(j)
-            t = threading.Thread(target=self._run, args=(j,), daemon=True)
-            t.start()
-            return j
+        self._pending.put(j)
+        return j
+
+    def _worker_loop(self):
+        while True:
+            j = self._pending.get()
+            self.current = j
+            try:
+                self._run(j)
+            finally:
+                self.current = None
 
     def _run(self, j):
         try:

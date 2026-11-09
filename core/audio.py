@@ -420,15 +420,15 @@ def ffprobe_streams(path):
     return json.loads(r.stdout)["streams"]
 
 
-def verify_durations(path, expected):
-    """Hard gate: video AND audio streams both within 0.15s of expected."""
+def verify_durations(path, expected, expect_audio=True):
+    """Hard gate: video (and audio when present/expected) within 0.15s of expected."""
     st = ffprobe_streams(path)
     vd = next((float(s["duration"]) for s in st if s["codec_type"] == "video"), None)
     ad = next((float(s["duration"]) for s in st if s["codec_type"] == "audio"), None)
     problems = []
     if vd is None or abs(vd - expected) > 0.15:
         problems.append("video duration %s != %.2f" % (vd, expected))
-    if ad is None or abs(ad - expected) > 0.15:
+    if expect_audio and (ad is None or abs(ad - expected) > 0.15):
         problems.append("audio duration %s != %.2f" % (ad, expected))
     if problems:
         raise RuntimeError("A/V verification FAILED for %s: %s" % (path, "; ".join(problems)))
