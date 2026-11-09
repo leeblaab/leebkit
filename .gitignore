@@ -16,3 +16,6 @@ _fixcheck.json
 projects/*.json
 !samples/
 scratch/
+
+# portable ffmpeg downloaded by LEEBKIT-setup.bat
+tools/
