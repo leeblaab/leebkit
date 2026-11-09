@@ -1,7 +1,8 @@
 # LEEBKIT Quickstart
 
 ## Run it
-Double-click `start.bat` (first run creates a venv and installs deps), or:
+Double-click `LEEBKIT-setup.bat` (one-click: checks Python, fetches portable ffmpeg if
+missing, then launches), or `start.bat` directly (first run creates a venv and installs deps), or:
 
     python -m venv .venv
     .venv\Scripts\python -m pip install -r requirements.txt
