@@ -4,10 +4,10 @@
 
 ![LEEBKIT 12s promo — looped preview (full voiced MP4 links below)](docs/leebkit_promo.gif)
 
-Full video with voiceover + music:
-https://github.com/leeblaab/leebkit/releases/download/v1.0/demo.mp4
-*(v1.2 release swaps this link for the new `promo_v12.mp4` — same project JSON in
-`samples/promo_v12.json`, reproducible with one command below.)*
+Full 12s video with voiceover + music (from the v1.2 release):
+https://github.com/leeblaab/leebkit/releases/download/v1.2/promo_v12.mp4
+*Same project JSON ships in `samples/promo_v12.json` (its 4 stills in
+`samples/media/`), reproducible with one command below.*
 
 **Hardware floor: any machine that runs Python 3.11+/ffmpeg — no GPU, no cloud.** The whole
 pipeline is pure Pillow/numpy + ffmpeg; if Python and ffmpeg run, LEEBKIT renders.
@@ -104,7 +104,7 @@ start.bat           # or straight to the app: creates .venv + installs deps, ope
 `docs/QUICKSTART.md` walks a first video in under 5 minutes. CLI render without the browser:
 
 ```
-python render_cli.py samples/promo_v12.json --out output/promo.mp4 --jobs 8
+python render_cli.py samples/promo_v12.json --media samples/media --out output/promo.mp4 --jobs 8
 ```
 
 (Image paths in project JSON are relative to `media/`; pass `--media DIR` to point elsewhere.)
