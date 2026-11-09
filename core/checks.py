@@ -24,7 +24,7 @@ def check_project(engine):
     """Returns list of flags: {shot, kind, message, severity}."""
     flags = []
     W = engine.W
-    safe_w = W - 100 - 60          # panel margins (50 each side) + inner pad
+    safe_w = engine.L["safe_w"]   # aspect-aware (core/layout.py)
     starts = engine.starts
 
     for i, s in enumerate(engine.shots):
@@ -49,48 +49,50 @@ def check_project(engine):
                     flags.append({"shot": i, "kind": "overflow", "severity": "error",
                                   "message": "shot %d %s: '%s' measures %.0fpx > safe %.0fpx"
                                              % (i, label or k, txt[:38], w, limit)})
+            LIM = engine.L   # aspect-aware safe widths (core/layout.py)
             if k in ("panel_top", "panel_mid"):
                 # measure the WRAPPED result: the engine auto-wraps long lines
-                # to W-160, so only genuinely unbreakable input (one monster
-                # word) should ever flag overflow here
+                # to its safe width, so only genuinely unbreakable input (one
+                # monster word) should ever flag overflow here
                 for wl in engine.fit_panel_lines(ImageDraw.Draw(Image.new("RGB", (W, 8))),
                                                  L["lines"], engine.H1):
-                    over(wl, engine.H1)
+                    over(wl, engine.H1, limit=LIM["panel_text_limit"])
             elif k == "title_block":
                 # wrap-aware measured check: flag each line that STILL overflows
                 lines, tsize, trk = engine.fit_title(
                     ImageDraw.Draw(Image.new("RGB", (W, 8))), L.get("text", ""),
-                    engine.preset["sizes"]["logo"], W - 80)
-                f_t = engine.LOGO if tsize == engine.preset["sizes"]["logo"] else \
+                    engine.L["logo"], LIM["title_limit"])
+                f_t = engine.LOGO if tsize == engine.L["logo"] else \
                     engine._mkfont(engine.preset["fonts"]["display"], tsize)
                 for tl in lines:
                     over(tl, f_t, limit=W - trk * max(0, len(tl) - 1), label="title")
                 if L.get("sub"):
-                    over(L["sub"], engine.SMALL, limit=W - 80, label="subtitle")
+                    over(L["sub"], engine.SMALL, limit=LIM["title_limit"], label="subtitle")
             elif k in ("accent_word", "cta", "small", "handle", "big_number"):
                 if k == "small":
                     # engine wraps the note inside its chip, so only a single
                     # monster word can actually overflow
                     wl = max(L.get("text", "").split(" "),
                              key=lambda w: engine.SMALL.getlength(w), default="")
-                    over(wl, engine.SMALL, limit=W - 260)
+                    over(wl, engine.SMALL, limit=LIM["small_chip_limit"])
                 else:
-                    lim = W - 80 if k != "cta" else W - 140
+                    lim = {"cta": LIM["cta_limit"], "big_number": W - 80}.get(k, W - 80)
                     over(L.get("text", ""), engine.H1 if k == "accent_word" else
                          (engine.BODY if k in ("cta", "handle") else engine.SMALL), limit=lim)
             elif k == "cap_lines":
                 for wl in engine.fit_panel_lines(ImageDraw.Draw(Image.new("RGB", (W, 8))),
                                                  L["lines"], engine.BODY):
-                    over(wl, engine.BODY)
+                    over(wl, engine.BODY, limit=LIM["panel_text_limit"])
             elif k == "chips":
-                widths = [engine.MONOS.getlength(c) + 60 for c in L["items"]]
-                total = sum(widths) + 26 * (len(L["items"]) - 1)
-                if total > W - 80:
+                widths = [engine.MONOS.getlength(c) + engine.L["chip_extra_w"] for c in L["items"]]
+                total = sum(widths) + engine.L["chip_gap"] * (len(L["items"]) - 1)
+                if total > LIM["chips_total_limit"]:
                     flags.append({"shot": i, "kind": "overflow", "severity": "error",
-                                  "message": "shot %d chips row %.0fpx > safe %.0fpx" % (i, total, W - 80)})
+                                  "message": "shot %d chips row %.0fpx > safe %.0fpx"
+                                             % (i, total, LIM["chips_total_limit"])})
             elif k == "terminal":
                 for rline in L.get("rows", []):
-                    if rline.strip() and engine.MONO.getlength(rline) > W - 200:
+                    if rline.strip() and engine.MONO.getlength(rline) > LIM["term_line_limit"]:
                         flags.append({"shot": i, "kind": "overflow", "severity": "warn",
                                       "message": "shot %d terminal line '%s' clips (engine truncates it)"
                                                  % (i, rline[:38])})
