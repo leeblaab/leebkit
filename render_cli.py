@@ -71,10 +71,14 @@ def main():
     ap.add_argument("--draft", action="store_true", help="fast encode (preset veryfast crf 23)")
     ap.add_argument("--jobs", type=int, default=max(1, min(8, os.cpu_count() or 1)))
     args = ap.parse_args()
+    if args.jobs < 1:
+        ap.error("--jobs must be >= 1 (got %d)" % args.jobs)
 
     proj_path = os.path.abspath(args.project)
     with open(proj_path, "r", encoding="utf-8") as f:
         proj = json.load(f)
+    from core.engine import validate_project
+    validate_project(proj)
     name = proj.get("name", os.path.splitext(os.path.basename(proj_path))[0])
     out_dir = os.path.join(ROOT, "output")
     os.makedirs(out_dir, exist_ok=True)
@@ -102,7 +106,8 @@ def main():
         if r.returncode != 0:
             raise RuntimeError("mux failed:\n" + r.stderr[-2000:])
         os.replace(tmp, out_mp4)
-        A.verify_durations(out_mp4, proj["target"])
+    from core import audio as A
+    A.verify_durations(out_mp4, proj["target"], expect_audio=not args.no_audio)
 
     # cleanup scratch frames
     import shutil
