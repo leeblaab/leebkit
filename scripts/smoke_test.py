@@ -96,5 +96,21 @@ r = subprocess.run([PY, os.path.join(ROOT, "render_cli.py"), sq, "--jobs", "0"],
                    capture_output=True, text=True, cwd=ROOT)
 ok("cli rejects --jobs 0", r.returncode != 0 and "jobs" in (r.stderr or "").lower())
 
+# 6. UI inline JS must parse (a '#' comment line once killed the whole script:
+# empty dropdowns on a healthy server). node --check if present, else basic scan.
+import re as _re
+html = open(os.path.join(ROOT, "ui", "index.html"), encoding="utf-8").read()
+scripts = [m.group(1) for m in _re.finditer(r"<script>(.*?)</script>", html, _re.S)]
+jsblob = "\n".join(scripts)
+bad_lines = [i + 1 for i, ln in enumerate(jsblob.splitlines()) if ln.lstrip().startswith("#")]
+ok("ui js no # comments", not bad_lines, "lines %s" % bad_lines if bad_lines else "")
+try:
+    tmpjs = os.path.join(TMP, "ui_inline.js")
+    open(tmpjs, "w", encoding="utf-8").write(jsblob)
+    nr = subprocess.run(["node", "--check", tmpjs], capture_output=True, text=True)
+    ok("ui js parses (node)", nr.returncode == 0, (nr.stderr or "")[-300:])
+except FileNotFoundError:
+    print("SKIP node --check (node not installed)")
+
 print(("SMOKE PASS (%d checks)" % (0 if fails else 0)) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)
