@@ -17,10 +17,14 @@ import math
 import os
 import random
 
-import numpy as np
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
-
-from .layout import build_layout, clamp_font_sizes
+import numpy as np
+
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+
+
+from .layout import build_layout, clamp_font_sizes
+
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "assets")
@@ -63,7 +67,12 @@ def load_preset(name):
     if not name.endswith(".json"):
         name += ".json"
     path = name if os.path.isabs(name) else os.path.join(ROOT, "presets", name)
-    with open(path, "r", encoding="utf-8") as f:
+    pdir = os.path.realpath(os.path.join(ROOT, "presets"))
+    rp = os.path.realpath(path)
+    if not (rp == pdir or rp.startswith(pdir + os.sep)):
+        # confinement: preset ids may never traverse outside the presets dir (A2)
+        raise ValueError("preset must live in the presets/ directory: %r" % name)
+    with open(rp, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -100,7 +109,7 @@ class Engine:
     def __init__(self, proj, preset=None, media_dir=None):
         self.proj = validate_project(dict(proj))
         self.preset = preset or load_preset(self.proj.get("preset", "leebdark.json"))
-        self.media_dir = media_dir or ROOT
+        self.media_dir = media_dir or os.path.join(ROOT, "media")
         self.W = int(self.proj.get("width", 1080))
         self.H = int(self.proj.get("height", 1920))
         self.FPS = int(self.proj.get("fps", 30))
@@ -138,6 +147,7 @@ class Engine:
             return f
 
         self._mkfont = mk   # used later (title shrink-to-fit) outside __init__ scope
+        self.SIZES = S      # preset pixel sizes dict (used by wrap layout math)
         FD = P["fonts"]
         self.LOGO = mk(FD["display"], S["logo"])
         self.H1 = mk(FD["display"], S["h1"])
@@ -167,20 +177,44 @@ class Engine:
         self.BW, self.BH = int(self.W * self.OVER), int(self.H * self.OVER)
         self.bases = {}
         self.available_images = self._scan_images()
+        self.bad_images = []
         for s in self.shots:
             f = s.get("image")
             if f and f not in self.bases:
                 p = self._media_path(f)
+                if p is None:
+                    # path escapes media_dir (traversal/absolute) — loud, not silent
+                    self.bad_images.append(f)
+                    continue
                 if os.path.exists(p):
                     self.bases[f] = self._load_base(p)
+                else:
+                    self.bad_images.append(f)
+        if self.bad_images and any(s.get("image") for s in self.shots):
+            raise SystemExit("[LEEBKIT] ERROR: shot image(s) not found or outside media "
+                             "dir (render aborted, no black frames): %s"
+                             % ", ".join(sorted(set(self.bad_images))))
 
         self._grid = None
         self._collage = None
         self._grad_cache = {}
 
     # ------------------------------------------------------------------ media
+    def _within(self, base, path):
+        """True if path resolves inside base (containment for path inputs)."""
+        b = os.path.realpath(base)
+        p = os.path.realpath(path)
+        return p == b or p.startswith(b + os.sep)
+
     def _media_path(self, fname):
-        return fname if os.path.isabs(fname) else os.path.join(self.media_dir, fname)
+        # confinement: project-supplied paths may never escape media_dir —
+        # relative traversal (..) and absolute paths are rejected (A2 hardening)
+        if os.path.isabs(fname):
+            return None
+        cand = os.path.join(self.media_dir, fname)
+        if not self._within(self.media_dir, cand):
+            return None
+        return cand
 
     def _scan_images(self):
         d = self.media_dir
@@ -208,6 +242,8 @@ class Engine:
         others = []
         for rel in self.available_images:
             p = self._media_path(rel)
+            if p is None:
+                continue
             if p not in [self._media_path(u) for u in used] and rel not in self.bases:
                 others.append(p)
             if len(pool) + len(others) >= 12:
@@ -320,13 +356,13 @@ class Engine:
             lines.append(cur)
         return lines, size, trk
 
-    def wrap_words(self, dr, words, fnt, limit):
+    def wrap_words(self, dr, words, fnt, limit, tracking=0):
         """Greedy word-wrap: group `words` so each line measures <= limit px.
         A single over-long word stays on its own line (checks.py flags it)."""
         lines, cur = [], []
         for wd in words:
             cand = " ".join(cur + [wd])
-            if not cur or dr.textlength(cand, font=fnt) <= limit:
+            if not cur or self._measure_tracked(dr, cand, fnt, tracking) <= limit:
                 cur.append(wd)
             else:
                 lines.append(" ".join(cur))
@@ -343,6 +379,12 @@ class Engine:
         for l in lines:
             out.extend(self.wrap_words(dr, l.split(" "), fnt, limit))
         return out
+
+    def fit_small_lines(self, dr, text, fnt, tracking):
+        """Wrap a tracked small/sub line to the safe text width minus plate
+        padding so an over-long sub can never clip at the frame edge."""
+        limit = self.W - 160 - 2 * self.L["sub_pad"]
+        return self.wrap_words(dr, text.split(" "), fnt, limit, tracking=tracking)
 
     def draw_title_lines(self, dr, y_center, lines, fnt, fill, tracking, line_h):
         ys = [y_center - (len(lines) - 1) * line_h / 2 + j * line_h for j in range(len(lines))]
@@ -492,16 +534,22 @@ class Engine:
                              fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
                 sub = L.get("sub", "")
                 if sub:
-                    # translucent dark plate behind the sub so it stays readable
-                    # even when it lands on bright artwork (white coats, etc.)
+                    # auto-wrap long subs to the safe text width so a single
+                    # over-long line can never clip at the frame edge, then
+                    # translucent dark plate(s) behind each wrapped line
+                    sub_lines = self.fit_small_lines(dr, sub, self.SMALL, TRK.get("sub", 0))
                     sy = ul_y + int(tsize * 0.42) + LY["sub_gap"] - slide
-                    sw = self._measure_tracked(dr, sub, self.SMALL, TRK.get("sub", 0))
                     pad = LY["sub_pad"]
-                    dr.rounded_rectangle(((W - sw) / 2 - pad, sy - pad,
-                                          (W + sw) / 2 + pad, sy + LY["small"] + pad),
-                                         radius=LY["sub_radius"], fill=(0, 0, 0, int(150 * min(1.0, prog * 1.3))))
-                    self.draw_center_text(dr, sy, sub, self.SMALL,
-                                          (DIMC[0], DIMC[1], DIMC[2], a), tracking=TRK.get("sub", 14))
+                    line_h_s = int(self.SIZES["small"] * 1.35)
+                    plate_a = int(150 * min(1.0, prog * 1.3))
+                    for li, sl in enumerate(sub_lines):
+                        ly_ = sy + li * line_h_s
+                        sw = self._measure_tracked(dr, sl, self.SMALL, TRK.get("sub", 0))
+                        dr.rounded_rectangle(((W - sw) / 2 - pad, ly_ - pad,
+                                              (W + sw) / 2 + pad, ly_ + LY["small"] + pad),
+                                             radius=LY["sub_radius"], fill=(0, 0, 0, plate_a))
+                        self.draw_center_text(dr, ly_, sl, self.SMALL,
+                                              (DIMC[0], DIMC[1], DIMC[2], a), tracking=TRK.get("sub", 14))
             elif k == "accent_word":
                 self.word_pop(dr, H * LY["accent_frac"] - slide, self.H1, L["text"], ACCENT, prog, tracking=2, alpha_cap=a_gate)
             elif k in ("panel_top", "panel_mid"):

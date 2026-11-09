@@ -67,7 +67,13 @@ def check_project(engine):
                 for tl in lines:
                     over(tl, f_t, limit=W - trk * max(0, len(tl) - 1), label="title")
                 if L.get("sub"):
-                    over(L["sub"], engine.SMALL, limit=LIM["title_limit"], label="subtitle")
+                    # wrap-aware: the engine auto-wraps subs (fit_small_lines),
+                    # so flag only lines that STILL overflow after wrapping
+                    sub_trk = getattr(engine, "TRK", {}).get("sub", 0)
+                    for sl in engine.fit_small_lines(
+                            ImageDraw.Draw(Image.new("RGB", (W, 8))),
+                            L["sub"], engine.SMALL, sub_trk):
+                        over(sl, engine.SMALL, limit=LIM["title_limit"], label="subtitle")
             elif k in ("accent_word", "cta", "small", "handle", "big_number"):
                 if k == "small":
                     # engine wraps the note inside its chip, so only a single
