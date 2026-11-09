@@ -10,6 +10,7 @@ vo/models/
 
 # user media + uploaded images (re-uploadable; keep samples/ only)
 media/
+!samples/media/
 _fixcheck.json
 
 # personal project save-files (may contain private VO text / upload paths)
