@@ -113,6 +113,8 @@ padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-ind
   <div class="panel">
     <h3>Project</h3>
     <div class="row"><label>Name</label><input id="pname" value="my_promo" style="flex:1;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px"></div>
+    <div class="row"><label>Format</label><select id="format"><option value="1080x1920">9:16 portrait (Reels / Shorts / TikTok)</option><option value="1080x1080">1:1 square (feed post)</option><option value="1920x1080">16:9 landscape (YouTube / web)</option></select></div>
+    <div class="totsub" id="formathint">9:16 is the native LEEBKIT look; square and landscape auto-adapt the layout.</div>
   <div class="row"><label>Preset</label><select id="preset"></select></div>
     <div class="row"><label>Voice</label><select id="voice"></select><button id="voiceprev" title="Audition this voice" style="padding:0 12px">&#9654;</button></div>
     <div class="row"><label>Music</label><select id="music"></select></div>
@@ -312,6 +314,9 @@ async function uploadFiles(files){
 
 // ---------- project config ----------
 $('#preset').onchange=e=>{P.preset=e.target.value};
+$('#format').onchange=e=>{P.size=e.target.value;const[w,h]=P.size.split('x').map(Number);P.width=w;P.height=h;
+  $('#formathint').textContent=P.height>P.width?'9:16 is the native LEEBKIT look; square and landscape auto-adapt the layout.':
+    'Layout, panels and fonts auto-scale for this canvas — check the storyboard strip after switching.'};
 $('#voice').onchange=e=>{P.voice=e.target.value;
   if(P.voice!=='none'&&!META.piper_ready)toast('Tip: pip install piper-tts — voice models found in vo/models/')}
 $('#music').onchange=e=>{P.music=/\.mp3$|\.wav$|\.ogg$/.test(e.target.value)?{file:e.target.value}:{bed:e.target.value}};
@@ -457,6 +462,9 @@ async function refreshOutputs(){const j=await api('/api/outputs');
   $('#outputs').innerHTML=j.outputs.length?j.outputs.map(o=>`<div class="outrow"><a href="${o.url}" target="_blank">${o.file}</a><span style="color:var(--dim)">${(o.size/1048576).toFixed(1)} MB</span></div>`).join(''):'<span class="noflags">none yet</span>'}
 
 boot().then(()=>{setTarget(P.target,true);fpsHint()});renderShots();connectWS();
+// hydrate Project rail from P (saved projects may carry a non-default format)
+$('#format').value=P.size in {'1080x1920':1,'1080x1080':1,'1920x1080':1}?P.size:'1080x1920';
+if(!('width'in P)){const[w,h]=String(P.size).split('x').map(Number);P.width=w;P.height=h;}
 </script>
 </body>
 </html>
