@@ -14,7 +14,7 @@ pipeline is pure Pillow/numpy + ffmpeg; if Python and ffmpeg run, LEEBKIT render
 
 | Benchmark (measured, not estimated) | Result |
 |---|---|
-| 12s promo, 1080×1920 @30fps, 360 frames, full audio (VO + music bed) | **8.3 s wall-clock** (headless `render_cli.py --jobs 8`; the web app renders one job at a time but each job now parallelizes its frames too) |
+| 12s promo, 1080×1920 @30fps, 360 frames, full audio (VO + music bed) | **~17 s wall-clock end-to-end** (headless `render_cli.py --jobs 8`, warm run; frame pipeline ~14 s of that. The web app renders one job at a time but each job parallelizes its frames too) |
 | Output spec (ffprobe) | h264 1080×1920 30fps + aac, duration gate passes |
 | Machine | Windows 11 laptop, CPU-only (`--jobs 8`), Python 3.14 dev venv — release line runs 3.11–3.13 |
 
