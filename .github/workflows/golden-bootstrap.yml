@@ -1,0 +1,38 @@
+name: golden bootstrap (one-time, manual)
+
+# Regenerates the per-OS golden baselines on the runner itself and uploads them
+# as an artifact — download it and commit the files. Needed once for
+# hashes-linux.json; re-run after any intentional pixel change lands (the
+# windows weekly gate refreshes hashes.json locally instead).
+on:
+  workflow_dispatch:
+
+jobs:
+  bootstrap:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ffmpeg (linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install ffmpeg (windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Write full-corpus baseline for this OS
+        run: python scripts/golden_frames.py --update
+      - name: Upload baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-baseline-${{ matrix.os }}
+          path: tests/golden/hashes*.json
