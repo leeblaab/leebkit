@@ -4,6 +4,8 @@ import json
 import os
 import shutil
 import asyncio
+import hashlib
+import io
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
@@ -33,7 +35,7 @@ def _prune_cache(d, keep=PREVIEW_MAX):
     Cheap (listdir+stat) and runs at most once per preview request."""
     try:
         names = [f for f in os.listdir(d)
-                 if f.startswith(("strip_", "anim_", "vo_", "music_"))]
+                 if f.startswith(("strip_", "anim_", "vo_", "music_", "style_"))]
     except OSError:
         return
     if len(names) <= keep:
@@ -204,6 +206,62 @@ def _anim_preview_sync(proj: dict):
     if not os.path.exists(out_png):
         eng.render_layer(0, peek, 7).save(out_png)
     return {"img": "/output/_previews/anim_%s.png" % h}
+
+
+# ------------------------------------------------- style previews (v1.3 F slot)
+_STYLE_SAMPLE = os.path.join(ROOT, "samples", "promo_v12.json")
+STYLEPREV_DIR = os.path.join(ROOT, "output", "_styleprev")
+
+
+def _style_preview_sync(preset: str):
+    """One animated WebP per preset: three boundary frames of the sample promo
+    rendered at HALF resolution THROUGH build_layout (a real 540x960 Engine —
+    layout math identical to full res, never downscale-after-render). Frames:
+    settled title beat, wipe-in mid-transition, settled panel beat. Animated
+    webp, NOT gif: the 256-color palette bands cyan-on-black gradients.
+
+    In-process off the event loop (to_thread), like every other preview route:
+    a bounded mp sub-job is deliberately skipped — with one queue worker it
+    would only delay real renders for a 3-frame job. Out of golden-hash scope
+    by design (docs/v1.3_plan.md): builds its own half-res Engines, never
+    touches the render pipeline."""
+    try:
+        P = load_preset(preset)   # confined to presets/ by load_preset
+    except Exception as e:
+        raise HTTPException(404, "unknown preset: %s" % e)
+    proj = json.load(open(_STYLE_SAMPLE, encoding="utf-8"))
+    proj["width"], proj["height"] = 540, 960
+    try:
+        eng = Engine(proj, preset=P, media_dir=os.path.join(ROOT, "samples", "media"))
+    except Exception as e:
+        raise HTTPException(422, str(e))
+    # boundary picks (fps 30; shot starts 0/90/180/270, XF=0.5s): f45 settled
+    # title beat in shot0; f135 mid wipe_left INTO shot2 (both title blocks +
+    # chips visible); f330 settled CTA beat in shot3 (accent word + URL pill).
+    # NOTE: early lt values inside a transition window draw NO text (outgoing
+    # layer is frozen-fading, incoming captions wait for their own `at`) —
+    # pick settled or mid-window frames where overlays are actually on screen.
+    picks = (45, 135, 330)
+    frames = [eng.compose_frame(i) for i in picks]
+    # frame indices are part of the key so changing picks busts the cache
+    h = hashlib.sha256(json.dumps([preset, proj["shots"], list(picks)], sort_keys=True).encode()).hexdigest()[:12]
+    os.makedirs(STYLEPREV_DIR, exist_ok=True)
+    _prune_cache(STYLEPREV_DIR)
+    out_path = os.path.join(STYLEPREV_DIR, "style_%s.webp" % h)
+    if not os.path.exists(out_path):
+        buf = io.BytesIO()
+        frames[0].save(buf, format="WEBP", save_all=True,
+                       append_images=frames[1:], duration=[900, 500, 1400],
+                       loop=0, quality=82)
+        with open(out_path, "wb") as f:
+            f.write(buf.getvalue())
+    return {"url": "/output/_styleprev/style_%s.webp" % h,
+            "frames": [45, 135, 300], "size": "540x960"}
+
+
+@app.get("/api/style_preview/{preset}")
+async def style_preview(preset: str):
+    return await asyncio.to_thread(_style_preview_sync, preset)
 
 
 @app.post("/api/vo_preview")
