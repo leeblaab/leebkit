@@ -388,10 +388,14 @@ def outputs():
     out = []
     od = os.path.join(ROOT, "output")
     ignored = _ignored_outputs(od)
-    for f in sorted(os.listdir(od), reverse=True):
-        if f.endswith(".mp4") and f not in ignored:
-            out.append({"file": f, "url": "/output/" + f,
-                        "size": os.path.getsize(os.path.join(od, f))})
+    files = [f for f in os.listdir(od)
+             if f.endswith(".mp4") and f not in ignored]
+    # newest FIRST by modification time — the old reverse-alphabetical sort
+    # buried fresh renders under older files (user: "the new video is never on top")
+    files.sort(key=lambda f: os.path.getmtime(os.path.join(od, f)), reverse=True)
+    for f in files:
+        out.append({"file": f, "url": "/output/" + f,
+                    "size": os.path.getsize(os.path.join(od, f))})
     return {"outputs": out}
 
 

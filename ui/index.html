@@ -107,6 +107,7 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
   <div class="brand-sub">by LEEBLAAB &middot; offline kinetic promos</div>
   <div class="spacer"></div>
   <button id="btn-save">Save project</button>
+  <select id="btn-load" title="Load a saved project" style="font-family:var(--mono);font-size:12px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><option value="">Load project…</option></select>
   <button id="btn-preview">Storyboard<span style="color:var(--acc)"> ⚑</span></button>
   <button id="btn-render" class="primary">Render MP4<kbd>Ctrl+Enter</kbd></button>
 </header>
@@ -172,7 +173,7 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
     <h3>Storyboard &amp; red flags</h3>
     <div id="flags"><span class="noflags">Run Storyboard to check layout, timing, slots &amp; VO.</span></div>
     <div id="stripwrap"></div>
-    <div id="prog"><div class="bar"><i id="barfill"></i></div><div class="pstate" id="pstate"></div></div>
+    <div id="prog"><div class="bar"><i id="barfill"></i></div><div class="pstate" id="pstate"></div><button id="btn-cancel-job" style="display:none;margin-top:6px;font-family:var(--mono);font-size:11px;padding:4px 10px;color:#ff6b6b">✕ cancel this render</button></div>
   </div>
 
   <div class="panel">
@@ -203,6 +204,7 @@ async function boot(){
   $('#music').innerHTML=META.music.map(m=>`<option value="${m.id}">${m.id}${m.procedural?' (procedural)':' (your file)'}</option>`).join('');
   $('#voice').innerHTML=META.voices.map(v=>`<option value="${v.id}" ${v.id===P.voice?'selected':''}>${v.label||v.id}</option>`).join('');
   refreshOutputs();
+  refreshProjects();
   // live-test bug #2: the gallery was only ever loaded from #preset.onchange,
   // so the ANIMATIONS pane stayed a text placeholder until the user touched
   // the preset dropdown. Load it at boot (endpoint returns instantly from
@@ -377,7 +379,10 @@ function setTarget(v,quiet){
 }
 function updateTotals(){
   const sum=P.shots.reduce((a,s)=>a+s.t,0);
-  $('#totals').innerHTML=`${sum.toFixed(1)}s <span>/</span> <span style="color:var(--dim)">${P.target.toFixed(1)}s</span>`;
+  // keep the <i id="target"> node alive: setTarget() (duration slider) writes to
+  // '#target' AFTER updateTotals runs, and a plain <span> here destroyed it —
+  // slider rescale silently threw and died (v1.3 load-project test found this)
+  $('#totals').innerHTML=`${sum.toFixed(1)}s <span>/</span> <i id="target" style="font-style:normal;color:var(--dim)">${P.target.toFixed(1)}s</i>`;
   $('#shotcount').textContent=P.shots.length+' shots'+(sum>P.target+1e-9?' — OVER TARGET':'');
 }
 $('#targetslider').oninput=e=>setTarget(e.target.value);
@@ -535,7 +540,39 @@ function syncVoLines(){
 }
 
 // ---------- save / preview / render ----------
-$('#btn-save').onclick=async()=>{syncVoLines();try{const j=await api('/api/project',P);toast('saved → projects/'+j.file)}catch(e){toast('save: '+e.message)}};
+$('#btn-save').onclick=async()=>{syncVoLines();try{const j=await api('/api/project',P);toast('saved → projects/'+j.file);refreshProjects()}catch(e){toast('save: '+e.message)}};
+
+// ---------- load project (v1.3 live test: save existed, load did not) ----------
+async function refreshProjects(){
+  try{const j=await api('/api/projects');
+    const sel=$('#btn-load'),cur=sel.value;
+    sel.innerHTML='<option value="">Load project…</option>'+j.projects.map(p=>`<option value="${esc(p.file)}">${esc(p.name||p.file)}</option>`).join('');
+    sel.value=cur;
+  }catch(e){}
+}
+function hydrateControls(){
+  const opt=(sel,v)=>{if([...sel.options].some(o=>o.value===String(v)))sel.value=String(v)};
+  opt($('#preset'),P.preset);
+  $('#format').value=P.size in {'1080x1920':1,'1080x1080':1,'1920x1080':1}?P.size:'1080x1920';
+  if(!('width'in P)){const[w,h]=String(P.size).split('x').map(Number);P.width=w;P.height=h;}
+  opt($('#fps'),P.fps||30);fpsHint();
+  opt($('#voice'),P.voice);
+  opt($('#music'),(P.music&&P.music.bed)||'none');
+  $('#targetslider').value=P.target;$('#targetval').textContent=P.target+'s';$('#target').textContent=(+P.target).toFixed(1)+'s';
+  renderShots();renderAnimList();updateTotals();loadGallery();
+}
+$('#btn-load').onchange=async e=>{
+  const f=e.target.value;if(!f)return;
+  try{
+    const proj=await api('/api/project/'+encodeURIComponent(f));
+    // mutate P in place: every handler closes over the global P by reference
+    Object.keys(P).forEach(k=>delete P[k]);Object.assign(P,proj);
+    if(!Array.isArray(P.shots))P.shots=[];
+    hydrateControls();
+    toast('loaded '+f);
+  }catch(err){toast('load: '+err.message)}
+  e.target.value='';
+};
 let _pvBusy=false;
 $('#btn-preview').onclick=async()=>{
   if(_pvBusy){toast('storyboard check already running…');return}
@@ -559,23 +596,41 @@ let ws=null,_wsDead=false;
 function connectWS(){
   if(_wsDead)return pollJobs();          // no websockets lib on the server — use polling
   try{ws=new WebSocket(`ws://${location.host}/ws/progress`)}catch(e){_wsDead=true;return pollJobs()}
-  ws.onmessage=e=>{applyJob(JSON.parse(e.data).jobs.slice(-1)[0])};
+  ws.onmessage=e=>{const l=JSON.parse(e.data).jobs;applyJob(curJobOf(l),l)};
   ws.onclose=()=>{_wsDead=true;pollJobs()};   // server without 'websockets' lib: fall back, don't retry forever
 }
 let _pollTimer=null;
 async function pollJobs(){
   clearTimeout(_pollTimer);
-  try{const j=await api('/api/jobs');applyJob(j.jobs[j.jobs.length-1])}catch(e){}
+  try{const j=await api('/api/jobs');applyJob(curJobOf(j.jobs),j.jobs)}catch(e){}
   _pollTimer=setTimeout(pollJobs,800);
 }
-function applyJob(j){
+function curJobOf(list){
+  if(!list||!list.length)return null;
+  // show the RUNNING job (not the most recently submitted one): a queued job
+  // behind it would freeze the bar at 0% and hide real progress
+  return list.find(x=>['frames','encode','audio','mux'].includes(x.state))||list[list.length-1];
+}
+let _curJob=null;
+function applyJob(j,list){
   if(!j)return;
   $('#prog').style.display='block';
   $('#barfill').style.width=j.pct+'%';
-  const label={queued:'queued — waiting',frames:'rendering frames',encode:'encoding video',audio:'building audio',mux:'muxing A/V',done:'done',error:'FAILED'}[j.state]||j.state;
-  $('#pstate').textContent=`${label} — ${j.frames_done}/${j.frames_total} frames (${j.pct}%)`+(j.error?' — '+j.error:'');
-  if(j.state==='done'||j.state==='error'){refreshOutputs();if(j.state==='done')toast('✓ render complete: '+j.out,'done:'+j.id);else toast('render failed — see progress bar','err:'+j.id)}
+  const label={queued:'queued — waiting',frames:'rendering frames',encode:'encoding video',audio:'building audio',mux:'muxing A/V',done:'done',error:'FAILED',canceled:'canceled'}[j.state]||j.state;
+  const active=(list||[]).filter(x=>['queued','frames','encode','audio','mux'].includes(x.state));
+  const waiting=active.filter(x=>x.state==='queued').length;
+  $('#pstate').textContent=`${label} — ${j.frames_done}/${j.frames_total} frames (${j.pct}%)`+(j.error?' — '+j.error:'')+(waiting?` — ${waiting} more in queue`:'');
+  _curJob=active.some(x=>x.id===j.id)?j.id:null;
+  const cb=$('#btn-cancel-job');
+  cb.style.display=_curJob?'inline-block':'none';cb.disabled=false;
+  if(j.state==='done'||j.state==='error'||j.state==='canceled'){refreshOutputs();if(j.state==='done')toast('✓ render complete: '+j.out,'done:'+j.id);else toast('render '+j.state,'err:'+j.id)}
 }
+$('#btn-cancel-job').onclick=async e=>{
+  if(!_curJob)return;
+  e.target.disabled=true;
+  try{await api('/api/job/'+_curJob+'/cancel',{});toast('cancel requested — stops at the current frame')}
+  catch(err){toast('cancel: '+err.message);e.target.disabled=false}
+};
 
 async function refreshOutputs(){const j=await api('/api/outputs');
   $('#outputs').innerHTML=j.outputs.length?j.outputs.map(o=>`<div class="outrow"><a href="${o.url}" target="_blank">${o.file}</a><span style="color:var(--dim)">${(o.size/1048576).toFixed(1)} MB</span></div>`).join(''):'<span class="noflags">none yet</span>'}
