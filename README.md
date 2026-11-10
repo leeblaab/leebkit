@@ -4,8 +4,8 @@
 
 ![LEEBKIT 12s promo — looped preview (full voiced MP4 links below)](docs/leebkit_promo.gif)
 
-Full 12s video with voiceover + music (from the v1.2 release):
-https://github.com/leeblaab/leebkit/releases/download/v1.2/promo_v12.mp4
+Full 12s video with voiceover + music (from the v1.3 release):
+https://github.com/leeblaab/leebkit/releases/download/v1.3/promo_v13.mp4
 *Same project JSON ships in `samples/promo_v12.json` (its 4 stills in
 `samples/media/`), reproducible with one command below.*
 
