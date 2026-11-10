@@ -224,6 +224,14 @@ class Engine:
         self._grid = None
         self._collage = None
         self._grad_cache = {}
+        # C3b: fit/wrap metrics cache keyed (shot_idx, caption_idx). The
+        # shrink/wrap loops in fit_title/fit_panel_lines are input-determined:
+        # the same (project JSON, size, preset) always yields the same result,
+        # so per-frame refits were pure repeated work. Engine instances are
+        # built fresh per project (queue/CLI rebuild on every job; UI edits
+        # rebuild via new submit), so the cache dies with the instance — no
+        # invalidation hook needed.
+        self._metrics_cache = {}
 
     # ------------------------------------------------------------------ media
     def _within(self, base, path):
@@ -349,7 +357,15 @@ class Engine:
 
     def fit_title(self, dr, txt, base_size, limit, tracking_scale=6 / 128):
         """Wrap title to <=limit px per line (word-first), shrink font only as a
-        last resort. Returns (lines, size, tracking)."""
+        last resort. Returns (lines, size, tracking).
+
+        C3b: results are cached per Engine on the exact args — they depend only
+        on the project text + fonts + layout numbers, never on time or draw
+        state, so the shrink loop runs once per caption instead of per frame."""
+        ck = ("title", txt, base_size, limit, tracking_scale)
+        hit = self._metrics_cache.get(ck)
+        if hit is not None:
+            return list(hit[0]), hit[1], hit[2]   # fresh list copy: callers mutate never, but keep the cache pristine
         words = txt.split()
         if not words:
             return [], base_size, 0
@@ -380,11 +396,23 @@ class Engine:
                     lines.append(cur)
                     cur = wd
             lines.append(cur)
-        return lines, size, trk
+        result = (lines, size, trk)
+        self._metrics_cache[ck] = result
+        return result
 
     def wrap_words(self, dr, words, fnt, limit, tracking=0):
         """Greedy word-wrap: group `words` so each line measures <= limit px.
-        A single over-long word stays on its own line (checks.py flags it)."""
+        A single over-long word stays on its own line (checks.py flags it).
+
+        C3b: cached per Engine — wrap output depends only on the words, font
+        size/name, limit and tracking (never time/draw state), so the cache key
+        uses the font's identity (name+size) instead of the transient Draw."""
+        ck = ("wrap", tuple(words), getattr(fnt, "path", id(fnt)),
+              fnt.size if isinstance(fnt.size, int) else tuple(fnt.size),
+              limit, tracking)
+        hit = self._metrics_cache.get(ck)
+        if hit is not None:
+            return hit
         lines, cur = [], []
         for wd in words:
             cand = " ".join(cur + [wd])
@@ -395,7 +423,8 @@ class Engine:
                 cur = [wd]
         if cur:
             lines.append(" ".join(cur))
-        return lines
+        self._metrics_cache[ck] = lines
+        return list(lines)   # copy: callers may mutate the returned list, never the cache
 
     def fit_panel_lines(self, dr, lines, fnt):
         """Wrap raw panel/cap lines to the text safe width (W-160) so long user
@@ -504,7 +533,7 @@ class Engine:
         LY = self.L
         TRK = self.TRK
 
-        for L in s.get("captions", []):
+        for ci, L in enumerate(s.get("captions", [])):
             k = L["kind"]
             at = float(L.get("at", 0.2))
             # panel_* kinds are the shot's message itself (fill=solid frames):
@@ -551,7 +580,8 @@ class Engine:
                 WHITE=WHITE, ACCENT=ACCENT, DIMC=DIMC,
                 lt=lt, at=at, g=g, shot_t=float(s["t"]),
                 prog=prog, a=a, slide=slide,
-                a_gate=a_gate, transition_out=transition_out)
+                a_gate=a_gate, transition_out=transition_out,
+                cap_idx=(i, ci))   # C3b: stable per-caption slot for fit/wrap caches
             _cf(self, dr, L, k, ctx, (clamp01, ease_o, ease_ow))
         # film grain (per-frame seeded; disabled in presets with grain_points=0)
         gp = int(P.get("grain_points", 90))
