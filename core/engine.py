@@ -506,6 +506,16 @@ class Engine:
         for L in s.get("captions", []):
             k = L["kind"]
             at = float(L.get("at", 0.2))
+            # panel_* kinds are the shot's message itself (fill=solid frames):
+            # run their clock 0.45s early so a black beat never holds with an
+            # empty card (Yasser's sheet9 QA: dead gaps before word-pop lines).
+            # MUST happen BEFORE prog/freeze: previously the shift was applied
+            # after prog was computed from unshifted at, which cancelled the
+            # early start inside transition windows (panel text froze near
+            # prog~0 and faded out unseen) and left entry timing on ordinary
+            # frames inconsistent with slide/gating (v1.3 C2).
+            if k in ("panel_top", "panel_mid"):
+                at -= 0.45
             prog = clamp01((lt - at) / 0.32)
             # outgoing-side kill switch: inside a transition window the incoming
             # layer runs its own early clock (OV) while this layer's lt keeps
@@ -521,14 +531,6 @@ class Engine:
                 a_gate = int(255 * fade)
             else:
                 a_gate = None
-            # panel_* kinds are the shot's message itself (fill=solid frames):
-            # run their clock 0.45s early so a black beat never holds with an
-            # empty card (Yasser's sheet9 QA: dead gaps before word-pop lines).
-            if k in ("panel_top", "panel_mid"):
-                at -= 0.45
-            if transition_out:
-                # re-apply the freeze to the shifted clock too
-                prog = min(prog, clamp01((float(s["t"]) - at) / 0.32))
             if cut_mode and lt < at:
                 continue
             if prog <= 0:
