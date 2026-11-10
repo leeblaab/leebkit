@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "name": "kinds_corpus",
+ "preset": "leebdark",
+ "target": 20.0,
+ "fps": 30,
+ "music": {"mode": "none"},
+ "shots": [
+  {"t": 2.0, "transition": "cut", "captions": [
+    {"kind": "title_block", "at": 0.2, "text": "GOLDEN TITLE", "sub": "SUBTITLE LINE"}]},
+  {"t": 2.0, "transition": "cut", "captions": [
+    {"kind": "accent_word", "at": 0.3, "text": "ACCELERATE"},
+    {"kind": "handle", "at": 1.0, "text": "@leeblaab"}]},
+  {"t": 2.0, "transition": "cut", "fill": "solid", "captions": [
+    {"kind": "panel_top", "at": 0.3, "lines": ["first panel line", "second panel line here"]}]},
+  {"t": 2.0, "transition": "cut", "fill": "solid", "captions": [
+    {"kind": "panel_mid", "at": 0.3, "lines": ["mid panel says stop.", "then the punch."]}]},
+  {"t": 2.0, "transition": "cut", "captions": [
+    {"kind": "small", "at": 0.3, "text": "a small note chip for golden"},
+    {"kind": "cta", "at": 0.8, "text": "GET IT FREE"}]},
+  {"t": 2.0, "transition": "cut", "captions": [
+    {"kind": "big_number", "at": 0.3, "text": "8.3s"},
+    {"kind": "cap_lines", "at": 0.6, "lines": ["one two three", "four five six"]}]},
+  {"t": 2.0, "transition": "cut", "captions": [
+    {"kind": "terminal", "at": 0.3, "rows": ["> PROMPT", "render the frame", "", "░░░ 0%"]}]},
+  {"t": 2.0, "transition": "cut", "captions": [
+    {"kind": "chips", "at": 0.3, "items": ["offline", "free", "agpl"]}]},
+  {"t": 2.0, "transition": "wipe_left", "captions": [
+    {"kind": "title_block", "at": 0.2, "text": "WIPE OUT"}]},
+  {"t": 2.0, "transition": "cut", "captions": [
+    {"kind": "accent_word", "at": 0.3, "text": "INCOMING"}]}
+ ]
+}
