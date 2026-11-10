@@ -203,6 +203,11 @@ async function boot(){
   $('#music').innerHTML=META.music.map(m=>`<option value="${m.id}">${m.id}${m.procedural?' (procedural)':' (your file)'}</option>`).join('');
   $('#voice').innerHTML=META.voices.map(v=>`<option value="${v.id}" ${v.id===P.voice?'selected':''}>${v.label||v.id}</option>`).join('');
   refreshOutputs();
+  // live-test bug #2: the gallery was only ever loaded from #preset.onchange,
+  // so the ANIMATIONS pane stayed a text placeholder until the user touched
+  // the preset dropdown. Load it at boot (endpoint returns instantly from
+  // cache and renders missing tiles in the background).
+  loadGallery();
 }
 
 // ---------- shots ----------
@@ -239,10 +244,14 @@ function capEditor(i,j){
 function renderShots(){
   renderAnimList();
   renderMotion();
+  // s.image is media-relative (upload returns "uploads/x.png"); the file
+  // mount is /media, and old saved projects may still carry a "media/"
+  // prefix — strip it so the thumb survives both. (live-test bug #1:
+  // src="/${s.image}" hit /uploads/... which is not mounted -> 404 broken img)
   $('#shots').innerHTML=P.shots.map((s,i)=>`
   <div class="card" draggable="true" data-i="${i}">
     <div class="grip">⠿<br><span style="font-size:11px">${String(i+1).padStart(2,'0')}</span></div>
-    <div class="thumbwrap"><img src="/${s.image}">
+    <div class="thumbwrap"><img src="/media/${String(s.image).replace(/^media\//,'')}">
       <div class="rm" data-rm="${i}" title="Remove this shot">×</div></div>
     <div class="fields">
       ${s.captions.length?`<label>Caption boxes (edit inline; add more from the Animations panel)</label>${s.captions.map((c,j)=>`<label style="margin-top:6px">${c.kind} #${j+1}</label>${capEditor(i,j)}`).join('')}`:`<label>Caption lines (top panel — quick start)</label>
@@ -449,9 +458,11 @@ function paintGallery(){
   if(!GAL)return;
   $('#acatrail').innerHTML=GAL.categories.map(c=>`<button data-cat="${c.id}" class="${c.id===_galCat?'on':''}">${c.label}</button>`).join('');
   const cat=(GAL.categories.find(c=>c.id===_galCat)||GAL.categories[0]);
-  $('#animgrid').innerHTML=cat.items.map(id=>{
-    const it=GAL.categories.flatMap(c=>c.items).find(x=>x.id===id);
-    if(!it)return '';
+  // manifest items are full objects ({id,label,kind,url,ready}), not id
+  // strings — the old code re-found them by id and never matched (string vs
+  // object), so #animgrid rendered EMPTY for every category (live-test bug:
+  // "animations pane shows only text boxes").
+  $('#animgrid').innerHTML=cat.items.map(it=>{
     if(!it.ready)return `<div class="acard" style="cursor:default"><div style="aspect-ratio:9/16;display:flex;align-items:center;justify-content:center;color:var(--dim);font-family:var(--mono);font-size:11px">rendering…</div><div class="alabel">${esc(it.label)}</div></div>`;
     return `<div class="acard" data-anim="${it.id}" data-kind="${it.kind}"><img src="${it.url}" alt="${esc(it.label)}" loading="lazy"><div class="alabel">${esc(it.label)}</div></div>`;
   }).join('');
