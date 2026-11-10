@@ -39,7 +39,27 @@ FrameCtx = namedtuple("FrameCtx", [
     "slide",               # eased slide offset px
     "a_gate",              # outgoing-transition alpha cap or None
     "transition_out",      # XF window length or None (stagger-freeze input)
+    "cap_idx",             # (shot_idx, caption_idx): C3b per-caption cache slot
 ])
+
+
+def _wrap(eng, dr, words, fnt, limit, tracking=0, ctx=None):
+    """C3b: fit/wrap call routed through the Engine metrics cache. The result
+    depends only on (words, font, limit, tracking) — never on time or draw
+    state — so within one Engine build it is computed ONCE per caption slot
+    and reused for every frame.
+
+    Slot key includes the words tuple: if two projects share an Engine
+    instance with different text at the same (shot, caption) index, the first
+    call's cache would otherwise serve the second project stale lines."""
+    if ctx is None:
+        return eng.wrap_words(dr, words, fnt, limit, tracking=tracking)
+    ck = ("wrap", ctx.cap_idx, tuple(words), id(fnt), limit, tracking)
+    hit = eng._metrics_cache.get(ck)
+    if hit is None:
+        hit = eng.wrap_words(dr, words, fnt, limit, tracking=tracking)
+        eng._metrics_cache[ck] = hit
+    return list(hit)   # copy so callers never mutate the cache
 
 
 def draw_title_block(eng, dr, L, k, ctx, e):
@@ -69,7 +89,9 @@ def draw_title_block(eng, dr, L, k, ctx, e):
         # auto-wrap long subs to the safe text width so a single
         # over-long line can never clip at the frame edge, then
         # translucent dark plate(s) behind each wrapped line
-        sub_lines = eng.fit_small_lines(dr, sub, eng.SMALL, TRK.get("sub", 0))
+        sub_lines = _wrap(eng, dr, sub.split(" "), eng.SMALL,
+                          eng.W - 160 - 2 * LY["sub_pad"],
+                          tracking=TRK.get("sub", 0), ctx=ctx)
         sy = ul_y + int(tsize * 0.42) + LY["sub_gap"] - slide
         pad = LY["sub_pad"]
         line_h_s = int(eng.SIZES["small"] * 1.35)
@@ -97,7 +119,7 @@ def draw_panel(eng, dr, L, k, ctx, e):
                                                   ctx.slide, ctx.lt, ctx.at, ctx.a_gate)
     # auto-wrap user lines to the safe text width, then grow the
     # panel box to fit the wrapped line count (Yasser's shot-3 clip)
-    lines = eng.fit_panel_lines(dr, L["lines"], eng.H1)
+    lines = _wrap_panel(eng, dr, L["lines"], eng.H1, ctx)
     n = len(lines)
     ph = LY["line_h_panel"] * n + LY["panel_extra_h"]
     py = H * (LY["panel_top_frac"] if k == "panel_top" else LY["panel_mid_frac"])
@@ -126,7 +148,7 @@ def draw_small(eng, dr, L, k, ctx, e):
     # crash rounded_rectangle), and long notes wrap inside a capped
     # chip instead of running off-frame
     txt = L["text"]
-    sl_lines = eng.wrap_words(dr, txt.split(" "), eng.SMALL, LY["small_chip_limit"]) or [""]
+    sl_lines = _wrap(eng, dr, txt.split(" "), eng.SMALL, LY["small_chip_limit"], ctx=ctx) or [""]
     w = max(dr.textlength(l, font=eng.SMALL) for l in sl_lines)
     x = (W - w) / 2
     bh = LY["small_chip_h"] + (len(sl_lines) - 1) * LY["small_line_h"]
@@ -179,6 +201,14 @@ def draw_big_number(eng, dr, L, k, ctx, e):
             fill=(ACCENT[0], ACCENT[1], ACCENT[2], bn_a))
 
 
+def _wrap_panel(eng, dr, lines, fnt, ctx):
+    """fit_panel_lines routed through the per-caption cache (C3b)."""
+    out = []
+    for l in lines:
+        out.extend(_wrap(eng, dr, l.split(" "), fnt, eng.L["panel_text_limit"], ctx=ctx))
+    return out
+
+
 def draw_cap_lines(eng, dr, L, k, ctx, e):
     clamp01, ease_o, ease_ow = e
     H, LY, WHITE, lt, at, slide, a_gate = (ctx.H, ctx.LY, ctx.WHITE,
@@ -186,7 +216,7 @@ def draw_cap_lines(eng, dr, L, k, ctx, e):
     wp = clamp01((lt - at) / M.CAPLINE_RAMP)
     if ctx.transition_out:
         wp = min(wp, clamp01((float(ctx.shot_t) - at) / M.CAPLINE_RAMP))
-    for j, line in enumerate(L["lines"]):
+    for j, line in enumerate(L["lines"]):   # draw path uses RAW lines (checks.py wraps+measures); do not "fix" here — pixels would change
         eng.word_pop(dr, H * LY["caplines_frac"] + j * LY["capline_h"] - slide, eng.BODY, line, WHITE,
                      wp - j * M.CAPLINE_LINE_STEP, tracking=3, alpha_cap=a_gate)
 
