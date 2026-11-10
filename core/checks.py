@@ -69,7 +69,7 @@ def check_project(engine):
                 if L.get("sub"):
                     # wrap-aware: the engine auto-wraps subs (fit_small_lines),
                     # so flag only lines that STILL overflow after wrapping
-                    sub_trk = getattr(engine, "TRK", {}).get("sub", 0)
+                    sub_trk = engine.TRK.get("sub", 0)  # TRK guaranteed by Engine.__init__; no defensive getattr (audit #9)
                     for sl in engine.fit_small_lines(
                             ImageDraw.Draw(Image.new("RGB", (W, 8))),
                             L["sub"], engine.SMALL, sub_trk):
@@ -125,7 +125,11 @@ def check_project(engine):
                                   "message": "shot %d panel words finish at %.2fs but shot ends at %.2fs"
                                              % (i, done_at, t)})
             elif k == "cap_lines":
-                done_at = at + 0.3 + (len(L["lines"]) - 1) * 0.45 + (max(len(l.split(" ")) for l in L["lines"]) - 1) * 0.18 + 0.36
+                # timing runs on WRAPPED lines (engine auto-wraps via fit_panel_lines);
+                # using raw L["lines"] under-counted late-finishing animations (audit B#3)
+                cl = engine.fit_panel_lines(ImageDraw.Draw(Image.new("RGB", (W, 8))),
+                                            L["lines"], engine.BODY)
+                done_at = at + 0.3 + (len(cl) - 1) * 0.45 + (max(len(l.split(" ")) for l in cl) - 1) * 0.18 + 0.36
                 if done_at > t - 0.1:
                     flags.append({"shot": i, "kind": "timing", "severity": "error",
                                   "message": "shot %d cap lines finish at %.2fs > shot end %.2fs" % (i, done_at, t)})

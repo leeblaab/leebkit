@@ -20,7 +20,7 @@
       "image": "img_00014.png",
       "t": 3.0,
       "transition": "cut",
-      "camera": "pushin",
+      "cam": "pushin",
       "dim": 0.55,
       "captions": [
         {
@@ -41,7 +41,7 @@
       "image": "img_00027.png",
       "t": 3.0,
       "transition": "wipe_left",
-      "camera": "pushin2",
+      "cam": "pushin2",
       "dim": 0.5,
       "captions": [
         {
@@ -66,7 +66,7 @@
       "image": "img_00035.png",
       "t": 3.0,
       "transition": "wipe_up",
-      "camera": "pandown",
+      "cam": "pandown",
       "dim": 0.62,
       "captions": [
         {
@@ -87,7 +87,7 @@
       "image": "img_00039.png",
       "t": 3.0,
       "transition": "wipe_left",
-      "camera": "pushin",
+      "cam": "pushin",
       "dim": 0.55,
       "captions": [
         {

@@ -1,5 +1,15 @@
-fastapi>=0.110
-uvicorn[standard]>=0.29
-python-multipart>=0.0.9
-pillow>=10.0
-numpy>=1.26
+# Runtime deps — pinned to the range this build is tested against
+# (scripts/smoke_test.py runs green on these exact versions; see inline notes).
+# Upper bounds guard against untested major-version breakage.
+fastapi>=0.110,<1.0            # tested: 0.162.0
+uvicorn[standard]>=0.29,<1.0   # tested: 0.54.0
+python-multipart>=0.0.9,<1.0   # tested: 0.0.33
+pillow>=10.0,<14.0             # tested: 13.0.0
+numpy>=1.26,<3.0               # tested: 2.5.4
+
+# Optional extras ---------------------------------------------------------
+# On-device voiceover (TTS). Without it the app still works: the UI shows an
+# install hint and renders fall back to caption-only (no VO track). Install:
+#   pip install "piper-tts>=1.2"
+# Kept out of the base install: piper wheels are heavy (~70 MB + voice models)
+# and many users never use on-device VO.

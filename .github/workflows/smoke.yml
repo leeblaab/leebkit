@@ -1,0 +1,24 @@
+name: smoke (linux gate)
+
+# Ubuntu is the cheap always-on gate. The platform we SHIP is Windows, so a
+# weekly windows-latest run covers interpreter discovery + ffmpeg invocation
+# on the real target (audit Bug B). Smoke cleans up its own scratch/outputs.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Smoke test (28 checks, headless render + ffprobe gate)
+        run: python scripts/smoke_test.py

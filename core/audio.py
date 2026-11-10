@@ -330,9 +330,33 @@ def vo_plan(proj, voice_id, scratch):
     return plan
 
 
+def _normalize_music(cfg):
+    """One shape for the music config, whatever wrote it (audit #2). The UI
+    historically wrote {"file": "x.mp3"} with no mode -> build_audio then fell
+    through to a procedural bed: silent wrong output. Derive mode from the
+    keys present; also accept scan_music's "file:name" bed id."""
+    if not cfg:
+        return {"mode": "procedural", "bed": "synthwave"}
+    cfg = dict(cfg)
+    bed = cfg.get("bed") or cfg.get("file") or ""
+    if bed.startswith("file:"):
+        bed = bed[len("file:"):]
+    if bed in ("", None):
+        return {"mode": "procedural", "bed": "synthwave"}
+    if bed == "none":
+        return {"mode": "none", "bed": "none"}
+    looks_like_file = any(str(bed).lower().endswith(ext)
+                          for ext in (".mp3", ".wav", ".m4a", ".ogg"))
+    if cfg.get("mode") == "file" or ("file" in cfg and looks_like_file) or \
+            (cfg.get("mode") not in ("procedural", "file") and looks_like_file
+             and bed not in BEDS):
+        return {"mode": "file", "bed": str(bed)}
+    return {"mode": "procedural", "bed": str(bed)}
+
+
 def build_audio(proj, media_dir=None, scratch=None, music_override=None):
     """Full audio bed -> 48kHz stereo WAV path. Hard-asserts TOTAL length."""
-    music_cfg = music_override or proj.get("music") or {"mode": "procedural", "bed": "synthwave"}
+    music_cfg = _normalize_music(music_override or proj.get("music"))
     voice = proj.get("voice", "none")
     dur = float(proj["target"])
     starts, cuts = shot_timeline(proj)
