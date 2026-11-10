@@ -233,9 +233,7 @@ function renderShots(){
     <div class="cardright"><span class="durtag">${s.t.toFixed(1)}s</span>
       <button data-up="${i}" style="padding:4px 8px">↑</button><button data-dn="${i}" style="padding:4px 8px">↓</button></div>
   </div>`).join('');
-  const sum=P.shots.reduce((a,s)=>a+s.t,0);
-  $('#totals').innerHTML=`${sum.toFixed(1)}s <span>/</span> <i style="font-style:normal;color:var(--dim)">${P.target.toFixed(1)}s</i>`;
-  $('#shotcount').textContent=P.shots.length+' shots'+(sum>P.target?' — OVER TARGET':'');
+  updateTotals();
   $$('.card').forEach(c=>{c.ondragstart=e=>{e.dataTransfer.setData('text/plain',c.dataset.i);c.classList.add('dragging')};
     c.ondragend=()=>c.classList.remove('dragging');
     c.ondragover=e=>e.preventDefault();
@@ -252,6 +250,11 @@ function renderShots(){
   $$('.thumbwrap').forEach(tw=>{tw.ondragover=e=>{if([...e.dataTransfer.types].includes('Files')){e.preventDefault();tw.classList.add('drophot')}};
     tw.ondragleave=()=>tw.classList.remove('drophot')});
 }
+function updateTotals(){
+  const sum=P.shots.reduce((a,s)=>a+s.t,0);
+  $('#totals').innerHTML=`${sum.toFixed(1)}s <span>/</span> <i style="font-style:normal;color:var(--dim)">${P.target.toFixed(1)}s</i>`;
+  $('#shotcount').textContent=P.shots.length+' shots'+(sum>P.target?' — OVER TARGET':'');
+}
 const esc=s=>(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 
 // delegated events
@@ -266,7 +269,7 @@ document.addEventListener('input',e=>{
     else if(f==='items')c.items=e.target.value.split(',').map(x=>x.trim()).filter(Boolean);
     else c[f]=e.target.value;
     if(f==='rows'&&c.kind==='terminal')c.rows=(c.rows||[]).slice(0,3);  // bar row is engine-owned
-    renderAnimList();                                     // keep right-panel list in sync
+    // no renderAnimList() per keystroke: rebuilding the list mid-typing drops focus (audit #10)
   }
   if(e.target.dataset.vo!=null)P.shots[+e.target.dataset.vo].vo=e.target.value;
   if(e.target.id==='pname')P.name=e.target.value;
@@ -274,7 +277,13 @@ document.addEventListener('input',e=>{
 document.addEventListener('click',async e=>{
   const b=e.target;
   if(b.dataset.rm!=null){P.shots.splice(+b.dataset.rm,1);renderShots();toast('shot removed')}
-  if(b.dataset.dur!=null){P.shots[+b.dataset.dur].t=+b.dataset.v;renderShots()}
+  if(b.dataset.dur!=null){                        // patch in place: a full renderShots()
+    const i=+b.dataset.dur,d=+b.dataset.v;        // rebuild killed focus mid-typing (audit #10)
+    P.shots[i].t=d;
+    const card=b.closest('.card');
+    if(card){card.querySelectorAll('[data-dur]').forEach(x=>x.classList.toggle('on',+x.dataset.v===d));
+      const tag=card.querySelector('.durtag');if(tag)tag.textContent=d.toFixed(1)+'s'}
+    updateTotals()}
   if(b.dataset.up!=null){const i=+b.dataset.up;if(i>0){const[m]=P.shots.splice(i,1);P.shots.splice(i-1,0,m);renderShots()}}
   if(b.dataset.dn!=null){const i=+b.dataset.dn;if(i<P.shots.length-1){const[m]=P.shots.splice(i,1);P.shots.splice(i+1,0,m);renderShots()}}
   if(b.dataset.voprev!=null)await voPreviewShot(+b.dataset.voprev,b);
@@ -319,7 +328,7 @@ $('#format').onchange=e=>{P.size=e.target.value;const[w,h]=P.size.split('x').map
     'Layout, panels and fonts auto-scale for this canvas — check the storyboard strip after switching.'};
 $('#voice').onchange=e=>{P.voice=e.target.value;
   if(P.voice!=='none'&&!META.piper_ready)toast('Tip: pip install piper-tts — voice models found in vo/models/')}
-$('#music').onchange=e=>{P.music=/\.mp3$|\.wav$|\.ogg$/.test(e.target.value)?{file:e.target.value}:{bed:e.target.value}};
+$('#music').onchange=e=>{const v=e.target.value;P.music=/\.mp3$|\.wav$|\.m4a$|\.ogg$/.test(v)?{mode:'file',bed:v}:(v==='none'?{mode:'none',bed:'none'}:{mode:'procedural',bed:v})};
 
 // ---------- duration slider (5-45s): rescale shot durations proportionally ----------
 function setTarget(v,quiet){

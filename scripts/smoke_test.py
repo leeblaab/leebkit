@@ -17,7 +17,12 @@ os.makedirs(TMP, exist_ok=True)
 fails = []
 
 
+_checks_done = 0
+
+
 def ok(name, cond, detail=""):
+    global _checks_done
+    _checks_done += 1
     print(("PASS " if cond else "FAIL ") + name + (" — " + detail if detail else ""))
     if not cond:
         fails.append(name)
@@ -102,14 +107,14 @@ esc = {"schema": 1, "name": "esc", "target": 2.0, "fps": 24,
 try:
     Engine(esc)
     ok("engine rejects ../ traversal image", False, "no abort raised")
-except SystemExit as e:
+except FileNotFoundError as e:   # ValueError-family, NOT SystemExit (audit #8):
     ok("engine rejects ../ traversal image", "not found or outside" in str(e))
 abs_img = {"schema": 1, "name": "abs", "target": 2.0, "fps": 24,
            "shots": [{"t": 2.0, "image": os.path.join(ROOT, "media", "img_00010.png"), "captions": []}]}
 try:
     Engine(abs_img)
     ok("engine rejects absolute image path", False, "no abort raised")
-except SystemExit as e:
+except FileNotFoundError as e:
     ok("engine rejects absolute image path", "not found or outside" in str(e))
 from core.engine import load_preset
 try:
@@ -139,6 +144,99 @@ flags = CH.check_project(eng)
 errs = [f for f in flags if f.get("severity") == "error"]
 ok("long sub wraps (no overflow error)", not errs, str(errs))
 
+# 7b. transition whitelist (audit #1): typo'd transitions rejected at validate time
+badtr = {"schema": 1, "name": "tr", "target": 2.0, "fps": 24,
+         "shots": [{"t": 2.0, "transition": "wipe_leftt", "captions": []}]}
+try:
+    validate_project(badtr)
+    ok("validate rejects unknown transition", False, "accepted typo")
+except ValueError as e:
+    ok("validate rejects unknown transition", "not implemented" in str(e))
+# and the real kinds pass validation + compose (wipe_left/wipe_up implemented now)
+from core.engine import TRANSITIONS
+good = all(t in TRANSITIONS for t in ("cut", "fade", "slideL", "whip", "flashdip", "wipe_left", "wipe_up"))
+ok("TRANSITIONS covers engine kinds", good)
+wproj = {"schema": 1, "name": "wipe", "target": 2.0, "fps": 24,
+         "shots": [{"t": 1.0, "transition": "cut"},
+                   {"t": 1.0, "transition": "wipe_left"}]}
+try:
+    e2 = Engine(wproj)
+    e2.compose_frame(int(1.3 * 24))   # mid-wipe frame
+    ok("wipe_left composes a frame", True)
+except Exception as e:
+    ok("wipe_left composes a frame", False, str(e)[:120])
+
+# 7c. music config normalization (audit #2): UI's {file:...} shape -> mode file
+from core.audio import _normalize_music
+mn = _normalize_music({"file": "song.mp3"})
+ok("music {file:x.mp3} normalizes to mode=file", mn["mode"] == "file" and mn["bed"] == "song.mp3", str(mn))
+ok("music {bed:synthwave} stays procedural", _normalize_music({"bed": "synthwave"})["mode"] == "procedural")
+ok("music file: prefix accepted", _normalize_music({"bed": "file:track.wav"})["mode"] == "file")
+
+# 7d. queue survives a missing-image job (audit #8): worker thread must live on,
+# and the NEXT job must still render. Tiny 1-shot/1s/no-audio jobs keep this cheap;
+# below the >=60-frame threshold so it takes the serial path (no mp.Pool in smoke).
+import time as _t
+from core.queue import QUEUE, QueueFull
+
+
+def j_done(j):
+    return j.state in ("done", "error", "canceled")
+
+
+tiny = {"schema": 1, "name": "smkq", "target": 1.0, "fps": 24, "width": 320, "height": 320,
+        "voice": "none", "music": {"bed": "none"},
+        "shots": [{"t": 1.0, "transition": "cut", "captions": []}]}
+badj = QUEUE.submit({**tiny, "shots": [{**tiny["shots"][0], "image": "definitely_missing_zz.png"}]},
+                    media_dir=os.path.join(ROOT, "media"))
+goodj = QUEUE.submit(dict(tiny), media_dir=os.path.join(ROOT, "media"))
+deadline = _t.time() + 90
+while _t.time() < deadline:
+    if j_done(badj) and j_done(goodj):
+        break
+    QUEUE.wait_change(1.0)
+ok("queue survives missing-image job (audit #8)",
+   badj.state == "error" and goodj.state == "done",
+   "bad=%s(%s) good=%s" % (badj.state, badj.error, goodj.state))
+
+# 7e. queue cap + cancel (audit #3)
+try:
+    for _ in range(10):
+        QUEUE.submit(dict(tiny), media_dir=os.path.join(ROOT, "media"))
+    ok("queue refuses >MAX_QUEUED submits", False, "accepted 10 submissions")
+except QueueFull:
+    ok("queue refuses >MAX_QUEUED submits", True)
+
+# 7f. camera-name gate (v1.21 audit): "cam" and "camera" both accepted, unknown
+# names fail loud; promo_v12 ships the canonical key so its pans actually apply.
+try:
+    validate_project({"schema": 1, "target": 3.0, "shots": [
+        {"t": 3.0, "image": "x.png", "camera": "spinzoom"}]})
+    ok("unknown camera name rejected (both keys)", False, "spinzoom accepted")
+except ValueError:
+    _p12 = json.load(open(os.path.join(ROOT, "samples", "promo_v12.json"), encoding="utf-8"))
+    from core.camutil import cam_name as _cn
+    ok("unknown camera name rejected (both keys)",
+       all("camera" not in s and _cn(s) is not None for s in _p12["shots"]),
+       "promo_v12: %s" % [(s.get("cam"), s.get("camera")) for s in _p12["shots"]])
+
+# drain remaining queued jobs (they are tiny; cancel the still-queued ones fast)
+deadline = _t.time() + 90
+while _t.time() < deadline:
+    snaps = QUEUE.snapshot()
+    if snaps and all(s["state"] in ("done", "error", "canceled") for s in snaps):
+        break
+    QUEUE.wait_change(1.0)
+
+# smoke self-cleanup: queue-job outputs (smkq_*.mp4) were left behind by every
+# run — 20 identical files piled up before this existed (follow-up audit hygiene).
+for f in os.listdir(os.path.join(ROOT, "output")):
+    if f.startswith("smkq_") and f.endswith(".mp4"):
+        try:
+            os.remove(os.path.join(ROOT, "output", f))
+        except OSError:
+            pass
+
 # 8. UI inline JS must parse (a '#' comment line once killed the whole script:
 # empty dropdowns on a healthy server). node --check if present, else basic scan.
 import re as _re
@@ -155,5 +253,6 @@ try:
 except FileNotFoundError:
     print("SKIP node --check (node not installed)")
 
-print(("SMOKE PASS (%d checks)" % (0 if fails else 0)) if not fails else "SMOKE FAILED: " + ", ".join(fails))
+# counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
+print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)

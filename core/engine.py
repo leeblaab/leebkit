@@ -24,6 +24,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 
 from .layout import build_layout, clamp_font_sizes
+from .camutil import cam_name
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -31,6 +32,15 @@ ASSETS = os.path.join(ROOT, "assets")
 FONTS_DIR = os.path.join(ASSETS, "fonts")
 
 BG_DEFAULT = (10, 10, 14)
+
+# Transitions the engine actually implements. validate_project rejects anything
+# else so a typo ("wipe_left") fails LOUD at save/submit time instead of
+# silently rendering a fade (v1.2 audit #1).
+TRANSITIONS = {"cut", "none", "fade", "slideL", "slideR", "whip", "flashdip",
+               "wipe_left", "wipe_up"}
+# camera pan names (zoom is a separate global track). validate_project gates
+# these; the engine reads them via camutil.cam_name ("cam" OR "camera").
+CAMERAS = {"pushin", "panup", "pandown", "pandiag", "pushout", "pushin2"}
 
 
 # ---------------------------------------------------------------- easing utils
@@ -97,6 +107,14 @@ def validate_project(proj):
     for i, s in enumerate(shots):
         if not (0.5 <= float(s.get("t", 0)) <= 15.0):
             raise ValueError("shot %d duration must be 0.5-15s" % i)
+        tr = s.get("transition") or s.get("trans")
+        if tr is not None and tr not in TRANSITIONS:
+            raise ValueError("shot %d transition %r not implemented (choices: %s)"
+                             % (i, tr, ", ".join(sorted(TRANSITIONS))))
+        cam = cam_name(s)
+        if cam is not None and cam not in CAMERAS:
+            raise ValueError("shot %d camera %r unknown (choices: %s)"
+                             % (i, cam, ", ".join(sorted(CAMERAS))))
         for c in s.get("captions", []):
             if "kind" not in c:
                 raise ValueError("shot %d caption missing kind" % i)
@@ -118,6 +136,9 @@ class Engine:
 
         P = self.preset
         C = P["colors"]
+        self.TRK = P.get("tracking", {})   # checks.py measures sub widths with this
+                                           # (was a render_layer-local; checker saw {} ->
+                                           # flagged widths != rendered widths, audit #9)
         self.BG = hex2rgb(C["bg"])
         self.WHITE = hex2rgb(C["white"])
         self.ACCENT = hex2rgb(C["accent"])
@@ -191,9 +212,13 @@ class Engine:
                 else:
                     self.bad_images.append(f)
         if self.bad_images and any(s.get("image") for s in self.shots):
-            raise SystemExit("[LEEBKIT] ERROR: shot image(s) not found or outside media "
-                             "dir (render aborted, no black frames): %s"
-                             % ", ".join(sorted(set(self.bad_images))))
+            # ValueError, NOT SystemExit: SystemExit is a BaseException, so it
+            # escaped queue._run's `except Exception` and killed the single
+            # worker thread forever (v1.2 audit #8). CLI converts this to an
+            # exit at its own boundary.
+            raise FileNotFoundError("shot image(s) not found or outside media "
+                                    "dir (render aborted, no black frames): %s"
+                                    % ", ".join(sorted(set(self.bad_images))))
 
         self._grid = None
         self._collage = None
@@ -456,7 +481,7 @@ class Engine:
 
         if base is not None:
             z = self.track(g)
-            px, py = self.CAM.get(s.get("cam"), (0, 0))
+            px, py = self.CAM.get(cam_name(s), (0, 0))
             p = ease_io(clamp01(lt / float(s["t"])))
             cx = self.BW / 2 + px * p
             cy = self.BH / 2 + py * p
@@ -476,7 +501,7 @@ class Engine:
         WHITE, ACCENT, DIMC = self.WHITE, self.ACCENT, self.DIM
         P = self.preset
         LY = self.L
-        TRK = P.get("tracking", {})
+        TRK = self.TRK
 
         for L in s.get("captions", []):
             k = L["kind"]
@@ -738,6 +763,11 @@ class Engine:
         # "cut"/"none" = hard instant switch: no fade window, no incoming-text
         # ghosting during the boundary frames (Yasser's round-3 complaint).
         kind = s.get("transition") or s.get("trans") or "fade"
+        # NOTE: the label on shot i is honoured at BOTH boundaries around it by
+        # design: cut_mode (hard cut) applies to this shot's render_layer calls,
+        # while the transition block below uses shots[i+1]'s label for the
+        # outgoing window. Do NOT zero XF based on shots[i-1] — that silently
+        # kills the NEXT boundary's wipe/fade (verified by pixel-ownership probes).
         cut_mode = kind in ("cut", "none")
         XF = self.XF if not cut_mode else 0.0
         frame = self.render_layer(i, lt, idx, cut_mode=cut_mode)
@@ -778,6 +808,18 @@ class Engine:
                         d2 = ImageDraw.Draw(frame, "RGBA")
                         f = (0.64 - p) / 0.14
                         d2.rectangle((0, 0, W, H), fill=(self.ACCENT[0], self.ACCENT[1], self.ACCENT[2], int(85 * f)))
+            elif kind == "wipe_left":
+                # hard-edged directional wipe (the promo_v12 sample's choice):
+                # incoming shot sweeps in from the LEFT edge rightwards
+                off = int(W * pe)
+                c = frame.copy()
+                c.paste(nx.crop((0, 0, off, H)), (0, 0))
+                frame = c
+            elif kind == "wipe_up":
+                off = int(H * pe)
+                c = frame.copy()
+                c.paste(nx.crop((0, H - off, W, H)), (0, H - off))
+                frame = c
             else:  # fade
                 frame = Image.blend(frame, nx, pe)
         return frame
