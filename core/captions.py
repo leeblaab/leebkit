@@ -21,6 +21,8 @@ render_layer to avoid a cycle)."""
 
 from collections import namedtuple
 
+from . import metrics as M   # stagger-clock constants: draw and checks share one source
+
 # every scalar the old chain read from render_layer locals, in one explicit
 # group — style + frame clocks, not a god-ctx of Engine state.
 FrameCtx = namedtuple("FrameCtx", [
@@ -105,9 +107,9 @@ def draw_panel(eng, dr, L, k, ctx, e):
         box_a = min(box_a, a_gate)
     dr.rounded_rectangle((LY["panel_x"], py - slide, W - LY["panel_x"], py + ph - slide), radius=26,
                          fill=(eng.PANEL[0], eng.PANEL[1], eng.PANEL[2], box_a))
-    wprog = clamp01((lt - at - 0.28) / 0.95)
+    wprog = clamp01((lt - at - M.PANEL_WDELAY) / M.PANEL_WRAMP)
     nw = [len(l.split(" ")) for l in lines]
-    span = max(nw) * 0.18 + 0.36          # word_pop internal stagger window
+    span = max(nw) * M.WORD_STEP + M.WORD_RAMP   # word_pop internal stagger window
     Sv = (1.0 - span) / (n - 1) if n > 1 else 0.0   # line offsets (completion formula)
     for j, line in enumerate(lines):
         col = ACCENT if (j == n - 1 and (line.endswith(".") or k == "panel_mid")) else WHITE
@@ -181,12 +183,12 @@ def draw_cap_lines(eng, dr, L, k, ctx, e):
     clamp01, ease_o, ease_ow = e
     H, LY, WHITE, lt, at, slide, a_gate = (ctx.H, ctx.LY, ctx.WHITE,
                                            ctx.lt, ctx.at, ctx.slide, ctx.a_gate)
-    wp = clamp01((lt - at) / 0.3)
+    wp = clamp01((lt - at) / M.CAPLINE_RAMP)
     if ctx.transition_out:
-        wp = min(wp, clamp01((float(ctx.shot_t) - at) / 0.3))
+        wp = min(wp, clamp01((float(ctx.shot_t) - at) / M.CAPLINE_RAMP))
     for j, line in enumerate(L["lines"]):
         eng.word_pop(dr, H * LY["caplines_frac"] + j * LY["capline_h"] - slide, eng.BODY, line, WHITE,
-                     wp - j * 0.45, tracking=3, alpha_cap=a_gate)
+                     wp - j * M.CAPLINE_LINE_STEP, tracking=3, alpha_cap=a_gate)
 
 
 def draw_terminal(eng, dr, L, k, ctx, e):
@@ -237,9 +239,9 @@ def draw_terminal(eng, dr, L, k, ctx, e):
             shown.append(extra)
     yy = y0 + LY["term_rows_y"]
     for r, line in enumerate(shown):
-        appear = clamp01((lt - 0.4 - r * 0.5) / 0.3)
+        appear = clamp01((lt - M.TERM_FIRST_AT - r * M.TERM_ROW_STEP) / M.TERM_ROW_RAMP)
         if ctx.transition_out:
-            appear = min(appear, clamp01((s_t - 0.4 - r * 0.5) / 0.3))
+            appear = min(appear, clamp01((s_t - M.TERM_FIRST_AT - r * M.TERM_ROW_STEP) / M.TERM_ROW_RAMP))
         if appear <= 0:
             break
         colr = ACCENT if line.startswith(">") else (205, 210, 220)
@@ -269,10 +271,10 @@ def draw_chips(eng, dr, L, k, ctx, e):
     x = (W - total) / 2
     y = H * LY["chips_frac"]
     for ci, c in enumerate(chips):
-        appear = clamp01((lt - at - ci * 0.35) / 0.4)
+        appear = clamp01((lt - at - ci * M.CHIP_STEP) / M.CHIP_RAMP)
         if ctx.transition_out:
             # freeze stagger clock at shot end, then let a_gate fade it
-            appear = min(appear, clamp01((float(ctx.shot_t) - at - ci * 0.35) / 0.4))
+            appear = min(appear, clamp01((float(ctx.shot_t) - at - ci * M.CHIP_STEP) / M.CHIP_RAMP))
         if appear <= 0:
             break
         aa = int(255 * ease_o(appear))

@@ -516,7 +516,7 @@ class Engine:
             # prog~0 and faded out unseen) and left entry timing on ordinary
             # frames inconsistent with slide/gating (v1.3 C2).
             if k in ("panel_top", "panel_mid"):
-                at -= 0.45
+                at -= CAPTIONS.M.PANEL_SHIFT
             prog = clamp01((lt - at) / 0.32)
             # outgoing-side kill switch: inside a transition window the incoming
             # layer runs its own early clock (OV) while this layer's lt keeps
