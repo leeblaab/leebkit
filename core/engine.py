@@ -25,6 +25,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from .layout import build_layout, clamp_font_sizes
 from .camutil import cam_name
+from . import captions as CAPTIONS   # per-kind draw (C3a); captions never imports engine
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -542,204 +543,16 @@ class Engine:
                 a = min(a, a_gate)
             slide = int((1 - ease_o(prog)) * LY["slide_dy"])
 
-            if k == "title_block":
-                txt = L.get("text", "")
-                # auto-wrap to the safe width (shrink only as last resort) so a
-                # long title can never run past the frame edge
-                lines, tsize, trk = self.fit_title(dr, txt, LY["logo"], LY["title_limit"])
-                tfnt = self.LOGO if tsize == LY["logo"] else \
-                    self._mkfont(self.preset["fonts"]["display"], tsize)
-                line_h = int(tsize * LY["title_line_h_k"])
-                nlines = max(1, len(lines))
-                # underline + subtitle ride below the last title line
-                base_y = H * LY["title_frac"] - (nlines - 1) * line_h / 2
-                self.draw_title_lines(dr, base_y - slide, lines, tfnt,
-                                      (WHITE[0], WHITE[1], WHITE[2], a), trk, line_h)
-                lw = int(min(LY["ul_max"], max(LY["ul_min"], tsize * 4)) * ease_o(prog))
-                ul_y = H * LY["title_frac"] + (nlines - 1) * line_h / 2 + int(tsize * LY["ul_gap_k"])
-                dr.rectangle(((W - lw) / 2, ul_y - slide, (W + lw) / 2, ul_y + LY["ul_h"] - slide),
-                             fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
-                sub = L.get("sub", "")
-                if sub:
-                    # auto-wrap long subs to the safe text width so a single
-                    # over-long line can never clip at the frame edge, then
-                    # translucent dark plate(s) behind each wrapped line
-                    sub_lines = self.fit_small_lines(dr, sub, self.SMALL, TRK.get("sub", 0))
-                    sy = ul_y + int(tsize * 0.42) + LY["sub_gap"] - slide
-                    pad = LY["sub_pad"]
-                    line_h_s = int(self.SIZES["small"] * 1.35)
-                    plate_a = int(150 * min(1.0, prog * 1.3))
-                    for li, sl in enumerate(sub_lines):
-                        ly_ = sy + li * line_h_s
-                        sw = self._measure_tracked(dr, sl, self.SMALL, TRK.get("sub", 0))
-                        dr.rounded_rectangle(((W - sw) / 2 - pad, ly_ - pad,
-                                              (W + sw) / 2 + pad, ly_ + LY["small"] + pad),
-                                             radius=LY["sub_radius"], fill=(0, 0, 0, plate_a))
-                        self.draw_center_text(dr, ly_, sl, self.SMALL,
-                                              (DIMC[0], DIMC[1], DIMC[2], a), tracking=TRK.get("sub", 14))
-            elif k == "accent_word":
-                self.word_pop(dr, H * LY["accent_frac"] - slide, self.H1, L["text"], ACCENT, prog, tracking=2, alpha_cap=a_gate)
-            elif k in ("panel_top", "panel_mid"):
-                # auto-wrap user lines to the safe text width, then grow the
-                # panel box to fit the wrapped line count (Yasser's shot-3 clip)
-                lines = self.fit_panel_lines(dr, L["lines"], self.H1)
-                n = len(lines)
-                ph = LY["line_h_panel"] * n + LY["panel_extra_h"]
-                py = H * (LY["panel_top_frac"] if k == "panel_top" else LY["panel_mid_frac"])
-                pa = clamp01(prog / 0.5)
-                box_a = int(P.get("panel_alpha", 224) * ease_o(pa))
-                if a_gate is not None:
-                    box_a = min(box_a, a_gate)
-                dr.rounded_rectangle((LY["panel_x"], py - slide, W - LY["panel_x"], py + ph - slide), radius=26,
-                                     fill=(self.PANEL[0], self.PANEL[1], self.PANEL[2], box_a))
-                wprog = clamp01((lt - at - 0.28) / 0.95)
-                nw = [len(l.split(" ")) for l in lines]
-                span = max(nw) * 0.18 + 0.36          # word_pop internal stagger window
-                Sv = (1.0 - span) / (n - 1) if n > 1 else 0.0   # line offsets (completion formula)
-                for j, line in enumerate(lines):
-                    col = ACCENT if (j == n - 1 and (line.endswith(".") or k == "panel_mid")) else WHITE
-                    self.word_pop(dr, py + LY["panel_pad_y"] + j * LY["line_h_panel"] - slide,
-                                  self.H1, line, col,
-                                  wprog * (span / 0.55) - j * Sv, tracking=2, alpha_cap=a_gate)
-            elif k == "small":
-                # box rect was miscomputed: x+w+30 (not w+60 -> could invert and
-                # crash rounded_rectangle), and long notes wrap inside a capped
-                # chip instead of running off-frame
-                txt = L["text"]
-                sl_lines = self.wrap_words(dr, txt.split(" "), self.SMALL, LY["small_chip_limit"]) or [""]
-                w = max(dr.textlength(l, font=self.SMALL) for l in sl_lines)
-                x = (W - w) / 2
-                bh = LY["small_chip_h"] + (len(sl_lines) - 1) * LY["small_line_h"]
-                chip_a = int(195 * ease_o(prog))
-                if a_gate is not None:
-                    chip_a = min(chip_a, a_gate)
-                dr.rounded_rectangle((x - LY["small_pad_x"], H * LY["small_frac"] - slide,
-                                      x + w + LY["small_pad_x"], H * LY["small_frac"] + bh - slide),
-                                     radius=16, fill=(self.PANEL[0], self.PANEL[1], self.PANEL[2],
-                                                      chip_a))
-                for j, l in enumerate(sl_lines):
-                    self.draw_center_text(dr, H * LY["small_frac"] + j * LY["small_line_h"] - slide, l, self.SMALL,
-                                          (WHITE[0], WHITE[1], WHITE[2], a))
-            elif k == "cta":
-                txt = L["text"]
-                w = dr.textlength(txt, font=self.BODY)
-                x = (W - w) / 2
-                y = H * LY["cta_frac"] - slide
-                pad = LY["cta_pad"]
-                # clamp the outline box to the frame so a long CTA can never
-                # draw past the edge (checks.py flags the overflow instead)
-                dr.rounded_rectangle((max(LY["cta_edge"], x - pad), y + LY["cta_top_off"],
-                                      min(W - LY["cta_edge"], x + w + pad), y + LY["cta_bot_off"]),
-                                     radius=18,
-                                     outline=(ACCENT[0], ACCENT[1], ACCENT[2], a), width=4)
-                dr.text((x, y), txt, font=self.BODY, fill=(WHITE[0], WHITE[1], WHITE[2], a))
-            elif k == "handle":
-                self.draw_center_text(dr, H * LY["handle_frac"] - slide, L["text"], self.BODY,
-                                      (ACCENT[0], ACCENT[1], ACCENT[2], a), tracking=4)
-            elif k == "big_number":
-                txt = L["text"]
-                w = dr.textlength(txt, font=self.BIG)
-                e = ease_ow(prog)
-                bn_a = int(255 * e)
-                if a_gate is not None:
-                    bn_a = min(bn_a, a_gate)
-                dr.text(((W - w) / 2, H * LY["bignum_frac"] + (1 - e) * 50 - slide), txt, font=self.BIG,
-                        fill=(ACCENT[0], ACCENT[1], ACCENT[2], bn_a))
-            elif k == "cap_lines":
-                wp = clamp01((lt - at) / 0.3)
-                if transition_out:
-                    wp = min(wp, clamp01((float(s["t"]) - at) / 0.3))
-                for j, line in enumerate(L["lines"]):
-                    self.word_pop(dr, H * LY["caplines_frac"] + j * LY["capline_h"] - slide, self.BODY, line, WHITE,
-                                  wp - j * 0.45, tracking=3, alpha_cap=a_gate)
-            elif k == "terminal":
-                box_h = LY["term_box_h"]
-                y0 = H * LY["term_y_frac"]
-                ta = int(P.get("term_alpha", 238) * ease_o(prog))
-                if a_gate is not None:
-                    ta = min(ta, a_gate)
-                dr.rounded_rectangle((LY["term_x"], y0 - slide, W - LY["term_x"], y0 + box_h - slide), radius=26,
-                                     fill=(10, 12, 16, ta))
-                dr.rounded_rectangle((LY["term_x"], y0 - slide, W - LY["term_x"], y0 + LY["term_head_h"] - slide), radius=26,
-                                     fill=(24, 28, 34, ta))
-                for d_, cc in enumerate([(255, 95, 86), (255, 189, 46), (39, 201, 63)]):
-                    dr.ellipse((LY["term_dot0"] + d_ * LY["term_dot_step"], y0 + LY["term_dot_y"] - slide,
-                                LY["term_dot0"] + (d_ + 1) * LY["term_dot_step"], y0 + LY["term_dot_y"] + LY["term_dot_step"] - slide),
-                               fill=(cc[0], cc[1], cc[2], a))
-                # typing runs until ~1s before shot end; bar animates mid-shot: no freeze
-                rows = L.get("rows", ["> PROMPT", "", "> RENDERING...", "░░░░░░░░░░░░  0%"])
-                prompt_txt = rows[1] if len(rows) > 1 else ""
-                type_end = float(s["t"]) - 1.0
-                prog_t = clamp01((lt - 0.5) / max(0.3, type_end - 0.5))
-                typed = prompt_txt[: int(len(prompt_txt) * prog_t)]
-                cursor = "_" if int(g * 2.4) % 2 == 0 else " "
-                # progress bar is FULLY automatic: any row that starts with the
-                # block glyphs (or a bare percent like "0%") gets replaced by the
-                # live █░ bar + percent — the user never types a static value.
-                # Fill window scales with shot length: starts 1/3 in, ends 0.5s
-                # before shot end (so it lands exactly at 100%).
-                t_shot = float(s["t"])
-                b_start = t_shot / 3.0
-                bt = clamp01((lt - b_start) / max(0.5, t_shot - b_start - 0.5))
-                bar = int(12 * bt)
-                pct = int(100 * bt)
-
-                def _bar_row(x):
-                    xs = x.strip()
-                    return bool(xs) and (xs[0] in "█░" or (xs.endswith("%") and len(xs) <= 6))
-                shown = [rows[0], typed + cursor]
-                for extra in rows[2:]:
-                    if _bar_row(extra):
-                        shown.append("  " + "█" * bar + "░" * (12 - bar) + "  " + str(pct) + "%")
-                    else:
-                        shown.append(extra)
-                yy = y0 + LY["term_rows_y"]
-                for r, line in enumerate(shown):
-                    appear = clamp01((lt - 0.4 - r * 0.5) / 0.3)
-                    if transition_out:
-                        appear = min(appear, clamp01((float(s["t"]) - 0.4 - r * 0.5) / 0.3))
-                    if appear <= 0:
-                        break
-                    colr = ACCENT if line.startswith(">") else (205, 210, 220)
-                    if "%" in line and pct > 0:
-                        colr = ACCENT
-                    fnt = self.MONO if r < 2 else self.MONOS
-                    # typed mono lines must fit measured width or they clip at panel edge
-                    maxw = LY["term_line_limit"]
-                    while fnt.getlength(line) > maxw and len(line) > 1:
-                        line = line[:-1]
-                    row_a = int(255 * appear)
-                    if a_gate is not None:
-                        row_a = min(row_a, a_gate)
-                    dr.text((LY["term_row_x"], yy - slide), line, font=fnt,
-                            fill=(colr[0], colr[1], colr[2], row_a))
-                    yy += LY["term_line_h_a"] if r < 2 else LY["term_line_h_b"]
-            elif k == "chips":
-                chips = L["items"]
-                widths = [dr.textlength(c, font=self.MONOS) + LY["chip_extra_w"] for c in chips]
-                gap = LY["chip_gap"]
-                total = sum(widths) + gap * (len(chips) - 1)
-                x = (W - total) / 2
-                y = H * LY["chips_frac"]
-                for ci, c in enumerate(chips):
-                    appear = clamp01((lt - at - ci * 0.35) / 0.4)
-                    if transition_out:
-                        # freeze stagger clock at shot end, then let a_gate fade it
-                        appear = min(appear, clamp01((float(s["t"]) - at - ci * 0.35) / 0.4))
-                    if appear <= 0:
-                        break
-                    aa = int(255 * ease_o(appear))
-                    if a_gate is not None:
-                        aa = min(aa, a_gate)
-                    sl = int((1 - ease_o(appear)) * 30)
-                    dr.rounded_rectangle((x, y + sl, x + widths[ci], y + LY["chip_h"] + sl),
-                                         radius=LY["chip_h"] // 2,
-                                         fill=(10, 12, 16, aa),
-                                         outline=(ACCENT[0], ACCENT[1], ACCENT[2], aa), width=3)
-                    dr.text((x + LY["chip_text_dx"], y + LY["chip_text_y"] + sl), c, font=self.MONOS,
-                            fill=(WHITE[0], WHITE[1], WHITE[2], aa))
-                    x += widths[ci] + gap
-
+            _cf = CAPTIONS.DISPATCH.get(k)
+            if _cf is None:
+                continue    # unknown kind: validate_project gates these; belt & braces
+            ctx = CAPTIONS.FrameCtx(
+                W=W, H=H, LY=LY, P=P, TRK=TRK,
+                WHITE=WHITE, ACCENT=ACCENT, DIMC=DIMC,
+                lt=lt, at=at, g=g, shot_t=float(s["t"]),
+                prog=prog, a=a, slide=slide,
+                a_gate=a_gate, transition_out=transition_out)
+            _cf(self, dr, L, k, ctx, (clamp01, ease_o, ease_ow))
         # film grain (per-frame seeded; disabled in presets with grain_points=0)
         gp = int(P.get("grain_points", 90))
         if gp:
