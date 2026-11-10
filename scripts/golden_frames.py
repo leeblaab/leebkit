@@ -12,17 +12,34 @@ Corpus:
 End-to-end leg: one real ffmpeg encode -> ffprobe nb_frames (the sequence-read
 layer that frame-level hashing cannot exercise).
 
-Usage:  python scripts/golden_frames.py [--update] [--sample N]
+Usage:  python scripts/golden_frames.py [--update] [--sample N] [--os-name NAME]
+
+Baselines are PER-OS (v1.3 C4 follow-up): the linux push gate and the Windows
+weekly gate rasterize/resize a handful of promo frames differently (sub-LSB
+kernel differences; same Pillow/numpy wheels, same fonts — cross-run hashes
+are byte-stable on each OS). One shared baseline therefore flags 258 frames on
+linux with zero code change. Each OS compares against its own baseline:
+  tests/golden/hashes.json          (windows — the shipping target)
+  tests/golden/hashes-linux.json    (ubuntu push gate; regen via --os-name linux --update)
+--os-name overrides platform detection (used by the bootstrap job).
 Exit 0 = match; 1 = mismatch/drift report; 2 = baseline missing (--update).
 """
-import argparse, hashlib, json, os, subprocess, sys, tempfile
+import argparse, hashlib, json, os, platform, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 from core.engine import Engine  # noqa: E402
 
 GOLDEN = os.path.join(ROOT, "tests", "golden")
-BASELINE = os.path.join(GOLDEN, "hashes.json")
+
+
+def baseline_path(os_name=None):
+    """Per-OS baseline file (see module docstring for why)."""
+    o = os_name or ("windows" if platform.system() == "Windows" else "linux")
+    return os.path.join(GOLDEN, "hashes.json" if o == "windows"
+                        else "hashes-%s.json" % o)
+
+
 MEDIA = os.path.join(ROOT, "samples", "media")
 FORMATS = [(1080, 1920), (1080, 1080), (1920, 1080)]
 
@@ -109,8 +126,11 @@ def main():
     ap.add_argument("--update", action="store_true")
     ap.add_argument("--sample", type=int, default=0,
                     help="hash every Nth promo frame (CI push gate)")
+    ap.add_argument("--os-name", default=None,
+                    help="override baseline OS bucket (bootstrap job)")
     a = ap.parse_args()
 
+    BASELINE = baseline_path(a.os_name)
     corpus = build_corpus(sample=a.sample)
     ok_enc, enc_msg = encode_leg()
 
