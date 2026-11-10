@@ -85,13 +85,18 @@ out_mp4 = os.path.join(ROOT, "output", "smoke.mp4")
 ok("cli render", r.returncode == 0 and os.path.exists(out_mp4),
    (r.stderr or "")[-300:] if r.returncode != 0 else out_mp4)
 if os.path.exists(out_mp4):
-    pr = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,width,height,duration",
+    pr = subprocess.run(["ffprobe", "-v", "error", "-count_frames",
+                         "-show_entries", "stream=codec_type,width,height,duration,nb_read_frames",
                          "-of", "json", out_mp4], capture_output=True, text=True)
     try:
         st = json.loads(pr.stdout)["streams"]
         v = next(s for s in st if s["codec_type"] == "video")
         ok("ffprobe square", int(v["width"]) == 1080 and int(v["height"]) == 1080
            and abs(float(v["duration"]) - 4.0) < 0.15, json.dumps(v))
+        # frame-count gate: duration tolerance alone would hide a dropped or
+        # duplicated frame (N = target*fps; draft renders run at project fps)
+        nf = int(v.get("nb_read_frames", -1))
+        ok("frame count == target*fps", nf == 4 * int(p.get("fps", 24)), "nb_read_frames=%s" % nf)
     except Exception as e:
         ok("ffprobe square", False, str(e))
     os.remove(out_mp4)
