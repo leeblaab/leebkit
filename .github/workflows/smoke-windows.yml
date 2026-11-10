@@ -22,3 +22,6 @@ jobs:
       - name: Smoke test (headless render + ffprobe gate)
         shell: cmd
         run: python scripts/smoke_test.py
+      - name: Golden frames (FULL corpus on the shipping OS)
+        shell: cmd
+        run: python scripts/golden_frames.py
