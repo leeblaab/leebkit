@@ -23,7 +23,7 @@ button.primary{background:var(--acc);color:#001318;border-color:var(--acc)}
 button.primary:hover{background:#4df0ff;color:#001318}
 button:disabled{opacity:.35;cursor:not-allowed}
 kbd{font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.4);padding:2px 6px;border-radius:3px;margin-left:8px}
-main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;padding:20px 24px;width:100%;margin:0}
+main{display:grid;grid-template-columns:300px minmax(0,1fr) 340px;gap:20px;padding:20px 24px;width:100%;margin:0}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
 .panel h3{font-family:'Archivo Black';font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
 /* drop zone */
@@ -85,6 +85,19 @@ border-radius:4px;padding:7px 9px;font-family:'Inter';font-size:13px}
 .outrow a{color:var(--acc);text-decoration:none}.outrow a:hover{text-decoration:underline}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--acc);
 padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-index:99;display:none}
+/* animations pane (v1.35) */
+#animgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+.acard{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px;cursor:pointer;
+transition:border-color .15s;position:relative}
+.acard:hover{border-color:var(--acc)}
+.acard.applied{border-color:var(--ok)}
+.acard.applied::after{content:'✓ applied';position:absolute;top:8px;right:8px;font-family:var(--mono);
+font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border-radius:3px}
+.acard img{width:100%;border-radius:4px;display:block;background:#000;aspect-ratio:9/16;object-fit:cover}
+.acard .alabel{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:5px;text-align:center}
+#acatrail{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+#acatrail button{padding:5px 10px;font-size:11px}
+#acatrail button.on{border-color:var(--acc);color:var(--acc)}
 @media(max-width:1100px){main{grid-template-columns:1fr}}
 </style>
 </head>
@@ -99,6 +112,16 @@ padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-ind
 </header>
 
 <main>
+<section class="rail" id="animcol">
+  <div class="panel">
+    <h3>Animations</h3>
+    <div class="row"><label>Apply to shot</label><select id="animapplyshot"></select></div>
+    <div id="acatrail"></div>
+    <div id="animgrid"><span class="noflags">pick images first — tiles show each move on a blank background</span></div>
+    <div class="totsub" style="margin-top:8px">Click a card to apply it to the selected shot. A transition belongs to the NEXT shot (it's how that shot arrives); camera moves act on the shot itself. Tiles are live previews — they loop.</div>
+  </div>
+</section>
+
 <section>
   <div class="panel">
     <h3>Images — drop, or click to pick</h3>
@@ -143,31 +166,6 @@ padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-ind
     </select></div>
     <div id="animlist" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
     <div class="totsub" style="margin-top:8px">Each box animates in with its own kinetic style — ▶ shows it mid-animation on a blank background (no image needed). The Storyboard check verifies each box finishes before the shot ends.</div>
-  </div>
-
-  <div class="panel">
-    <h3>Motion &amp; transitions</h3>
-    <div class="row"><label>Shot</label><select id="motionshot"></select></div>
-    <div class="row"><label>Transition in</label><select id="mtrans">
-      <option value="cut">Cut (hard, no overlay bleed)</option>
-      <option value="fade">Fade through black</option>
-      <option value="wipe_left">Wipe left →</option>
-      <option value="wipe_up">Wipe up ↑</option>
-      <option value="slideL">Slide from left</option>
-      <option value="slideR">Slide from right</option>
-      <option value="whip">Whip pan</option>
-      <option value="flashdip">Flash dip</option>
-    </select></div>
-    <div class="row"><label>Camera move</label><select id="mcam">
-      <option value="">none (static)</option>
-      <option value="pushin">Push in (zoom closer)</option>
-      <option value="pushin2">Push in, deep</option>
-      <option value="pushout">Pull out</option>
-      <option value="panup">Pan up</option>
-      <option value="pandown">Pan down</option>
-      <option value="pandiag">Diagonal pan</option>
-    </select></div>
-    <div class="totsub" style="margin-top:8px">The transition belongs to the NEXT shot (it's how this one gives way). Transitions blend the real footage — preview them in the Storyboard strip.</div>
   </div>
 
   <div class="panel">
@@ -348,7 +346,6 @@ async function uploadFiles(files){
 }
 
 // ---------- project config ----------
-$('#preset').onchange=e=>{P.preset=e.target.value};
 $('#format').onchange=e=>{P.size=e.target.value;const[w,h]=P.size.split('x').map(Number);P.width=w;P.height=h;
   $('#formathint').textContent=P.height>P.width?'9:16 is the native LEEBKIT look; square and landscape auto-adapt the layout.':
     'Layout, panels and fonts auto-scale for this canvas — check the storyboard strip after switching.'};
@@ -428,21 +425,66 @@ function renderAnimList(){
 }
 $('#animshot').onchange=e=>{_animShot=+e.target.value;renderAnimList();renderMotion()};
 
-// ---------- motion & transitions (right panel) ----------
-let _motionShot=0;
+// ---------- animations pane (left column, v1.35) ----------
+let _motionShot=0;          // shot selector shared by card clicks + old handlers
+let GAL=null;               // gallery manifest for the current preset
+let _galCat='favorites';    // category rail selection
+let _galTimer=null;
+
 function renderMotion(){
-  const sel=$('#motionshot');
+  const sel=$('#animapplyshot');
   sel.innerHTML=P.shots.map((s,i)=>`<option value="${i}">shot ${i+1} (${s.t.toFixed(1)}s)</option>`).join('')||'<option value="">no shots yet</option>';
-  if(P.shots.length){_motionShot=Math.min(_motionShot,P.shots.length-1);sel.value=_motionShot;
-    const s=P.shots[_motionShot];
-    $('#mtrans').value=s.transition||'cut';
-    $('#mcam').value=s.cam||'';}
+  if(P.shots.length){_motionShot=Math.min(_motionShot,P.shots.length-1);sel.value=_motionShot;}
+  paintApplied();
 }
-$('#motionshot').onchange=e=>{_motionShot=+e.target.value;renderMotion()};
-$('#mtrans').onchange=e=>{const s=P.shots[_motionShot];if(!s)return toast('add images first');
-  s.transition=e.target.value;renderShots();toast('shot '+(_motionShot+1)+' transition: '+e.target.value)};
-$('#mcam').onchange=e=>{const s=P.shots[_motionShot];if(!s)return toast('add images first');
-  s.cam=e.target.value;renderShots();toast('shot '+(_motionShot+1)+' camera: '+(e.target.value||'static'))};
+$('#animapplyshot').onchange=e=>{_motionShot=+e.target.value;paintApplied()};
+
+async function loadGallery(){
+  const preset=P.preset;
+  try{GAL=await api('/api/anim_gallery/'+preset)}catch(e){GAL=null;return}
+  if(GAL && GAL.preset===preset)paintGallery();
+}
+
+function paintGallery(){
+  if(!GAL)return;
+  $('#acatrail').innerHTML=GAL.categories.map(c=>`<button data-cat="${c.id}" class="${c.id===_galCat?'on':''}">${c.label}</button>`).join('');
+  const cat=(GAL.categories.find(c=>c.id===_galCat)||GAL.categories[0]);
+  $('#animgrid').innerHTML=cat.items.map(id=>{
+    const it=GAL.categories.flatMap(c=>c.items).find(x=>x.id===id);
+    if(!it)return '';
+    if(!it.ready)return `<div class="acard" style="cursor:default"><div style="aspect-ratio:9/16;display:flex;align-items:center;justify-content:center;color:var(--dim);font-family:var(--mono);font-size:11px">rendering…</div><div class="alabel">${esc(it.label)}</div></div>`;
+    return `<div class="acard" data-anim="${it.id}" data-kind="${it.kind}"><img src="${it.url}" alt="${esc(it.label)}" loading="lazy"><div class="alabel">${esc(it.label)}</div></div>`;
+  }).join('');
+  paintApplied();
+  // while any tile is still rendering, re-poll until the whole set lands
+  const pending=GAL.categories.some(c=>c.items.some(x=>!x.ready));
+  clearTimeout(_galTimer);
+  if(pending)_galTimer=setTimeout(loadGallery,2500);
+}
+
+function paintApplied(){
+  if(!P.shots.length||!GAL)return;
+  const s=P.shots[_motionShot];if(!s)return;
+  $$('#animgrid .acard').forEach(el=>{
+    const id=el.dataset.anim;if(!id)return;
+    const on=(el.dataset.kind==='camera')?(s.cam===id):(s.transition===id);
+    el.classList.toggle('applied',on);});
+}
+
+function applyAnim(id,kind){
+  const s=P.shots[_motionShot];if(!s)return toast('add images first');
+  if(kind==='camera'){s.cam=id;toast('shot '+(_motionShot+1)+' camera: '+id)}
+  else{s.transition=id;toast('shot '+(_motionShot+1)+' transition in: '+id)}
+  renderShots();   // re-renders shot cards; paintApplied runs via renderMotion
+}
+
+$('#acatrail').addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(!b)return;
+  _galCat=b.dataset.cat;paintGallery()});
+$('#animgrid').addEventListener('click',e=>{const c=e.target.closest('[data-anim]');if(!c)return;
+  applyAnim(c.dataset.anim,c.dataset.kind)});
+
+// tiles depend on the preset's colors/fonts: reload the gallery on switch
+$('#preset').onchange=e=>{P.preset=e.target.value;loadGallery()};
 $('#animkind').onchange=e=>{
   const i=_animShot;const s=P.shots[i];if(!s)return toast('add images first');
   s.captions.push(JSON.parse(JSON.stringify(CAP_DEFAULTS[e.target.value])));
