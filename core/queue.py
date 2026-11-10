@@ -31,6 +31,14 @@ class QueueFull(RuntimeError):
 
 # ---- parallel frame workers (module-level so mp.Pool can pickle them;
 # mirrors render_cli's _worker_init/_worker_chunk shape) ----
+# CRITICAL: nothing in this module may touch OUT_DIR at import time. mp.Pool
+# children unpickle _frame_worker_init by qualified name, which IMPORTS this
+# module in each child; the old module-level `QUEUE = Queue()` therefore built
+# a full second Queue inside every render worker, and its _prune_stale_scratch
+# deleted the parent's live _frames_* dir mid-render (deterministic ENOENT on
+# f_0000.png — the #4 queue-render bug). The QUEUE singleton is now created
+# only when this module loads in the main process (see bottom of file);
+# children get import-clean module objects.
 _FW = {}
 
 
@@ -294,6 +302,10 @@ class Queue:
         except Exception as e:
             j.state = "error"
             j.error = str(e)
+            # str(e) alone hid the raise-site for the f_0000 ENOENT live bug;
+            # full traceback goes to server stderr (uvicorn console).
+            import traceback
+            traceback.print_exc()
         finally:
             # audit Bug A: every exit path (error, cancel, done) removes scratch dirs.
             # the success path already rmtree'd frames; ignore_errors keeps that cheap.
@@ -307,4 +319,12 @@ class Queue:
             return [j.snapshot() for j in self.jobs[-12:]]
 
 
-QUEUE = Queue()
+# The queue singleton lives only in the app/server process. mp.Pool render
+# children import this module by necessity (qualified-name pickling of
+# _frame_worker_init) and must NOT build a Queue there — construction starts
+# a worker thread AND runs _prune_stale_scratch(), which deleted the parent's
+# live _frames_* dir mid-render (the deterministic f_0000.png ENOENT of #4).
+import multiprocessing as _mp
+
+if _mp.current_process().name == "MainProcess":
+    QUEUE = Queue()
