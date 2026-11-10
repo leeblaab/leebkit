@@ -439,6 +439,7 @@ async def progress(ws: WebSocket):
 app.mount("/assets", StaticFiles(directory=os.path.join(ROOT, "assets")), name="assets")
 app.mount("/media", StaticFiles(directory=os.path.join(ROOT, "media")), name="media")
 app.mount("/output", StaticFiles(directory=os.path.join(ROOT, "output")), name="output")
+os.makedirs(os.path.join(ROOT, "music"), exist_ok=True)  # fresh install has no music/ — mounting a missing dir crashed startup
 app.mount("/music", StaticFiles(directory=os.path.join(ROOT, "music")), name="music")
 
 
