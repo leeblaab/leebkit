@@ -27,7 +27,14 @@ stills (Ken Burns), kinetic text, transitions, voiceover and music with auto-duc
 rendered entirely on your machine by Python + ffmpeg. Double-click `start.bat`, open the
 webUI, get an MP4.
 
-**Status: v1.2 — November 2026.** Everything listed below is built and in daily use.
+**Status: v1.3 — November 2026.** Everything listed below is built and in daily use.
+v1.3 adds: golden-frame regression harness (1260 hashed frames + ffprobe frame-count
+gate, run on every push), wipe_left/wipe_up transitions with correct caption timing,
+caption engine split into per-kind measure/draw modules so the pre-render checker and
+the renderer share one source of truth (no more false overflow warnings), metrics cache
+(measure once per shot, not per frame — long-text projects no longer pay the fit/shrink
+loop on every single frame), and style previews: every preset renders a live
+3-frame animated preview in the app before you commit to a look.
 v1.2 adds: 9:16 + 1:1 + 16:9 format selector, sub-line auto-wrap, path-confinement + upload
 hardening (all project-supplied image paths are confined to `media/`, absolute/traversal paths
 rejected, 32MB upload cap + magic-byte sniff), missing-image abort instead of black frames,
