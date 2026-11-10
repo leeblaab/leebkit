@@ -303,6 +303,12 @@ def vo_duration(text, voice_id, scratch):
     return len(d) / sr, p
 
 
+def vo_duration_probe(voice_id, scratch):
+    """Cheap fixed-sentence synthesis used by the UI audition button — probes
+    the whole chain (model + subprocess + decode) with a tiny input."""
+    return vo_duration("This is how I sound in your promo.", voice_id, scratch)
+
+
 # --------------------------------------------------------------- bed assembly
 def shot_timeline(proj):
     starts, acc = [], 0.0

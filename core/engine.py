@@ -91,6 +91,14 @@ def validate_project(proj):
     """Schema-1 validation; raises ValueError with a readable message."""
     if proj.get("schema") != 1:
         raise ValueError("project schema must be 1 (got %r)" % proj.get("schema"))
+    # media-relative convention (v1.2): Engine joins shot image paths onto
+    # media_dir, so an "media/..."-prefixed path silently double-prefixes and
+    # dies later as "outside media dir". Older writers produced that shape —
+    # normalize at the boundary instead of failing the whole render.
+    for s in proj.get("shots") or []:
+        img = s.get("image")
+        if isinstance(img, str) and (img == "media" or img.startswith("media/")):
+            s["image"] = img[len("media/"):]
     w = int(proj.get("width", 1080))
     h = int(proj.get("height", 1920))
     if not (320 <= w <= 3840 and 320 <= h <= 3840):

@@ -20,7 +20,8 @@ from . import audio as A
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-MAX_QUEUED = 4          # jobs waiting beyond this are refused at submit (audit #3)
+MAX_QUEUED = 20         # jobs waiting beyond this are refused at submit (audit #3);
+                        # was 4 — live testing kept hitting the cap by accident
 KEEP_FINISHED = 20      # finished/error/canceled jobs retained for UI history
 
 
@@ -45,6 +46,33 @@ def _frame_chunk(args):
         # PNG intermediates: JPEG q92 -> crf 19 was lossy-then-lossy (audit #4)
         _FW["eng"].compose_frame(idx).save(os.path.join(frames_dir, "f_%04d.png" % idx))
     return b - a
+
+
+_SPAWN_OK = None
+
+
+def _spawn_ok():
+    """True if mp.Pool spawn workers actually run in this process environment.
+
+    A restricted host (agent shells, service sessions) can fail Windows spawn
+    with WinError 87; pool.map then hangs or returns nothing while the parent
+    thinks frames were written (the live-test ENOENT on f_0000.png). Probe once
+    per process with a bare Pool doing pure work — no app imports needed in the
+    child, so the probe itself can't be poisoned by our import graph.
+    """
+    global _SPAWN_OK
+    if _SPAWN_OK is None:
+        try:
+            import multiprocessing as mp
+            with mp.Pool(1) as p:
+                _SPAWN_OK = (p.map(_spawn_child, [40]) == [42])
+        except Exception:
+            _SPAWN_OK = False
+    return _SPAWN_OK
+
+
+def _spawn_child(x):          # module-level so it pickles on spawn
+    return x + 2
 
 
 class Job:
@@ -112,7 +140,10 @@ class Queue:
             # referenced by the worker and keeps updating state normally.
             self.jobs = [j for j in self.jobs
                          if j.state not in ("done", "error", "canceled")][-KEEP_FINISHED:]
-            j = Job(proj, media_dir or ROOT)
+            # default must match Engine convention: images are media-relative,
+            # so the queue default was ROOT (wrong base) — every path resolved one
+            # level too deep unless callers passed media/ explicitly.
+            j = Job(proj, media_dir or os.path.join(ROOT, "media"))
             self.jobs.append(j)
         self._pending.put(j)
         with self._cond:
@@ -166,7 +197,11 @@ class Queue:
             out_dir = os.path.join(ROOT, "output")
             frames_dir = os.path.join(out_dir, "_frames_%s" % name)
             audio_dir = os.path.join(out_dir, "_audio_%s" % name)
-            shutil.rmtree(frames_dir, ignore_errors=True)   # fresh start; never reuse stale/empty dirs
+            # fresh start; never reuse stale/empty dirs. rmtree then IMMEDIATELY
+            # recreate: a bare rmtree lets ANY concurrent cleanup (other session,
+            # startup prune) delete our dir between remove and makedirs (live-test
+            # ENOENT on f_0000.png).
+            shutil.rmtree(frames_dir, ignore_errors=True)
             os.makedirs(frames_dir, exist_ok=True)
             eng = Engine(j.proj, media_dir=j.media_dir)
             j.state = "frames"
@@ -174,9 +209,18 @@ class Queue:
                 self._cond.notify_all()
             jobs = max(1, min(8, os.cpu_count() or 1))
             if jobs > 1 and j.frames_total >= 60:
-                # parallel frame render in the app too (audit #5): same chunked
-                # mp.Pool shape as render_cli. Progress updates per chunk.
-                import multiprocessing as mp
+                # parallel frame render in the app too (audit #5). mp.Pool only
+                # when spawn workers are proven alive on this host (a bare Pool
+                # probe at boot): agent shells / restricted sessions can break
+                # Windows spawn (WinError 87), which previously surfaced as a
+                # mysterious ENOENT on f_0000.png because dead pool workers never
+                # wrote frames while the parent happily saved them itself.
+                # Probe once per process; fall back to threads (GIL-bound, but
+                # correct) — render_cli still gives users full multiprocessing.
+                if not _spawn_ok():
+                    import multiprocessing.dummy as mp
+                else:
+                    import multiprocessing as mp
                 proj_path = os.path.join(ROOT, "projects", "_queue_%s.json" % j.id)
                 with open(proj_path, "w", encoding="utf-8") as fh:
                     json.dump(j.proj, fh)

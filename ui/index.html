@@ -116,8 +116,8 @@ padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-ind
     <div class="row"><label>Format</label><select id="format"><option value="1080x1920">9:16 portrait (Reels / Shorts / TikTok)</option><option value="1080x1080">1:1 square (feed post)</option><option value="1920x1080">16:9 landscape (YouTube / web)</option></select></div>
     <div class="totsub" id="formathint">9:16 is the native LEEBKIT look; square and landscape auto-adapt the layout.</div>
   <div class="row"><label>Preset</label><select id="preset"></select></div>
-    <div class="row"><label>Voice</label><select id="voice"></select><button id="voiceprev" title="Audition this voice" style="padding:0 12px">&#9654;</button></div>
-    <div class="row"><label>Music</label><select id="music"></select></div>
+    <div class="row"><label>Voice</label><select id="voice"></select><button id="voiceprev" title="Audition this voice (first try takes ~10s — it starts the offline voice engine)" style="padding:0 12px">&#9654;</button></div>
+    <div class="row"><label>Music</label><select id="music"></select><button id="musicprev" title="Audition this music bed (8s)" style="padding:0 12px">&#9654;</button></div>
     <div class="row"><label>FPS</label><select id="fps"><option value="30">30 fps (smooth)</option><option value="24">24 fps (filmic, faster render)</option></select></div>
     <div class="totsub" id="fpshint"></div>
     <div class="row" style="margin-top:6px"><label>Duration</label><input type="range" id="targetslider" min="5" max="45" step="1" value="30" style="flex:1;accent-color:var(--acc)"><span id="targetval" style="font-family:var(--mono);color:var(--acc);width:42px;text-align:right">30s</span></div>
@@ -142,7 +142,32 @@ padding:10px 18px;border-radius:6px;font-family:var(--mono);font-size:12px;z-ind
       <option value="small">Small note</option>
     </select></div>
     <div id="animlist" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
-    <div class="totsub" style="margin-top:8px">Each box animates in with its own kinetic style — the Storyboard check verifies it finishes before the shot ends.</div>
+    <div class="totsub" style="margin-top:8px">Each box animates in with its own kinetic style — ▶ shows it mid-animation on a blank background (no image needed). The Storyboard check verifies each box finishes before the shot ends.</div>
+  </div>
+
+  <div class="panel">
+    <h3>Motion &amp; transitions</h3>
+    <div class="row"><label>Shot</label><select id="motionshot"></select></div>
+    <div class="row"><label>Transition in</label><select id="mtrans">
+      <option value="cut">Cut (hard, no overlay bleed)</option>
+      <option value="fade">Fade through black</option>
+      <option value="wipe_left">Wipe left →</option>
+      <option value="wipe_up">Wipe up ↑</option>
+      <option value="slideL">Slide from left</option>
+      <option value="slideR">Slide from right</option>
+      <option value="whip">Whip pan</option>
+      <option value="flashdip">Flash dip</option>
+    </select></div>
+    <div class="row"><label>Camera move</label><select id="mcam">
+      <option value="">none (static)</option>
+      <option value="pushin">Push in (zoom closer)</option>
+      <option value="pushin2">Push in, deep</option>
+      <option value="pushout">Pull out</option>
+      <option value="panup">Pan up</option>
+      <option value="pandown">Pan down</option>
+      <option value="pandiag">Diagonal pan</option>
+    </select></div>
+    <div class="totsub" style="margin-top:8px">The transition belongs to the NEXT shot (it's how this one gives way). Transitions blend the real footage — preview them in the Storyboard strip.</div>
   </div>
 
   <div class="panel">
@@ -215,6 +240,7 @@ function capEditor(i,j){
 }
 function renderShots(){
   renderAnimList();
+  renderMotion();
   $('#shots').innerHTML=P.shots.map((s,i)=>`
   <div class="card" draggable="true" data-i="${i}">
     <div class="grip">⠿<br><span style="font-size:11px">${String(i+1).padStart(2,'0')}</span></div>
@@ -359,12 +385,27 @@ function fpsHint(){
 }
 
 // ---------- voice audition (right panel) ----------
+let _voAuditioning=false;
 $('#voiceprev').onclick=async e=>{
   if(P.voice==='none')return toast('pick a real voice first');
-  const b=e.currentTarget;b.disabled=true;b.textContent='…';
+  if(_voAuditioning)return toast('voice engine still warming up…');
+  const b=e.currentTarget;b.disabled=true;b.textContent='…';_voAuditioning=true;
+  toast('starting the offline voice engine — first try takes ~10s');
   try{const j=await api('/api/vo_preview',{text:'This is how I sound in your promo.',voice:P.voice});
     new Audio(j.url+'?t='+Date.now()).play();}
   catch(err){toast('voice preview: '+err.message)}
+  finally{_voAuditioning=false;b.disabled=false;b.textContent='▶'}
+};
+
+// ---------- music audition (right panel) ----------
+$('#musicprev').onclick=async e=>{
+  const bed=(P.music&&P.music.bed)||'synthwave';
+  if(P.music&&P.music.mode==='none')return toast('music is off — pick a bed first');
+  const b=e.currentTarget;b.disabled=true;b.textContent='…';
+  try{
+    if(P.music&&P.music.mode==='file'){new Audio('/music/'+encodeURIComponent(bed)+'?t='+Date.now()).play()}
+    else{const j=await api('/api/music_preview',{bed});new Audio(j.url+'?t='+Date.now()).play()}
+  }catch(err){toast('music preview: '+err.message)}
   finally{b.disabled=false;b.textContent='▶'}
 };
 
@@ -385,7 +426,23 @@ function renderAnimList(){
       <i data-aprev="${i}:${j}" title="live preview of this animation" style="cursor:pointer">▶</i><i data-del="${i}:${j}" title="remove this box">×</i></div>`}).join('')
     :'<span class="noflags">no text boxes on this shot — pick a kind above</span>';
 }
-$('#animshot').onchange=e=>{_animShot=+e.target.value;renderAnimList()};
+$('#animshot').onchange=e=>{_animShot=+e.target.value;renderAnimList();renderMotion()};
+
+// ---------- motion & transitions (right panel) ----------
+let _motionShot=0;
+function renderMotion(){
+  const sel=$('#motionshot');
+  sel.innerHTML=P.shots.map((s,i)=>`<option value="${i}">shot ${i+1} (${s.t.toFixed(1)}s)</option>`).join('')||'<option value="">no shots yet</option>';
+  if(P.shots.length){_motionShot=Math.min(_motionShot,P.shots.length-1);sel.value=_motionShot;
+    const s=P.shots[_motionShot];
+    $('#mtrans').value=s.transition||'cut';
+    $('#mcam').value=s.cam||'';}
+}
+$('#motionshot').onchange=e=>{_motionShot=+e.target.value;renderMotion()};
+$('#mtrans').onchange=e=>{const s=P.shots[_motionShot];if(!s)return toast('add images first');
+  s.transition=e.target.value;renderShots();toast('shot '+(_motionShot+1)+' transition: '+e.target.value)};
+$('#mcam').onchange=e=>{const s=P.shots[_motionShot];if(!s)return toast('add images first');
+  s.cam=e.target.value;renderShots();toast('shot '+(_motionShot+1)+' camera: '+(e.target.value||'static'))};
 $('#animkind').onchange=e=>{
   const i=_animShot;const s=P.shots[i];if(!s)return toast('add images first');
   s.captions.push(JSON.parse(JSON.stringify(CAP_DEFAULTS[e.target.value])));
