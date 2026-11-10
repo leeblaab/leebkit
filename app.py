@@ -283,6 +283,30 @@ async def style_preview(preset: str):
     return await asyncio.to_thread(_style_preview_sync, preset)
 
 
+# ------------------------------------------------- animation gallery (v1.35)
+from core import anim_gallery as AG
+
+
+@app.get("/api/anim_gallery/{preset}")
+async def anim_gallery(preset: str):
+    """Manifest of CapCut-style looping webp tiles for every transition/camera
+    move on this preset's blank background. Tiles are cached forever under
+    output/_animgallery (StaticFiles serves them at /output/_animgallery/...);
+    missing ones render in the background after the manifest returns, so pane
+    open is instant and tiles pop in as they arrive (~12s for all 14)."""
+    try:
+        manifest = AG.gallery_manifest(preset)   # raises ValueError on bad preset
+    except Exception as e:
+        raise HTTPException(404, "unknown preset: %s" % e)
+    missing = any(not it["ready"] for c in manifest["categories"] for it in c["items"])
+    if missing:
+        try:
+            await asyncio.to_thread(AG.generate_gallery, preset)
+        except Exception:
+            pass   # UI shows 'generating...' placeholders; next poll picks tiles up
+    return AG.gallery_manifest(preset)
+
+
 @app.post("/api/vo_preview")
 async def vo_preview(req: dict):
     # piper subprocess (up to ~60s) must never block the event loop; the

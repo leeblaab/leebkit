@@ -242,6 +242,22 @@ for f in os.listdir(os.path.join(ROOT, "output")):
         except OSError:
             pass
 
+# 7d. animations gallery (v1.35): manifest + tiles for every card in the rail
+from core import anim_gallery as AG
+_gm = AG.gallery_manifest("leebdark")
+ok("gallery manifest has 5 categories", len(_gm["categories"]) == 5, str(len(_gm["categories"])))
+_all_items = [it for c in _gm["categories"] for it in c["items"]]
+ok("gallery covers 14 unique cards", len(set(i["id"] for i in _all_items)) == 14, str(len(set(i["id"] for i in _all_items))))
+ok("gallery tiles ready (pre-built)", all(i["ready"] for i in _all_items),
+   str([i["id"] for i in _all_items if not i["ready"]]))
+ok("gallery tile files exist", all(i["ready"] and os.path.isfile(os.path.join(ROOT, i["url"].lstrip("/").replace("/", os.sep))) for i in _all_items))
+_fav = {i["id"] for i in _gm["categories"][0]["items"]}
+ok("favorites reference real animations", bool(_fav) and _fav <= {i["id"] for i in _all_items}, str(sorted(_fav)))
+_cam = [i for c in _gm["categories"] if c["id"] == "camera" for i in c["items"]]
+ok("camera cards have kind=camera", all(i["kind"] == "camera" for i in _cam) and len(_cam) >= 6, str(len(_cam)))
+_trans = [i for c in _gm["categories"] if c["id"] == "transitions" for i in c["items"]]
+ok("transition cards have kind=transition", all(i["kind"] == "transition" for i in _trans), str(len(_trans)))
+
 # 8. UI inline JS must parse (a '#' comment line once killed the whole script:
 # empty dropdowns on a healthy server). node --check if present, else basic scan.
 import re as _re
