@@ -50,6 +50,12 @@ def _prune_cache(d, keep=PREVIEW_MAX):
 
 
 def _proj_engine(proj):
+    # normalize legacy/absolute image paths BEFORE Engine loads them (Engine
+    # itself never calls validate; every app path goes through here)
+    try:
+        validate_project(proj)
+    except ValueError:
+        pass  # surface real schema errors at the normal gate, not this one
     return Engine(proj, media_dir=os.path.join(ROOT, "media"))
 
 
@@ -121,8 +127,14 @@ async def upload(file: UploadFile = File(...)):
                                     % (MAX_UPLOAD_BYTES // (1024 * 1024)))
             f.write(chunk)
     os.replace(dest + ".part", dest)
-    rel = os.path.relpath(dest, ROOT).replace("\\", "/")
-    return {"path": rel, "url": "/" + rel}
+    # media-relative (v1.2 convention): Engine joins paths onto media_dir, so
+    # ROOT-relative ("media/uploads/x.png") silently double-prefixed and every
+    # render/storyboard died with "outside media dir" (live-test bug 4/3b).
+    # Base MUST be media_dir (Engine's root), not UPLOAD_DIR — uploads live in
+    # the uploads/ subdir, so relpath from UPLOAD_DIR dropped it and images
+    # resolved to media/img_x.png (missing) -> corrupted preview + ENOENT render.
+    rel = os.path.relpath(dest, os.path.join(ROOT, "media")).replace("\\", "/")
+    return {"path": rel, "url": "/media/" + rel}
 
 
 # ------------------------------------------------------------------ projects
@@ -194,6 +206,13 @@ async def anim_preview(proj: dict):
 
 def _anim_preview_sync(proj: dict):
     peek = float(proj.pop("_peek", 0.0) or 0.0)
+    # the preview shows the ANIMATION, not the photo: drop shot images so it
+    # renders on the preset background and works even when the user's image
+    # files are missing/moved (live-test bug 2: no black-frame abort here)
+    for s in proj.get("shots", []):
+        if s.get("image"):
+            s["image"] = ""
+            s.setdefault("dim", 0.0)
     try:
         eng = _proj_engine(proj)
     except Exception as e:
@@ -392,6 +411,7 @@ async def progress(ws: WebSocket):
 app.mount("/assets", StaticFiles(directory=os.path.join(ROOT, "assets")), name="assets")
 app.mount("/media", StaticFiles(directory=os.path.join(ROOT, "media")), name="media")
 app.mount("/output", StaticFiles(directory=os.path.join(ROOT, "output")), name="output")
+app.mount("/music", StaticFiles(directory=os.path.join(ROOT, "music")), name="music")
 
 
 @app.get("/")

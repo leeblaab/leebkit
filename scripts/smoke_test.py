@@ -182,7 +182,7 @@ ok("music file: prefix accepted", _normalize_music({"bed": "file:track.wav"})["m
 # and the NEXT job must still render. Tiny 1-shot/1s/no-audio jobs keep this cheap;
 # below the >=60-frame threshold so it takes the serial path (no mp.Pool in smoke).
 import time as _t
-from core.queue import QUEUE, QueueFull
+from core.queue import QUEUE, QueueFull, MAX_QUEUED
 
 
 def j_done(j):
@@ -206,7 +206,7 @@ ok("queue survives missing-image job (audit #8)",
 
 # 7e. queue cap + cancel (audit #3)
 try:
-    for _ in range(10):
+    for _ in range(MAX_QUEUED + 6):   # cap is configurable; test tracks it (was hardcoded 10 vs MAX=4)
         QUEUE.submit(dict(tiny), media_dir=os.path.join(ROOT, "media"))
     ok("queue refuses >MAX_QUEUED submits", False, "accepted 10 submissions")
 except QueueFull:
