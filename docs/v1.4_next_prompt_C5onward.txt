@@ -1,0 +1,70 @@
+PROMPT FOR FRESH SESSION — LEEBKIT v1.4, C5 onward (write on 2026-11-11)
+
+Continue the LEEBKIT v1.4 milestone at C:\Products\reelkit (master). Read
+docs/v1.4_plan.md (full plan + locked decisions D1-D7 + open risks) and
+docs/v1.4_handoff_next_session.txt first — do not re-derive anything from
+this prompt alone; the repo docs are authoritative.
+
+STATE RIGHT NOW:
+- Chain: a017b40(C1 720p tier) -> 125a5d9(C2 generator engine core) ->
+  3c0aa3d(C2b presets) -> fb9a500+422f642(C3 UI generator picker) ->
+  bd669c9+c030e23(C4 project JSON v3) -> 15324dc+6ce1dfd(C4d CLI --preset/
+  --motion/--music + music library) -> cb553a8(fix: anim gallery tiles stuck
+  'rendering' — tier-legal render + LANCZOS tile) -> 5f4f43a(UI: generator
+  look picker, per-preset looping webp thumbs + click-to-switch strip) ->
+  de73245(C4b half: three more procedural beds low_drive/sparkle/ambient_glow)
+  -> 4e25abb(docs handoff). HEAD=4e25abb. Working tree CLEAN.
+- Gates green as of de73245: scripts/smoke_test.py = 42 checks PASS (incl.
+  node --check of ui inline JS, tests/test_anim_gallery.py,
+  tests/test_music_beds.py); CLI render + ffprobe; scripts/golden_frames.py
+  GOLDEN PASS 1314 frames vs data/baselines/hashes.json UNMODIFIED (no pixel
+  commits since C2b). Linux baseline hashes-linux.json regen still pending —
+  do it before any push (golden_frames.py --os-name linux --update, or the
+  golden-bootstrap.yml workflow).
+- Nothing is pushed; no v1.4 tag exists. GitHub remote = leeblaab/leebkit.
+
+HARD RULES (from Yasser, still in force):
+- NEVER touch his live uvicorn on 127.0.0.1:8735 and never submit test
+  renders through that port — CLI, in-process, or ffprobe only.
+- "do delegation" means DO NOT delegate. No subagents.
+- One commit per plan step, each gate-green (smoke + CLI/ffprobe; golden
+  re-baseline ONLY for pixel-intentional commits — C5 is one of them).
+- Commit with repo-local identity: git -c user.name="LEEBLAAB"
+  -c user.email="banyadam18@gmail.com" commit ... (host global config =
+  nillianstore, wrong for this repo).
+- Nothing pushed or tagged without Yasser's explicit word. v1.4 ships as ONE
+  release at C7 ("massive hit"). Tiers locked 720p/FHD/2K — no 4K anywhere.
+- Tests are plain scripts (PYTHONPATH=. python tests/x.py), no pytest;
+  register new suites in smoke_test.py _SUITES.
+
+SEQUENCE FROM HERE:
+
+1) C5 — Share export GIF/WebP (the next code step):
+   - render_cli.py: --gif / --webp, encoded from the existing frame dir or
+     the mp4 via ffmpeg palettegen/paletteuse (palette-split) for quality.
+   - app.py: format selector on download; teaser caps enforced + documented.
+   - PLAN RISK #3 DECISION NEEDED FIRST: GIF cap. Propose 640px wide, <=6s,
+     ~12fps and CONFIRM THE CAP WITH YASSER when C5 starts (plan says so).
+     "GIF is a share teaser, not the master."
+   - smoke: one tiny GIF + one WebP render, ffprobe both. This commit
+     intentionally changes nothing in mp4 pixels — golden must stay PASS
+     unmodified; only new-format artifacts are added.
+   - Also fold in the C4b templates-gallery half if Yasser wants it before
+     C5 (templates/ dir + curated set: preset + shot skeleton + background
+     source; app.py gallery tab reusing the gen-preview plumbing). The beds
+     half of C4b is already done (de73245). CC0 external tracks stay parked —
+     procedural beds are enough; never guess licenses.
+
+2) C6 — AI-workflow README section (zero code): "Use LEEBKIT with
+   ChatGPT/Claude" — prompt templates that emit valid project JSON v3, the
+   schema contract, copy-paste into app or render_cli.py. Marketing answer
+   to CapCut's AI positioning. Pure docs commit.
+
+3) C7 — optional polish (cut if time-boxed): ease_back_out overshoot on
+   title pop-in + golden re-baseline for affected corpus shots. Then the
+   single v1.4 release: regen Linux hashes, tag/push ONLY on Yasser's word.
+
+FINISH THE SESSION LIKE ALWAYS: append a handoff line to
+docs/v1.4_handoff_next_session.txt (or update it), commit docs separately,
+confirm git status clean and identity LEEBLAAB <banyadam18@gmail.com>, and
+give Yasser the chain table + gate lines + one "next is X" line.
