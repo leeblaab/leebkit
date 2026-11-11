@@ -141,6 +141,7 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
     <div class="totsub" id="formathint">9:16 is the native LEEBKIT look; square and landscape auto-adapt the layout.</div>
   <div class="row"><label>Preset</label><select id="preset"></select></div>
     <div class="row"><label>Voice</label><select id="voice"></select><button id="voiceprev" title="Audition this voice (first try takes ~10s — it starts the offline voice engine)" style="padding:0 12px">&#9654;</button></div>
+    <div class="row"><label>VO Speed</label><select id="vospeed"><option value="0.8">Slow (0.8&times;)</option><option value="1.0" selected>Normal</option><option value="1.25">Fast (1.25&times;)</option></select></div>
     <div class="row"><label>Music</label><select id="music"></select><button id="musicprev" title="Audition this music bed (8s)" style="padding:0 12px">&#9654;</button></div>
     <div class="row"><label>FPS</label><select id="fps"><option value="30">30 fps (smooth)</option><option value="24">24 fps (filmic, faster render)</option></select></div>
     <div class="totsub" id="fpshint"></div>
@@ -188,7 +189,7 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 let META={presets:[],music:[],voices:[]};
 const PRESET_SHORT={leebdark:'LEEBLAAB house style'};  // keep dropdown rows short
-let P={schema:1,name:'my_promo',size:'1080x1920',fps:30,target:30,preset:'leebdark',music:{bed:'synthwave'},voice:'none',vo_lines:[],shots:[]};
+let P={schema:1,name:'my_promo',size:'1080x1920',fps:30,target:30,preset:'leebdark',music:{bed:'synthwave'},voice:'none',voice_speed:1.0,vo_lines:[],shots:[]};
 
 // toast: one-shot (done/error fire ONCE per job id; polling re-applies the
 // same terminal job every 800ms and used to reset the hide timer forever)
@@ -333,7 +334,7 @@ async function voPreviewShot(i,btn){
   if(P.voice==='none')return toast('pick a voice in the Project panel first');
   if(btn){btn.disabled=true;btn.textContent='…'}
   try{
-    const j=await api('/api/vo_preview',{text:line,voice:P.voice});
+    const j=await api('/api/vo_preview',{text:line,voice:P.voice,speed:P.voice_speed??1.0});
     if(_voAudio){_voAudio.pause()}
     _voAudio=new Audio(j.url+'?t='+Date.now());
     _voAudio.onended=()=>toast('VO line: '+j.duration.toFixed(1)+'s');
@@ -363,6 +364,7 @@ $('#format').onchange=e=>{P.size=e.target.value;const[w,h]=P.size.split('x').map
     'Layout, panels and fonts auto-scale for this canvas — check the storyboard strip after switching.'};
 $('#voice').onchange=e=>{P.voice=e.target.value;
   if(P.voice!=='none'&&!META.piper_ready)toast('Tip: pip install piper-tts — voice models found in vo/models/')}
+$('#vospeed').onchange=e=>{P.voice_speed=+e.target.value};
 $('#music').onchange=e=>{const v=e.target.value;P.music=/\.mp3$|\.wav$|\.m4a$|\.ogg$/.test(v)?{mode:'file',bed:v}:(v==='none'?{mode:'none',bed:'none'}:{mode:'procedural',bed:v})};
 
 // ---------- duration slider (5-45s): rescale shot durations proportionally ----------
@@ -403,7 +405,7 @@ $('#voiceprev').onclick=async e=>{
   if(_voAuditioning)return toast('voice engine still warming up…');
   const b=e.currentTarget;b.disabled=true;b.textContent='…';_voAuditioning=true;
   toast('starting the offline voice engine — first try takes ~10s');
-  try{const j=await api('/api/vo_preview',{text:'This is how I sound in your promo.',voice:P.voice});
+  try{const j=await api('/api/vo_preview',{text:'This is how I sound in your promo.',voice:P.voice,speed:P.voice_speed??1.0});
     new Audio(j.url+'?t='+Date.now()).play();}
   catch(err){toast('voice preview: '+err.message)}
   finally{_voAuditioning=false;b.disabled=false;b.textContent='▶'}
@@ -558,6 +560,7 @@ function hydrateControls(){
   if(!('width'in P)){const[w,h]=String(P.size).split('x').map(Number);P.width=w;P.height=h;}
   opt($('#fps'),P.fps||30);fpsHint();
   opt($('#voice'),P.voice);
+  $('#vospeed').value=String(P.voice_speed??1.0);if(![...$('#vospeed').options].some(o=>o.value===$('#vospeed').value))$('#vospeed').value='1.0';P.voice_speed=+$('#vospeed').value;
   opt($('#music'),(P.music&&P.music.bed)||'none');
   $('#targetslider').value=P.target;$('#targetval').textContent=P.target+'s';$('#target').textContent=(+P.target).toFixed(1)+'s';
   renderShots();renderAnimList();updateTotals();loadGallery();

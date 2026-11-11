@@ -258,7 +258,10 @@ def piper_available():
         return False
 
 
-def piper_line(text, voice_id, out_wav):
+VO_SPEED_RANGE = (0.7, 1.5)  # sane bounds; UI offers 0.8/1.0/1.25
+
+
+def piper_line(text, voice_id, out_wav, speed=1.0):
     model = os.path.join(VO_MODELS, voice_id + ".onnx")
     if not os.path.exists(model):
         raise RuntimeError("voice model not found: %s (run setup_vo.bat)" % model)
@@ -267,8 +270,14 @@ def piper_line(text, voice_id, out_wav):
     import tempfile
     os.makedirs(os.path.dirname(out_wav) or ".", exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="piper_")
+    cmd = [PY311, "-m", "piper", "-m", model, "--output-dir", tmp]
+    # v1.4 C2: speech speed via piper's --length-scale (LS>1 = slower). Speed S
+    # maps to LS=1/S; omit the flag entirely at 1.0 so the default argv shape —
+    # and every existing cached line — stays exactly as before.
+    if abs(float(speed) - 1.0) > 1e-9:
+        cmd += ["--length-scale", "%.2f" % (1.0 / float(speed))]
     try:
-        r = subprocess.run([PY311, "-m", "piper", "-m", model, "--output-dir", tmp],
+        r = subprocess.run(cmd,
                            input=text, text=True, capture_output=True, timeout=60)
         if r.returncode != 0:
             raise RuntimeError("piper failed: " + (r.stderr or "")[-400:])
@@ -292,21 +301,26 @@ def piper_line(text, voice_id, out_wav):
     return out_wav
 
 
-def vo_duration(text, voice_id, scratch):
-    """Generate one line and return its duration in seconds (cached by hash)."""
+def vo_duration(text, voice_id, scratch, speed=1.0):
+    """Generate one line and return its duration in seconds (cached by hash).
+    v1.4 C2: the cache key includes speed — same text+voice at different
+    speeds are different wavs; without this, sped lines serve stale audio."""
     import hashlib
-    h = hashlib.sha256((voice_id + "|" + text).encode("utf-8")).hexdigest()[:16]
+    speed = float(speed)
+    sp = "" if abs(speed - 1.0) < 1e-9 else "|s%.2f" % speed
+    h = hashlib.sha256((voice_id + "|" + text + sp).encode("utf-8")).hexdigest()[:16]
     p = os.path.join(scratch, "vo_%s.wav" % h)
     if not os.path.exists(p):
-        piper_line(text, voice_id, p)
+        piper_line(text, voice_id, p, speed=speed)
     d, sr = read_wav_mono(p)
     return len(d) / sr, p
 
 
-def vo_duration_probe(voice_id, scratch):
+def vo_duration_probe(voice_id, scratch, speed=1.0):
     """Cheap fixed-sentence synthesis used by the UI audition button — probes
     the whole chain (model + subprocess + decode) with a tiny input."""
-    return vo_duration("This is how I sound in your promo.", voice_id, scratch)
+    return vo_duration("This is how I sound in your promo.", voice_id, scratch,
+                       speed=speed)
 
 
 # --------------------------------------------------------------- bed assembly
@@ -323,6 +337,7 @@ def vo_plan(proj, voice_id, scratch):
     """Resolve project vo_lines -> (start, dur, text) placements. VO start is
     absolute; shot/offset resolve against the shot timeline."""
     starts, _ = shot_timeline(proj)
+    vspeed = float(proj.get("voice_speed", 1.0))  # v1.4 C2
     plan = []
     for L in proj.get("vo_lines", []):
         if not L.get("text"):
@@ -331,7 +346,7 @@ def vo_plan(proj, voice_id, scratch):
             st = starts[int(L["shot"])] + float(L.get("offset", 0.0))
         else:
             st = float(L["at"])
-        dur, _ = vo_duration(L["text"], voice_id, scratch)
+        dur, _ = vo_duration(L["text"], voice_id, scratch, speed=vspeed)
         plan.append((st, dur, L["text"]))
     return plan
 

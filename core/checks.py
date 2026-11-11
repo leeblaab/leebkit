@@ -139,7 +139,8 @@ def check_project(engine):
             if not L.get("text"):
                 continue
             try:
-                dur, _ = A.vo_duration(L["text"], voice, scratch)
+                dur, _ = A.vo_duration(L["text"], voice, scratch,
+                                       speed=float(engine.proj.get("voice_speed", 1.0)))
             except Exception as e:
                 flags.append({"shot": L.get("shot", -1), "kind": "vo", "severity": "error",
                               "message": "VO gen failed: %s" % e})

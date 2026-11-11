@@ -25,6 +25,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from .layout import build_layout, clamp_font_sizes
 from .camutil import cam_name
+from .audio import VO_SPEED_RANGE  # v1.4 C2: one source of truth for speed bounds
 from . import captions as CAPTIONS   # per-kind draw (C3a); captions never imports engine
 
 
@@ -115,6 +116,18 @@ def validate_project(proj):
     fps = int(proj.get("fps", 30))
     if fps not in (24, 30):
         raise ValueError("fps must be 24 or 30 (got %d)" % fps)
+    # v1.4 C2: optional speech speed (UI offers 0.8/1.0/1.25 = Slow/Normal/Fast).
+    # Tolerated key — schema stays 1; gate the VALUE so junk fails at save time,
+    # not as a piper crash mid-render. Normalized to float on the project dict.
+    vs = proj.get("voice_speed", 1.0)
+    try:
+        vs = float(vs)
+    except (TypeError, ValueError):
+        raise ValueError("voice_speed must be a number (got %r)" % (proj.get("voice_speed"),))
+    if not (VO_SPEED_RANGE[0] <= vs <= VO_SPEED_RANGE[1]):
+        raise ValueError("voice_speed must be within %.2f-%.2f (got %.2f)"
+                         % (VO_SPEED_RANGE[0], VO_SPEED_RANGE[1], vs))
+    proj["voice_speed"] = vs
     shots = proj.get("shots") or []
     if not (1 <= len(shots) <= 10):
         raise ValueError("v1 supports 1-10 shots (got %d)" % len(shots))

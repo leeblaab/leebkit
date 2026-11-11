@@ -343,11 +343,18 @@ def _vo_preview_sync(req: dict):
     text, voice = req.get("text", "").strip(), req.get("voice", "")
     if not text or not voice or voice == "none":
         raise HTTPException(400, "need text + voice")
+    try:  # v1.4 C2: carry the project speed into the preview cache too
+        vspeed = float(req.get("speed", 1.0))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "speed must be a number")
+    if not (A.VO_SPEED_RANGE[0] <= vspeed <= A.VO_SPEED_RANGE[1]):
+        raise HTTPException(400, "speed must be within %.2f-%.2f"
+                            % (A.VO_SPEED_RANGE[0], A.VO_SPEED_RANGE[1]))
     scratch = VOPREV_DIR
     os.makedirs(scratch, exist_ok=True)
     _prune_cache(scratch)
     try:
-        dur, path = A.vo_duration(text, voice, scratch)
+        dur, path = A.vo_duration(text, voice, scratch, speed=vspeed)
     except Exception as e:
         raise HTTPException(500, str(e))
     rel = "/output/_voprev/" + os.path.basename(path)
