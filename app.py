@@ -70,7 +70,11 @@ def _proj_engine(proj):
 def meta():
     presets = [{"id": f[:-5], "label": load_preset(f).get("name", f[:-5])}
                for f in sorted(os.listdir(os.path.join(ROOT, "presets"))) if f.endswith(".json")]
-    music = [{"id": m if isinstance(m, str) else m["id"], "procedural": m["id"] in A.BEDS}
+    # C4e obs #2 (Yasser): the dropdown showed raw ids/file names — pass the
+    # friendly label from scan_music through to the UI.
+    music = [{"id": m if isinstance(m, str) else m["id"],
+              "label": (m.get("label") or m["id"]) if isinstance(m, dict) else m,
+              "procedural": (m if isinstance(m, str) else m["id"]) in A.BEDS}
              for m in (A.scan_music() or ["synthwave", "pulse"])
              for m in [dict(m) if isinstance(m, dict) else {"id": m}]]
     return {"presets": presets, "music": music, "voices": A.list_voices(),
@@ -146,6 +150,60 @@ async def upload(file: UploadFile = File(...)):
     # resolved to media/img_x.png (missing) -> corrupted preview + ENOENT render.
     rel = os.path.relpath(dest, os.path.join(ROOT, "media")).replace("\\", "/")
     return {"path": rel, "url": "/media/" + rel}
+
+
+def _sniff_audio(head):
+    """Magic-byte check for the four accepted music formats (mirrors the
+    _sniff_image hardening on /api/upload)."""
+    if head[:3] == b"ID3" or (head and head[0] == 0xFF and (head[1] & 0xE0) == 0xE0):
+        return True                                   # mp3 (tagged / raw frame)
+    if head[:4] == b"RIFF" and head[8:12] == b"WAVE":
+        return True                                   # wav
+    if head[4:8] == b"ftyp":
+        return True                                   # m4a (iso-bmff)
+    if head[:4] == b"OggS":
+        return True                                   # ogg
+    return False
+
+
+@app.post("/api/music_upload")
+async def music_upload(file: UploadFile = File(...)):
+    """C4e obs #2 (Yasser): optional user music — upload a bed below the Music
+    picker. Same hardening as /api/upload: safe name, size cap, content
+    sniffing; lands in core.audio.MUSIC_DIR so scan_music picks it up and the
+    /music mount can audition it."""
+    if not file.filename.lower().endswith((".mp3", ".wav", ".m4a", ".ogg")):
+        raise HTTPException(400, "audio only (mp3/wav/m4a/ogg)")
+    safe = "".join(c for c in file.filename if c.isalnum() or c in "._-")
+    if not safe or safe.startswith("."):
+        raise HTTPException(400, "bad file name")
+    os.makedirs(A.MUSIC_DIR, exist_ok=True)
+    dest = os.path.join(A.MUSIC_DIR, safe)
+    n = 1
+    base, ext = os.path.splitext(safe)
+    while os.path.exists(dest):
+        dest = os.path.join(A.MUSIC_DIR, "%s_%d%s" % (base, n, ext))
+        n += 1
+    head = await file.read(16)
+    if not _sniff_audio(head):
+        raise HTTPException(400, "file contents are not a mp3/wav/m4a/ogg audio file")
+    total = len(head)
+    with open(dest + ".part", "wb") as f:
+        f.write(head)
+        while True:
+            chunk = await file.read(1 << 20)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > MAX_UPLOAD_BYTES:
+                f.close()
+                os.remove(dest + ".part")
+                raise HTTPException(413, "audio too large (max %d MB)"
+                                    % (MAX_UPLOAD_BYTES // (1024 * 1024)))
+            f.write(chunk)
+    os.replace(dest + ".part", dest)
+    name = os.path.basename(dest)
+    return {"id": "file:" + name, "url": "/music/" + name}
 
 
 # ------------------------------------------------------------------ projects

@@ -105,7 +105,15 @@ def scan_music():
     if os.path.isdir(MUSIC_DIR):
         for f in sorted(os.listdir(MUSIC_DIR)):
             if f.lower().endswith((".mp3", ".wav", ".m4a", ".ogg")):
-                out.append({"id": "file:" + f, "label": f})
+                # C4e obs #2 (Yasser): friendly names in the picker. The three
+                # CC0 beds ship with known track titles (ATTRIBUTIONS.md); any
+                # other file gets its name humanized (underscores -> spaces).
+                _pretty = {"bed_cave_drone.mp3": "Ambient Cave Drone (CC0)",
+                           "bed_one_cool_minute.mp3": "One Cool Minute (CC0)",
+                           "bed_old_key.mp3": "Old Key (CC0)"}
+                label = _pretty.get(f) or (f.rsplit(".", 1)[0]
+                                           .replace("_", " ").replace("-", " ").strip())
+                out.append({"id": "file:" + f, "label": label})
     return out
 
 
