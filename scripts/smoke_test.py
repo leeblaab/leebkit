@@ -261,6 +261,33 @@ ok("camera cards have kind=camera", all(i["kind"] == "camera" for i in _cam) and
 _trans = [i for c in _gm["categories"] if c["id"] == "transitions" for i in c["items"]]
 ok("transition cards have kind=transition", all(i["kind"] == "transition" for i in _trans), str(len(_trans)))
 
+# 7g. generator shots ride the preview paths end-to-end (v1.4 C4): a mixed
+# gen+image project must pass check_project clean, storyboard_strip must render
+# it, and the anim-preview shape (single-shot mini project with _peek) must
+# render a gen shot — same code path as /api/preview + /api/anim_preview.
+from core.checks import storyboard_strip as _sbs
+_genproj = {"schema": 1, "name": "c4smk", "target": 5.0, "fps": 24,
+            "width": 320, "height": 480, "music": {"bed": "none"}, "voice": "none",
+            "shots": [
+                {"fill": "gen:midnight_drift", "motion": "normal", "t": 2.5,
+                 "captions": [{"kind": "title_block", "at": 0.3, "text": "GEN SMOKE", "sub": "mixed"}]},
+                {"fill": "gen:grid_pulse", "motion": "subtle", "t": 2.5, "transition": "fade",
+                 "captions": [{"kind": "cta", "at": 0.4, "text": "GO"}]}]}
+try:
+    _ge = Engine(_genproj)
+    _gflags = [f for f in CH.check_project(_ge) if f.get("severity") == "error"]
+    ok("mixed gen project checks clean", not _gflags, str(_gflags))
+    _strip_out = os.path.join(TMP, "c4_strip.png")
+    _sflags = [f for f in _sbs(Engine(_genproj), _strip_out) if f.get("severity") == "error"]
+    ok("storyboard strip renders gen shots", os.path.isfile(_strip_out) and os.path.getsize(_strip_out) > 1000 and not _sflags, str(_sflags))
+    # anim-preview shape: single-shot mini project frozen at _peek (UI builds this)
+    _mini = dict(_genproj); _mini["shots"] = [dict(_genproj["shots"][0])]; _mini["target"] = 2.5
+    _me = Engine(_mini)
+    _img = _me.render_layer(0, min(2.45, 0.3 + 0.16), 7)   # mid-animation peek
+    ok("anim-preview frame on gen shot", _img.size == (320, 480))
+except Exception as e:
+    ok("generator preview paths (C4)", False, str(e)[:160])
+
 # 8. UI inline JS must parse (a '#' comment line once killed the whole script:
 # empty dropdowns on a healthy server). node --check if present, else basic scan.
 import re as _re

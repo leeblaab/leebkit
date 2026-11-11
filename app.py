@@ -15,6 +15,7 @@ import time as _time
 
 from core.engine import Engine, load_preset, validate_project
 from core import audio as A
+from core import generators as G
 from core.checks import storyboard_strip, check_project
 from core.queue import QUEUE, QueueFull, ROOT
 
@@ -68,6 +69,8 @@ def meta():
              for m in (A.scan_music() or ["synthwave", "pulse"])
              for m in [dict(m) if isinstance(m, dict) else {"id": m}]]
     return {"presets": presets, "music": music, "voices": A.list_voices(),
+            "generators": [{"id": k, "label": v["label"]}
+                           for k, v in G.GEN_PRESETS.items()],
             "piper_ready": bool(A.piper_available() and len(A.list_voices()) > 1)}
 
 

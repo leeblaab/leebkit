@@ -53,6 +53,7 @@ border-radius:4px;padding:7px 9px;font-family:'Inter';font-size:13px}
 .durchips{display:flex;gap:6px;margin-top:8px}
 .durchips button{font-family:var(--mono);padding:5px 10px;font-size:12px;border-radius:3px}
 .durchips button.on{background:var(--acc);color:#001318;border-color:var(--acc)}
+button.durchip.on{background:var(--acc);color:#001318;border-color:var(--acc)}
 .cardright{display:flex;flex-direction:column;gap:6px;align-items:flex-end;padding-top:4px}
 .durtag{font-family:var(--mono);font-size:12px;color:var(--acc)}
 .volen{font-family:var(--mono);font-size:10px;color:var(--dim)}
@@ -129,6 +130,7 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
     <div id="drop">Drop images here (1–10) &mdash; they become shots in order<br>
       <span style="font-size:11px;color:var(--dim)">to replace a shot: drag a new image onto its card thumbnail</span></div>
     <input type="file" id="filepick" multiple accept="image/*" hidden>
+    <button id="btn-addgen" style="width:100%;margin-top:8px;font-family:var(--mono);padding:8px 12px;font-size:13px">+ Generator shot (no image needed)</button>
     <div id="shots"></div>
   </div>
 </section>
@@ -187,7 +189,7 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
 
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-let META={presets:[],music:[],voices:[]};
+let META={presets:[],music:[],voices:[],generators:[]};
 const PRESET_SHORT={leebdark:'LEEBLAAB house style'};  // keep dropdown rows short
 let P={schema:1,name:'my_promo',size:'1080x1920',fps:30,target:30,preset:'leebdark',music:{bed:'synthwave'},voice:'none',voice_speed:1.0,vo_lines:[],shots:[]};
 
@@ -215,6 +217,8 @@ async function boot(){
 
 // ---------- shots ----------
 function addShot(img){P.shots.push({image:img,t:4.0,transition:'cut',captions:[],vo:''});renderShots()}
+// v1.4 C4: generator-only shot — no image needed (D1: both sources first-class)
+function addGenShot(){P.shots.push({fill:'gen:'+((META.generators||[])[0]?.id||'midnight_drift'),motion:'normal',t:4.0,transition:'cut',captions:[],vo:''});renderShots()}
 const CAP_DEFAULTS={
   panel_top:{kind:'panel_top',at:0.2,lines:['NEW LINE']},
   panel_mid:{kind:'panel_mid',at:0.2,lines:['MID LINE']},
@@ -254,9 +258,20 @@ function renderShots(){
   $('#shots').innerHTML=P.shots.map((s,i)=>`
   <div class="card" draggable="true" data-i="${i}">
     <div class="grip">⠿<br><span style="font-size:11px">${String(i+1).padStart(2,'0')}</span></div>
-    <div class="thumbwrap"><img src="/media/${String(s.image).replace(/^media\//,'')}">
+    <div class="thumbwrap">${s.fill&&String(s.fill).startsWith('gen:')
+      ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px" title="${esc((META.generators||[]).find(g=>('gen:'+g.id)===s.fill)?.label||s.fill)}">◍</div>`
+      : `<img src="/media/${String(s.image).replace(/^media\//,'')}">`}
       <div class="rm" data-rm="${i}" title="Remove this shot">×</div></div>
     <div class="fields">
+      <label>Background source</label>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <button data-src="img" data-i="${i}" class="durchip ${!(s.fill&&String(s.fill).startsWith('gen:'))?'on':''}" style="flex:1;font-family:var(--mono);padding:5px 10px;font-size:12px;border-radius:3px">Image</button>
+        <button data-src="gen" data-i="${i}" class="durchip ${s.fill&&String(s.fill).startsWith('gen:')?'on':''}" style="flex:1;font-family:var(--mono);padding:5px 10px;font-size:12px;border-radius:3px">Generator</button>
+      </div>
+      ${s.fill&&String(s.fill).startsWith('gen:')?`<div style="display:flex;gap:6px;margin-bottom:6px">
+        <select data-gen="${i}" style="flex:1;min-width:0;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px;font-size:13px">${(META.generators||[]).map(g=>`<option value="gen:${g.id}" ${'gen:'+g.id===s.fill?'selected':''}>${g.label}</option>`).join('')}</select>
+        <select data-motion="${i}" style="min-width:0;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px;font-size:13px"><option value="normal" ${s.motion!=='subtle'?'selected':''}>Motion: Normal</option><option value="subtle" ${s.motion==='subtle'?'selected':''}>Motion: Subtle</option></select>
+      </div>`:''}
       ${s.captions.length?`<label>Caption boxes (edit inline; add more from the Animations panel)</label>${s.captions.map((c,j)=>`<label style="margin-top:6px">${c.kind} #${j+1}</label>${capEditor(i,j)}`).join('')}`:`<label>Caption lines (top panel — quick start)</label>
       <textarea data-cap="${i}" placeholder="BUILT BY&#10;PROMPT ENGINEERING"></textarea>`}
       <label>Voice-over for this shot</label>
@@ -308,11 +323,19 @@ document.addEventListener('input',e=>{
     // no renderAnimList() per keystroke: rebuilding the list mid-typing drops focus (audit #10)
   }
   if(e.target.dataset.vo!=null)P.shots[+e.target.dataset.vo].vo=e.target.value;
+  if(e.target.dataset.gen!=null){P.shots[+e.target.dataset.gen].fill=e.target.value;renderShots()}
+  if(e.target.dataset.motion!=null)P.shots[+e.target.dataset.motion].motion=e.target.value;
   if(e.target.id==='pname')P.name=e.target.value;
 });
 document.addEventListener('click',async e=>{
   const b=e.target;
   if(b.dataset.rm!=null){P.shots.splice(+b.dataset.rm,1);renderShots();toast('shot removed')}
+  if(b.dataset.src!=null){                       // v1.4 C4 background-source toggle
+    const i=+b.dataset.i,s=P.shots[i];
+    if(b.dataset.src==='gen'){if(!s.fill||!String(s.fill).startsWith('gen:')){s.fill='gen:'+((META.generators||[])[0]?.id||'midnight_drift');s.motion=s.motion||'normal'}renderShots()}
+    else{delete s.fill;delete s.motion;if(!s.image)toast('no image on this shot — drag one onto its thumbnail');renderShots()}
+  }
+  if(b.id==='btn-addgen'){addGenShot();toast('generator shot added — pick its preset in the card')}
   if(b.dataset.dur!=null){                        // patch in place: a full renderShots()
     const i=+b.dataset.dur,d=+b.dataset.v;        // rebuild killed focus mid-typing (audit #10)
     P.shots[i].t=d;
