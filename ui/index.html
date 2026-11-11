@@ -108,7 +108,8 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
   <div class="brand-sub">by LEEBLAAB &middot; offline kinetic promos</div>
   <div class="spacer"></div>
   <button id="btn-save">Save project</button>
-  <select id="btn-load" title="Load a saved project" style="font-family:var(--mono);font-size:12px;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><option value="">Load project…</option></select>
+  <button id="btn-new" title="Start a fresh blank project (current work is kept only if you saved it)" style="font-family:var(--mono);font-size:12px;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 10px">New project</button>
+  <select id="btn-load" title="Load a saved project" style="font-family:var(--mono);font-size:12px;background:#0c0c14;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><option value="">Load project…</option></select>
   <button id="btn-preview">Storyboard<span style="color:var(--acc)"> ⚑</span></button>
   <button id="btn-render" class="primary">Render MP4<kbd>Ctrl+Enter</kbd></button>
 </header>
@@ -569,6 +570,11 @@ function syncVoLines(){
 $('#btn-save').onclick=async()=>{syncVoLines();try{const j=await api('/api/project',P);toast('saved → projects/'+j.file);refreshProjects()}catch(e){toast('save: '+e.message)}};
 
 // ---------- load project (v1.3 live test: save existed, load did not) ----------
+// C4e (Yasser live test): the inline style used --card/--fg which do NOT
+// exist in this theme -> the OPENED dropdown kept Windows' default white
+// popup with white option text. Native <select> popups only take colors from
+// explicit `color`/`background` on the element itself; #0c0c14 matches the
+// .row select inputs everywhere else.
 async function refreshProjects(){
   try{const j=await api('/api/projects');
     const sel=$('#btn-load'),cur=sel.value;
@@ -599,6 +605,16 @@ $('#btn-load').onchange=async e=>{
     toast('loaded '+f);
   }catch(err){toast('load: '+err.message)}
   e.target.value='';
+};
+// C4e (Yasser live test): after loading a project there was no way back to a
+// blank one short of restarting the server. Same in-place mutation as load;
+// defaults mirror the initial P literal, minus vo_lines (stale shot indices).
+$('#btn-new').onclick=()=>{
+  if(P.shots.length&&!confirm('Start a new project? Unsaved changes in the current one will be lost.'))return;
+  Object.keys(P).forEach(k=>delete P[k]);
+  Object.assign(P,{schema:1,name:'my_promo',size:'1080x1920',width:1080,height:1920,fps:30,target:30,preset:'leebdark',music:{bed:'synthwave'},voice:'none',voice_speed:1.0,shots:[]});
+  hydrateControls();
+  toast('new blank project');
 };
 let _pvBusy=false;
 $('#btn-preview').onclick=async()=>{
