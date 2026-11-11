@@ -20,7 +20,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install deps
         run: pip install -r requirements.txt
-      - name: Smoke test (30 checks, headless render + ffprobe gate)
+      - name: Smoke test (headless render + ffprobe gate; check count printed by the script)
         run: python scripts/smoke_test.py
       - name: Golden frames (sampled subset; full corpus runs on the Windows gate)
         run: python scripts/golden_frames.py --sample 10

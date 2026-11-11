@@ -108,6 +108,8 @@ LEEBKIT-setup.bat   # one-click: checks Python, fetches portable ffmpeg if missi
 start.bat           # or straight to the app: creates .venv + installs deps, opens http://127.0.0.1:8735
 ```
 
+**Security note:** the app has no auth — it binds 127.0.0.1 only (loopback), so it is reachable from this machine alone. Do not expose port 8735 beyond localhost.
+
 `docs/QUICKSTART.md` walks a first video in under 5 minutes. CLI render without the browser:
 
 ```

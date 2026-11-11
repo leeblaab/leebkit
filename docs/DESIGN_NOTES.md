@@ -4,12 +4,11 @@
 
 ---
 
-Build LEEBKIT v1 at `C:\Products\reelkit\`. First read `C:\Products\reelkit\README.md`
+Build LEEBKIT v1 at the project root. First read this repo's `README.md`
 in full — it is the signed-off spec (pillars, brand rules, scope, architecture, pitfalls).
 Load skill `reelkit-project`, and skill `kinetic-text-promo-video` for the proven
-pipeline details. Source scripts to port from:
-`C:\Users\learn\Documents\ComfyUI\output\others\OT\Dataset\leebphotoz_promo\build_video_v4.py`,
-`make_audio.py`, `make_vo.py`.
+pipeline details. Source scripts to port from: the promo builder scripts in the
+author's local ComfyUI output dataset folder (personal machine; not in this repo).
 
 Build order (each step ends runnable, not stubbed):
 
