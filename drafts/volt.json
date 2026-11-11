@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "name": "tpl_volt",
+  "label": "Volt — acid-lime energy stage, kinetic techniques draft (slam + flashpop + wipe)",
+  "preset": "volt",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 21.4,
+  "fps": 30,
+  "voice": "none",
+  "music": {"bed": "low_drive"},
+  "shots": [
+    {
+      "fill": "solid",
+      "t": 2.8,
+      "transition": "cut",
+      "captions": [
+        {"kind": "kicker", "at": 0.15, "text": "ELECTRIC DELIVERY SYSTEM", "rule": false,
+         "colors": ["lime", "white"]},
+        {"kind": "title_block", "at": 0.45, "text": "HIGH VOLTAGE\nBY DESIGN",
+         "colors": ["lime", "white", "lime"]}
+      ],
+      "vo": "High voltage by design."
+    },
+    {
+      "fill": "solid",
+      "t": 3.2,
+      "transition": "cut",
+      "captions": [
+        {"kind": "slam", "at": 0.3, "text": "FAST.", "colors": ["lime"]},
+        {"kind": "kicker", "at": 1.4, "text": "ZERO LATENCY", "rule": false, "colors": ["white"]}
+      ],
+      "vo": "Fast. Zero latency."
+    },
+    {
+      "fill": "solid",
+      "t": 3.6,
+      "transition": "cut",
+      "captions": [
+        {"kind": "flashpop", "at": 0.35, "text": "POWER EVERY MOVE YOU MAKE",
+         "colors": ["lime", "white", "dim"]}
+      ],
+      "vo": "Power every move you make."
+    },
+    {
+      "fill": "solid",
+      "t": 3.4,
+      "transition": "cut",
+      "captions": [
+        {"kind": "wipe", "at": 0.35, "text": "TURN THE CURRENT ON", "colors": ["lime"]}
+      ],
+      "vo": "Turn the current on."
+    },
+    {
+      "fill": "solid",
+      "t": 3.4,
+      "transition": "cut",
+      "captions": [
+        {"kind": "maskline", "at": 0.35, "text": "charged from the first frame to the last",
+         "colors": ["lime", "white"]}
+      ],
+      "vo": "Charged from the first frame to the last."
+    },
+    {
+      "fill": "solid",
+      "t": 5.0,
+      "transition": "cut",
+      "captions": [
+        {"kind": "burst", "at": 0.4, "text": "VOLT.", "colors": ["lime"]},
+        {"kind": "kicker", "at": 2.6, "text": "LEEBKIT KINETIC SET", "rule": false, "colors": ["white"]}
+      ],
+      "vo": "Volt."
+    }
+  ]
+}

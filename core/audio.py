@@ -630,6 +630,10 @@ def build_audio(proj, media_dir=None, scratch=None, music_override=None):
                 t_typing = (starts[i], starts[i] + float(s["t"]))
                 break
         music = bed_fn(dur, cuts, t_typing)
+    # beds build on beat grids; a float dur can land one sample off TOTAL and
+    # break the mix add (kinetic drafts surfaced this at 21.4s targets).
+    if len(music) != TOTAL:
+        music = np.resize(music, TOTAL)
 
     # ---- VO bed (numpy floats; NEVER bytearray slicing) ----
     vo = np.zeros(TOTAL)

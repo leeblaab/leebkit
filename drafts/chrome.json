@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "name": "tpl_chrome",
+  "label": "Chrome — violet studio draft (wipe + slam + flashpop, tech grotesque)",
+  "preset": "chrome",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 21.0,
+  "fps": 30,
+  "voice": "none",
+  "music": {"bed": "pulse"},
+  "shots": [
+    {
+      "fill": "solid",
+      "t": 2.8,
+      "transition": "cut",
+      "captions": [
+        {"kind": "kicker", "at": 0.15, "text": "PRECISION MOTION STUDIO", "rule": false,
+         "colors": ["violet", "white"]},
+        {"kind": "title_block", "at": 0.45, "text": "POLISHED\nTO THE PIXEL",
+         "colors": ["white", "violet", "white"]}
+      ],
+      "vo": "Polished to the pixel."
+    },
+    {
+      "fill": "solid",
+      "t": 3.4,
+      "transition": "cut",
+      "captions": [
+        {"kind": "wipe", "at": 0.35, "text": "REVEAL IN MOTION", "colors": ["violet"]}
+      ],
+      "vo": "Reveal in motion."
+    },
+    {
+      "fill": "solid",
+      "t": 2.8,
+      "transition": "cut",
+      "captions": [
+        {"kind": "slam", "at": 0.3, "text": "SET.", "colors": ["white"]}
+      ],
+      "vo": "Set."
+    },
+    {
+      "fill": "solid",
+      "t": 3.6,
+      "transition": "cut",
+      "captions": [
+        {"kind": "flashpop", "at": 0.35, "text": "GLOSS THAT MOVES WITH YOU",
+         "colors": ["violet", "white"]}
+      ],
+      "vo": "Gloss that moves with you."
+    },
+    {
+      "fill": "solid",
+      "t": 3.4,
+      "transition": "cut",
+      "captions": [
+        {"kind": "trackin", "at": 0.35, "text": "CHROME TYPE", "colors": ["white", "violet"]}
+      ],
+      "vo": "Chrome type."
+    },
+    {
+      "fill": "solid",
+      "t": 5.0,
+      "transition": "cut",
+      "captions": [
+        {"kind": "maskline", "at": 0.35, "text": "a quiet finish that keeps its shine",
+         "colors": ["violet", "white"]},
+        {"kind": "kicker", "at": 3.4, "text": "LEEBKIT KINETIC SET", "rule": false, "colors": ["white"]}
+      ],
+      "vo": "A quiet finish that keeps its shine."
+    }
+  ]
+}
