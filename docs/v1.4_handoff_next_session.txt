@@ -117,3 +117,40 @@ gallery half still parked ('templates later in v1.4'). Chain: a017b40(C1)
 125a5d9(C2) 3c0aa3d+fb9a500(C3) 422f642+bd669c9(C4) c030e23+15324dc(C4d)
 6ce1dfd(C4e) cb553a8 5f4f43a de73245(obs) 4e25abb 53d7897(docs) aac6198(C5)
 dbb3d1b(C6) 19f200b(C7).
+
+--- UPDATE Nov 11 (genpick fix + Yasser release decisions; local chain dbb3d1b..4591330) ---
+GENPICK FIX SHIPPED (4591330, ui-only, golden UNTOUCHED): live-app obs "only can
+select the 1st generator preset". Root cause: global click handler tested
+e.target.dataset.genpick directly — picker buttons contain child img/span.gpal +
+span.gnm, so clicks on label/thumb missed the branch; only bare-button-padding
+clicks worked. Fix: const gp=e.target.closest('[data-genpick]') before the other
+branches. Verified live on throwaway uvicorn :8799 (trusted CDP clicks on btn3
+label -> gen:ember_flow, btn5 -> gen:signal_field, .on ring follows). His live
+:8735 never touched. Gates after fix: SMOKE PASS 44, GOLDEN PASS 1314.
+- PITFALL (browser repro): CDP Input.dispatchMouseEvent + page reloads leave
+  instrumentation listeners/fake fill setters alive -> misleading repros; and
+  identical repeated repro calls = looping, Yasser killed the session twice.
+  Read the code first; one clean-state trusted-click check is enough.
+- PREVIEW SLOWNESS (his obs "motion preview very slow"): NOT fixed by decision.
+  Warm /api/gen_previews ~0.6s; cold build = 6 Engine composites (~1.4s+). The
+  2-frame/1300ms webp reads as flicker, not motion. Yasser: "will test everything
+  once we finish V1.4 completely" — revisit at final live-test if still bad.
+
+YASSER'S RELEASE DECISIONS (2026-11-11, authoritative):
+A) C4b templates gallery LANDS in v1.4 (templates/ dir + curated set + gallery
+   tab + one-template CLI render ffprobe gate; CC0 beds only with verified
+   provenance, else procedural beds stand).
+B) No live-test cycle until v1.4 is code-complete — he tests everything once,
+   after C4b + release prep land. Preview slowness judged at that point.
+C) Session housekeeping approved (this handoff append + docs commit).
+D) Push as ONE big v1.4 release when EVERYTHING (incl. C4b) is done — his word
+   still gates push/tag.
+
+NEXT SESSION ORDER:
+1) C4b templates gallery half = the ONLY remaining code work for v1.4.
+2) Regen Linux golden hashes-linux.json (bootstrap workflow on GitHub Actions,
+   proven path) — required before any push.
+3) Final gate at HEAD: smoke 44 + golden both platforms + CLI/ffprobe.
+4) Version bump / release notes (mention genpick fix; state preview status).
+5) Push + tag v1.4 ONLY on Yasser's explicit word.
+Chain tail: ...aac6198(C5) dbb3d1b(C6) 19f200b(C7) 38903e0(docs) 4591330(genpick fix).
