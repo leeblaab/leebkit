@@ -1,6 +1,6 @@
 Continue LEEBKIT v1.4 at C:\Products\reelkit — load the `reelkit-project` skill FIRST (it holds all standing rules, gates and locked decisions), then read docs/v1.4_plan.md in the repo.
 
-STATE: master @ <HASH> = C3 shipped locally (background generator core). NOT pushed — Yasser has not given the word to push. C1 a017b40 + C2 125a5d9 + C3 all green. Yasser will live test after C4, so proceed straight to C4.
+STATE: master @ 3c0aa3d = C3 shipped locally (background generator core). NOT pushed — Yasser has not given the word to push. C1 a017b40 + C2 125a5d9 + C3 all green. Yasser will live test after C4, so proceed straight to C4.
 
 C3 landed shape (grounded):
 - core/generators.py (new): GEN_PRESETS with the six locked names (midnight_drift, grid_pulse, paper_grain, ember_flow, deep_current, signal_field); palette = 4 designed hex per preset (D2 — never reads project color preset; presets/ dir colors cross-checked disjoint by test). render(name,W,H,offset,amp=1.0) -> PIL RGB. ONE shared driver (drv = offset*2pi*0.10; pattern layers MULT_PATTERN=0.6x, vignette stationary, grain MULT_GRAIN=1.0); amp multiplies DISPLACEMENT only (Subtle=0.4 in engine). Grain = fixed-seed power-of-two noise tile + MOVING crop (offsets wrapped into [0, tile-frame) so the window never straddles the wrap seam) — never fresh noise per frame. _LAYER_CACHE keyed (preset,W,H) + _GRID_CACHE hold base gradient, pattern field, grain tile, vignette; animated energy accumulates in ONE float16 scalar layer merged into RGB once (D6 perf).
