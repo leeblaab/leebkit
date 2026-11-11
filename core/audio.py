@@ -379,6 +379,13 @@ def build_audio(proj, media_dir=None, scratch=None, music_override=None):
     elif mode == "file":
         fn = str(music_cfg.get("bed", "")).replace("file:", "")
         path = fn if os.path.isabs(fn) else os.path.join(MUSIC_DIR, fn)
+        # audit (v1.31): confine RELATIVE beds to the music/ folder — project
+        # JSON is user-authored and a "../secrets" bed used to read anywhere.
+        # Absolute paths stay allowed: the UI's own file picker hands them over.
+        _b = os.path.realpath(MUSIC_DIR)
+        _p = os.path.realpath(path)
+        if not os.path.isabs(fn) and not (_p == _b or _p.startswith(_b + os.sep)):
+            raise ValueError("music bed %r escapes the music/ folder" % fn)
         d = load_music_file(path)
         music = np.zeros(TOTAL)
         n = min(len(d), TOTAL)
