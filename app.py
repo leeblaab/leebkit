@@ -286,6 +286,30 @@ async def style_preview(preset: str):
 # ------------------------------------------------- animation gallery (v1.35)
 from core import anim_gallery as AG
 
+# audit #7 (v1.31): one in-flight gallery build per preset. The old handler
+# `await`ed the full ~12s render inline, so every browser poll while a build
+# ran stacked ANOTHER full to_thread render — N tabs = N concurrent ffmpeg-free
+# but CPU-heavy tile renders on a laptop. Now: first caller kicks a background
+# task (returns the manifest with 'generating' placeholders immediately), and
+# concurrent callers piggyback on the single in-flight task instead of stacking.
+_GALLERY_TASKS: dict = {}
+
+
+def _gallery_task(preset):
+    t = _GALLERY_TASKS.get(preset)
+    if t is not None and not t.done():
+        return t
+
+    async def _build():
+        try:
+            await asyncio.to_thread(AG.generate_gallery, preset)
+        except Exception:
+            pass   # UI shows 'generating...' placeholders; next poll picks tiles up
+
+    t = asyncio.create_task(_build())
+    _GALLERY_TASKS[preset] = t
+    return t
+
 
 @app.get("/api/anim_gallery/{preset}")
 async def anim_gallery(preset: str):
@@ -300,10 +324,7 @@ async def anim_gallery(preset: str):
         raise HTTPException(404, "unknown preset: %s" % e)
     missing = any(not it["ready"] for c in manifest["categories"] for it in c["items"])
     if missing:
-        try:
-            await asyncio.to_thread(AG.generate_gallery, preset)
-        except Exception:
-            pass   # UI shows 'generating...' placeholders; next poll picks tiles up
+        _gallery_task(preset)   # single in-flight build per preset (audit #7)
     return AG.gallery_manifest(preset)
 
 
