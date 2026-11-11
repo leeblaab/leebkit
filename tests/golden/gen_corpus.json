@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "name": "gen_corpus",
+  "target": 6.0,
+  "fps": 24,
+  "width": 320,
+  "height": 480,
+  "voice": "none",
+  "music": {"bed": "none"},
+  "shots": [
+    {"t": 1.0, "transition": "cut", "fill": "gen:midnight_drift", "captions": []},
+    {"t": 1.0, "transition": "cut", "fill": "gen:grid_pulse", "captions": []},
+    {"t": 1.0, "transition": "cut", "fill": "gen:paper_grain", "captions": []},
+    {"t": 1.0, "transition": "cut", "fill": "gen:ember_flow", "captions": []},
+    {"t": 1.0, "transition": "cut", "fill": "gen:deep_current", "captions": []},
+    {"t": 1.0, "transition": "cut", "fill": "gen:signal_field", "captions": []}
+  ]
+}

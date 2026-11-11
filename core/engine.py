@@ -26,6 +26,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from .layout import build_layout, clamp_font_sizes
 from .camutil import cam_name
 from .audio import VO_SPEED_RANGE  # v1.4 C2: one source of truth for speed bounds
+from .generators import GEN_PRESETS, render as gen_render  # v1.4 C3
 from . import captions as CAPTIONS   # per-kind draw (C3a); captions never imports engine
 
 
@@ -146,6 +147,14 @@ def validate_project(proj):
         if cam is not None and cam not in CAMERAS:
             raise ValueError("shot %d camera %r unknown (choices: %s)"
                              % (i, cam, ", ".join(sorted(CAMERAS))))
+        # v1.4 C3: fill="gen:<preset>" whitelist — an unknown generator name
+        # fails LOUD at save/submit time (same rule as transitions/cameras),
+        # not as a mid-render crash.
+        fill = s.get("fill")
+        if isinstance(fill, str) and fill.startswith("gen:"):
+            if fill[4:] not in GEN_PRESETS:
+                raise ValueError("shot %d fill %r unknown generator (choices: gen:%s)"
+                                 % (i, fill, ", gen:".join(sorted(GEN_PRESETS))))
         for c in s.get("captions", []):
             if "kind" not in c:
                 raise ValueError("shot %d caption missing kind" % i)
@@ -555,7 +564,32 @@ class Engine:
         else:
             base = None
 
-        if base is not None:
+        # v1.4 C3: procedural generator bases ride the SAME overscanned crop
+        # path as image bases (Ken Burns cost ceiling, D6). The shot's zoom
+        # track and camera pan animate the crop; the generator itself runs on
+        # ONE shared driver at local time lt, amplitude from the preset tier
+        # (D4/D5) — never from shot speed. Fixed designed palettes (D2): the
+        # project color preset is deliberately NOT consulted here.
+        gen_name = fill[4:] if isinstance(fill, str) and fill.startswith("gen:") else None
+        if gen_name is not None:
+            # D6 cost ceiling: the generator runs on a base sized like the
+            # overscanned Ken Burns crop (BW/8), then rides the SAME per-frame
+            # crop+LANCZOS path as image bases — zoom track and camera pan
+            # therefore apply to generated shots too.
+            amp = 0.4 if s.get("motion", "normal") == "subtle" else 1.0
+            bw, bh = max(64, int(self.BW / 8)), max(64, int(self.BH / 8))
+            gbase = gen_render(gen_name, bw, bh, offset=lt, amp=amp)
+            z = self.track(g)
+            px, py = self.CAM.get(cam_name(s), (0, 0))
+            p = ease_io(clamp01(lt / float(s["t"])))
+            cx = bw / 2 + px * p
+            cy = bh / 2 + py * p
+            cw, ch = int(bw / z), int(bh / z)
+            x0 = int(max(0, min(bw - cw, cx - cw / 2)))
+            y0 = int(max(0, min(bh - ch, cy - ch / 2)))
+            img = gbase.crop((x0, y0, x0 + cw, y0 + ch)).resize((W, H), Image.LANCZOS)
+            base = img   # generated bases take the SAME dim-overlay path as images
+        elif base is not None:
             z = self.track(g)
             px, py = self.CAM.get(cam_name(s), (0, 0))
             p = ease_io(clamp01(lt / float(s["t"])))

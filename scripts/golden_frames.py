@@ -118,6 +118,16 @@ def build_corpus(sample=0):
         for w, h in FORMATS:
             eng = build(kinds, w, h, preset=preset)
             corpus["kinds_%s_%dx%d" % (preset, w, h)] = hash_points(eng)
+    # v1.4 C3: generator corpus — one Engine carrying all six locked gen
+    # presets as consecutive shots (hash_points covers every shot). Additive:
+    # the pre-existing corpus entries must stay byte-identical, which IS the
+    # backward-compat proof for the fill="gen:" branch. leebdark only: gen
+    # palettes are designed-fixed (D2) and never read the project preset, so
+    # a second preset pass would prove nothing.
+    gens = os.path.join(GOLDEN, "gen_corpus.json")
+    for w, h in FORMATS:
+        eng = build(gens, w, h)
+        corpus["gens_leebdark_%dx%d" % (w, h)] = hash_points(eng)
     return corpus
 
 
