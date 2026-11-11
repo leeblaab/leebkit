@@ -188,3 +188,41 @@ release notes (genpick fix, templates gallery, music beds; state preview
 slowness status); 4) push + tag v1.4 ONLY on Yasser's word.
 Chain tail: ...aac6198(C5) dbb3d1b(C6) 19f200b(C7) 38903e0(docs) 4591330(genpick)
 88f9be3 7969904(docs) 9ffaacf(C4b).
+
+--- UPDATE Nov 11 late session (C4e kinetic typography + template->image; HEAD 039f86f) ---
+Yasser asked for the full kinetic-typography push ("fill remaining 4 templates, more fonts,
+push your maximum limit") + per-scene background replacement. ALL SHIPPED locally, nothing
+pushed. Verdict on drafts: "exactly what i was looking for ... needs some tuning" -> tuning
+REVIEW IS PARKED until he tests the videos himself; do NOT re-open tuning unasked.
+
+Commits since 9ffaacf (all LEEBLAAB identity verified, all gate-green before commit):
+- 2823bfe music obs#1 fix: file-bed preview/render fell through to procedural.
+- d627909 CC0 external beds (3 public-domain tracks, provenance method in docs) + loudness
+  match in build_audio; d3dc776 friendly bed names + /api/music_upload row.
+- 01899fa kicker+burst kinds; eec0670 SIX more kinds wipe/split/slam/trackin/flashpop/maskline
+  (five-site wiring: metrics clocks, checks gates, captions draw, engine dispatch, smoke).
+  Clocks: SLAM_RAMP=0.26 FROM=1.85, TRACK_RAMP=0.55, FLASH_STEP=0.16 RAMP=0.22, WIPE_K=1.4.
+  burst per-caption COLOR fix (was preset-accent; his "PINK word was actually cyan").
+  Engine: self._canvas=img set in render_layer (ImageDraw has no _get_img; strip pastes use it).
+- eec0670 also: 5 OFL fonts assets/fonts/ (BebasNeue, Anton, Oswald/Sora/Syne variable —
+  ChakraPetch/Bricolage raw-URL downloads were 404 stubs, codeload zip route works) +
+  presets volt(#c8ff2e/Anton) signal(#ff9f1c/Bebas+Oswald) chrome(#7c5cff/Syne+Sora).
+- 692bde3/3771f89 onyx draft (pure-black stage, typewriter+clicks, SkillMedev budgets);
+  c83e84b volt/signal/chrome drafts + audio bed sample-count guard (beat-grid math lands
+  1 sample off TOTAL at ~21.4s -> resize to TOTAL or concat crashes).
+- 039f86f template->image flow: app.py load re-marks image-less fill=gen shots as fill:'image'
+  -> user replaces each scene background (drag-drop or Image chip picker, POST /api/upload).
+  Verified engine-level with fake uploads over onyx+volt; UI wiring read-only browser-checked.
+
+Drafts live in drafts/ (onyx/volt/signal/chrome.json, 19.6-21.4s, check_project clean) — OUT of
+the gallery gate until Yasser signs off. He will test-render them himself (load project -> Render;
+never touch his :8735).
+
+NEXT SESSION ORDER:
+1) WAIT for Yasser's draft-test feedback -> tuning pass on the new kinds/onyx look together.
+2) Then release prep: regen Linux golden hashes-linux.json (bootstrap workflow), final gates at
+   HEAD, version bump + GOOD release notes ("good docs prep this time for this massive release").
+3) Push + tag v1.4 ONLY on Yasser's explicit word — no rush, he said so.
+Chain tail: ...9ffaacf(C4b) 74d004b be4cc7b 2823bfe d627909 6eecc3d d3dc776 01899fa 039f86f...
+exact order: 74d004b be4cc7b d627909 2823bfe 6eecc3d d3dc776 01899fa 692bde3 3771f89 eec0670
+c83e84b 039f86f (HEAD). Gates at HEAD: smoke 45+ checks, GOLDEN PASS 1314 hashes UNMODIFIED.
