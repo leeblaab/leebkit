@@ -86,10 +86,65 @@ same project JSON you'd get from `samples/promo_v12.json`:
 - **Projects are files** — one human-readable JSON per promo in `projects/` (`"schema": 1`;
   old project files stay loadable forever). No database.
 
+## Use LEEBKIT with ChatGPT / Claude
+
+The app itself has no AI — but a project file is just JSON, so any chatbot can author one
+for you. Bring your own ChatGPT/Claude: paste the brief below, get a valid project back,
+render it locally. The engine never phones home either way; the chatbot runs on your machine's
+terms, and every unknown value in the JSON fails loudly at save time with the exact fix.
+
+**Brief to paste into ChatGPT/Claude** (copy everything between the lines):
+
+---
+
+Write me a LEEBKIT promo project as a single JSON object — no markdown fences, no commentary.
+Contract:
+
+- Top level: `"schema": 1` (exactly), `"name"`, `"preset"` (`leebdark` or `neonlight`),
+  `"size"` (`"720x1280"`, `"1080x1920"` or `"1440x2560"` for vertical; square/landscape like
+  `"1080x1080"`, `"1920x1080"` also fine), `"target"` (total seconds, e.g. 30.0), `"fps"` (24 or 30).
+- Optional voiceover: `"voice"` (e.g. `"en_US-lessac-medium"`) and `"vo_lines"`:
+  `[{"shot": <shot index>, "offset": <seconds into that shot>, "text": "..."}]`. Keep each line
+  short enough to speak inside its shot (roughly 3 words/second).
+- Optional music: `"music": {"mode": "procedural", "bed": "<bed>"}` where bed is one of
+  `synthwave`, `pulse`, `low_drive`, `sparkle`, `ambient_glow`; or `{"mode": "none"}`;
+  or `{"mode": "file", "bed": "track.mp3"}` for a file in the app's `music/` folder.
+- `"shots"`: array of shots. Each shot: `"image"` (a path relative to the app's `media/`
+  folder — I will tell you the filenames), or no image at all if it uses a background
+  generator; `"t"` (seconds, 0.5–15) and **the `t` values must sum exactly to `"target"`**;
+  `"transition"` one of: `cut`, `wipe_left`, `slideR`, `fade`, `whip`, `flashdip`, `wipe_up`;
+  `"cam"` one of: `pushin`, `pushin2`, `pushout`, `pandown`, `panup`, `pandiag`;
+  optional `"dim"` (0–1, darkens the image behind captions).
+- Backgrounds without photos: add `"fill": "gen:<preset>"` with preset one of
+  `midnight_drift`, `grid_pulse`, `paper_grain`, `ember_flow`, `deep_current`, `signal_field`,
+  plus optional `"motion": "normal"` or `"subtle"`.
+- Captions per shot: `"captions": [{"kind": ..., "at": <seconds into shot, within 0..t>, ...}]`.
+  Kinds and their payload: `title_block` (`text`, optional `sub`), `small` (`text`),
+  `cta` (`text`), `panel_top` / `panel_mid` (`lines`: array of strings),
+  `chips` (`items`: array of short strings), `cap_lines` (array in `"lines"`).
+- Use ALL CAPS for big titles, lowercase for small lines. No fields beyond this contract.
+
+My promo: <describe your product/offer, tone, and length>. My image files: <list them>.
+
+---
+
+**Then render it:** save the JSON into `projects/` (or anywhere), put your images under
+`media/`, and either open the app and load the project, or straight from a terminal:
+
+```
+python render_cli.py projects/my_promo.json --media media --out output/my_promo.mp4 --jobs 8
+```
+
+Wrong generator name, typo'd transition or off-budget duration sum? The CLI prints one clear
+line naming the shot and the valid choices — paste that line back to the chatbot and it fixes
+the file. Share teasers: add `--gif` (≤6s/640px) or `--webp` (≤8s/960px).
+
 ## Explicitly out (by design)
 
 Image generation of any kind, LLMs anywhere, network calls after setup. The prompt box is
-a template filler, not AI. Batch multi-project render and 2K/4K are future-tier ideas.
+a template filler, not AI — the AI-workflow section above is bring-your-own-chatbot *authoring*
+of a plain JSON file, with zero AI in the app itself. Batch multi-project render and 2K/4K are
+future-tier ideas.
 
 ## Requirements
 
