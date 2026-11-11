@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "name": "tpl_stomp",
+  "label": "Stomp — one phrase per beat (the market's #1 promo style)",
+  "preset": "leebdark",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 15.0,
+  "fps": 30,
+  "voice": "none",
+  "music": {"bed": "pulse"},
+  "shots": [
+    {
+      "fill": "gen:signal_field",
+      "motion": "normal",
+      "t": 2.5,
+      "transition": "cut",
+      "cam": "pushin2",
+      "captions": [
+        {"kind": "title_block", "at": 0.15, "text": "STOP.", "sub": "THIS ONE MOVES"},
+        {"kind": "handle", "at": 1.6, "text": "@yourhandle"}
+      ],
+      "vo": "Stop."
+    },
+    {
+      "fill": "gen:signal_field",
+      "motion": "normal",
+      "t": 2.0,
+      "transition": "flashdip",
+      "cam": "panup",
+      "captions": [
+        {"kind": "panel_mid", "at": 0.15, "lines": ["NO STOCK FOOTAGE.", "NO PLUG-INS."]}
+      ],
+      "vo": "No stock footage. No plug-ins."
+    },
+    {
+      "fill": "gen:grid_pulse",
+      "motion": "normal",
+      "t": 2.0,
+      "transition": "whip",
+      "cam": "pandown",
+      "captions": [
+        {"kind": "panel_mid", "at": 0.15, "lines": ["JUST WORDS.", "THAT HIT."]}
+      ],
+      "vo": "Just words. That hit."
+    },
+    {
+      "fill": "gen:grid_pulse",
+      "motion": "normal",
+      "t": 2.0,
+      "transition": "flashdip",
+      "cam": "pushin2",
+      "captions": [
+        {"kind": "big_number", "at": 0.15, "text": "6"},
+        {"kind": "small", "at": 1.0, "text": "looks. zero files."}
+      ],
+      "vo": "Six looks. Zero files."
+    },
+    {
+      "fill": "gen:ember_flow",
+      "motion": "normal",
+      "t": 2.0,
+      "transition": "wipe_up",
+      "cam": "pandiag",
+      "captions": [
+        {"kind": "panel_mid", "at": 0.15, "lines": ["TYPE THE LINE.", "PICK THE BEAT."]}
+      ],
+      "vo": "Type the line. Pick the beat."
+    },
+    {
+      "fill": "gen:ember_flow",
+      "motion": "normal",
+      "t": 2.5,
+      "transition": "flashdip",
+      "cam": "pushin",
+      "captions": [
+        {"kind": "accent_word", "at": 0.3, "text": "SHIP IT."}
+      ],
+      "vo": "Ship it."
+    },
+    {
+      "fill": "gen:paper_grain",
+      "motion": "subtle",
+      "t": 2.0,
+      "transition": "cut",
+      "cam": "pushout",
+      "captions": [
+        {"kind": "title_block", "at": 0.15, "text": "LEEBKIT", "sub": "YOUR PROMPT GOES HERE"},
+        {"kind": "cta", "at": 1.2, "text": "MADE WITH CODE"}
+      ],
+      "vo": "Leebkit."
+    }
+  ]
+}
