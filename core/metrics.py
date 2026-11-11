@@ -42,6 +42,12 @@ TITLE_PLATE_K = 1.3     # title_block element clock gain (C7): the sub-plate
 TITLE_RISE_PX = 24      # C7: back-out overshoot rise for the whole title block
                         # (ease_ow, same curve as word_pop) at the 1080 tier;
                         # scales via layout S. External typography review.
+# --- v1.36 Onyx draft: typewriter / pump / tint clocks --------------------
+TYPE_STEP = 0.085       # typewriter: per-character step (letters AND spaces)
+TYPE_RAMP = 0.10        # per-character appear ramp
+PUMP_STEP = 0.24        # word pump: per-word stagger
+PUMP_KICK = 1.30        # word pump: scale punch peak (word_pump)
+PUMP_RAMP = 0.30        # word pump: per-word progress ramp
 TERM_FIRST_AT = 0.4     # terminal first row at lt=0.4 (kind clock, not `at`)
 TERM_ROW_STEP = 0.5
 TERM_ROW_RAMP = 0.3
@@ -153,6 +159,21 @@ def measure(eng, L, k, shot_t, at_raw):
         # word (i=nw-1) needs ep >= (nw-1)*0.15 + 0.45 to fully settle
         nw = len(L.get("text", "").split(" "))
         done_at = at + POP_RAMP / KICKER_RAMP * max(1.0, (nw - 1) * 0.15 + 0.45)
+        m.update(done_at=done_at)
+
+    elif k == "typewriter":
+        # per-character reveal: char i appears when tp >= i*TYPE_STEP/TYPE_RAMP...
+        # exactly, draw path uses tc = (tp - i*TYPE_STEP)/TYPE_RATE; the last
+        # char settles at tp = (n-1)*TYPE_STEP + TYPE_RAMP -> done_at below.
+        n = len(L.get("text", ""))
+        done_at = at + (n - 1) * TYPE_STEP + TYPE_RAMP
+        m.update(done_at=done_at, nchars=n)
+
+    elif k == "pump":
+        # per-word scale punch: word i settles at
+        # at + PUMP_RAMP*(1 + i*PUMP_STEP/PUMP_RAMP); last word is the max.
+        nw = len(L.get("text", "").split(" "))
+        done_at = at + (nw - 1) * PUMP_STEP + PUMP_RAMP
         m.update(done_at=done_at)
 
     return m

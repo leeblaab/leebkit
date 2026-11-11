@@ -31,6 +31,8 @@ FrameCtx = namedtuple("FrameCtx", [
     "P",                   # merged preset dict
     "TRK",                 # preset tracking dict
     "WHITE", "ACCENT", "DIMC",   # colors (PANEL stays on eng: panel/small read it there)
+    "PAL",                   # v1.36: preset color-name -> rgb dict for per-caption
+                             # "colors" overrides (empty dict = palette not used)
     "lt", "at",            # shot-local time, caption start (post-preamble shift)
     "g",                   # global time (terminal cursor blink)
     "shot_t",              # float(shot["t"])
@@ -62,6 +64,26 @@ def _wrap(eng, dr, words, fnt, limit, tracking=0, ctx=None):
     return list(hit)   # copy so callers never mutate the cache
 
 
+def _draw_tinted_line(eng, dr, y_center, words, fills, fnt, tracking):
+    """v1.36 (Onyx draft): draw one title line word-by-word with per-word RGBA
+    fills, mirroring draw_center_text's tracked layout math exactly (per-char
+    advances + tracking) so tinted lines sit pixel-identical to white ones."""
+    W = eng.W
+    wsp = dr.textlength(" ", font=fnt)
+    pieces = []   # (char_or_space, advance)
+    for wi, w in enumerate(words):
+        for c in w:
+            pieces.append((c, dr.textlength(c, font=fnt), fills[wi]))
+        if wi < len(words) - 1:
+            pieces.append((" ", wsp, None))
+    total = sum(a + tracking for (c, a, f) in pieces) - tracking
+    x = (W - total) / 2
+    for c, adv, fill in pieces:
+        if fill is not None:
+            dr.text((x, y_center), c, font=fnt, fill=fill)
+        x += adv + tracking
+
+
 def draw_title_block(eng, dr, L, k, ctx, e):
     clamp01, ease_o, ease_ow = e
     H, W = ctx.H, ctx.W
@@ -69,6 +91,14 @@ def draw_title_block(eng, dr, L, k, ctx, e):
     WHITE, ACCENT, DIMC, a, prog, slide = (ctx.WHITE, ctx.ACCENT, ctx.DIMC,
                                            ctx.a, ctx.prog, ctx.slide)
     txt = L.get("text", "")
+    # v1.36 (Onyx draft): optional per-word colors on the title itself —
+    # only active when the caption declares "colors"; every shipped project
+    # omits it and keeps the single WHITE fill byte-for-byte.
+    tnames = L.get("colors")
+    tfills = None
+    if tnames:
+        cols = [ctx.PAL.get(n, WHITE) for n in tnames]
+        tfills = [cols[j % len(cols)] for j in range(len(txt.split()))]
     # C7: ONE element clock for the whole block — settle gain TITLE_PLATE_K +
     # back-out rise (ease_ow, same overshoot curve word_pop uses; external
     # typography review). Glyphs, underline and sub plate lift together.
@@ -83,8 +113,21 @@ def draw_title_block(eng, dr, L, k, ctx, e):
     nlines = max(1, len(lines))
     # underline + subtitle ride below the last title line
     base_y = H * LY["title_frac"] - (nlines - 1) * line_h / 2
-    eng.draw_title_lines(dr, base_y - slide, lines, tfnt,
-                         (WHITE[0], WHITE[1], WHITE[2], a), trk, line_h, rise=rise)
+    if tfills is None:
+        eng.draw_title_lines(dr, base_y - slide, lines, tfnt,
+                             (WHITE[0], WHITE[1], WHITE[2], a), trk, line_h, rise=rise)
+    else:
+        # per-word fill: word index continues across wrapped lines so the
+        # white/pink alternation follows the READING order of the title
+        woff = 0
+        ys = [base_y - slide + (j - (nlines - 1) / 2) * line_h - rise
+              for j in range(nlines)]
+        for y, ln in zip(ys, lines):
+            words = ln.split()
+            fills = [(tfills[woff + j][0], tfills[woff + j][1], tfills[woff + j][2], a)
+                     for j in range(len(words))]
+            woff += len(words)
+            _draw_tinted_line(eng, dr, y, words, fills, tfnt, trk)
     lw = int(min(LY["ul_max"], max(LY["ul_min"], tsize * 4))
              * ease_o(ep))   # C7: shared settle clock
     ul_y = H * LY["title_frac"] + (nlines - 1) * line_h / 2 + int(tsize * LY["ul_gap_k"])
@@ -204,10 +247,16 @@ def draw_kicker(eng, dr, L, k, ctx, e):
     w = eng._measure_tracked(dr, txt, eng.SMALL, trk)
     rule_w = int(w * ease_o(ep))          # rule grows with the settle clock
     y = H * LY["kicker_frac"] - slide
-    dr.rectangle(((W - rule_w) / 2, y - LY["kicker_rule_gap"],
-                  (W + rule_w) / 2, y - LY["kicker_rule_gap"] + LY["kicker_rule_h"]),
-                 fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
-    # letterspaced small caps, staggered rise (same overshoot curve as word_pop)
+    # v1.36 (Onyx draft): "rule: false" drops the accent rule for a bare
+    # letterspaced-caps line (drafts may restyle; shipped kickers keep it).
+    if L.get("rule", True):
+        dr.rectangle(((W - rule_w) / 2, y - LY["kicker_rule_gap"],
+                      (W + rule_w) / 2, y - LY["kicker_rule_gap"] + LY["kicker_rule_h"]),
+                     fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
+    # letterspaced small caps, staggered rise (same overshoot curve as word_pop);
+    # optional per-word "colors" (v1.36 draft tint), default ACCENT everywhere.
+    knames = L.get("colors")
+    kcols = [ctx.PAL.get(n, ACCENT) for n in knames] if knames else None
     words = txt.split(" ")
     wsp = dr.textlength(" ", font=eng.SMALL)
     ws = [dr.textlength(x, font=eng.SMALL) for x in words]
@@ -221,14 +270,15 @@ def draw_kicker(eng, dr, L, k, ctx, e):
         eoc = ease_ow(wt)
         aa = int(a * min(1.0, wt * 1.6))
         yy = y + (1 - eoc) * 24
+        col = kcols[i % len(kcols)] if kcols else ACCENT
         if trk:
             for c in word:
                 dr.text((x, yy), c, font=eng.SMALL,
-                        fill=(ACCENT[0], ACCENT[1], ACCENT[2], aa))
+                        fill=(col[0], col[1], col[2], aa))
                 x += dr.textlength(c, font=eng.SMALL) + trk
         else:
             dr.text((x, yy), word, font=eng.SMALL,
-                    fill=(ACCENT[0], ACCENT[1], ACCENT[2], aa))
+                    fill=(col[0], col[1], col[2], aa))
             x += ws[i] + wsp
 
 
@@ -247,6 +297,87 @@ def draw_burst(eng, dr, L, k, ctx, e):
         a = min(a, ctx.a_gate)
     dr.text(((W - w) / 2, H * LY["burst_frac"] - slide), txt, font=fnt,
             fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
+
+
+def _tint_pieces(L, ctx):
+    """v1.36 (Onyx draft): per-word color list for a caption. L["colors"] =
+    preset color NAMES cycled over words (e.g. ["white","pink"]); no list ->
+    [None] meaning the kind's default color. Letters inside a word share the
+    word's color unless L["tint_letters"] names per-CHARACTER colors."""
+    names = L.get("colors")
+    if not names:
+        return None
+    return [ctx.PAL.get(n, ctx.WHITE) for n in names]
+
+
+def draw_typewriter(eng, dr, L, k, ctx, e):
+    """v1.36 (Onyx draft): character-by-character typewriter reveal with a
+    blinking caret — the market "typed line" move. Char i's appear clock:
+    tp = (lt-at)/TYPE_RAMP normalized by render_layer's per-kind gate;
+    tc = (tp - i*TYPE_STEP)/TYPE_RAMP, matching metrics done_at exactly."""
+    clamp01 = e[0]
+    H, W, LY, WHITE, lt, at, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
+                                              ctx.lt, ctx.at, ctx.slide, ctx.a_gate)
+    txt = L["text"]
+    # seconds past the caption start (gate opens fully for this kind; the
+    # transition_out freeze mirrors render_layer's outgoing-side kill switch)
+    tp = lt - at
+    if ctx.transition_out:
+        tp = min(tp, float(ctx.shot_t) - at)
+    fnt = eng.BODY
+    trk = 3
+    pieces, total = eng.tracked_pieces(dr, txt, fnt, trk)
+    x0 = (W - total) / 2
+    y = H * LY["caplines_frac"] - slide
+    n_seen = 0
+    tints = _tint_pieces(L, ctx)
+    tl = L.get("tint_letters")   # optional per-char color names (same length as text)
+    for i, (c, adv) in enumerate(pieces):
+        tc = clamp01((tp - i * M.TYPE_STEP) / M.TYPE_RAMP)
+        if tc <= 0:
+            break
+        n_seen = i + 1
+        if c == " ":
+            continue
+        a = int(255 * min(1.0, tc * 3.0))
+        if a_gate is not None:
+            a = min(a, a_gate)
+        col = WHITE
+        if tl and i < len(tl):
+            col = ctx.PAL.get(tl[i], WHITE)
+        elif tints:
+            # word index of this char
+            wi = txt[:i].count(" ")
+            col = tints[wi % len(tints)]
+        dr.text((x0, y), c, font=fnt, fill=(col[0], col[1], col[2], a))
+        x0 += adv
+    # caret: blinks while typing, solid for 0.3s after the last char, gone once
+    # the line has settled (skill rule: no perpetual idle motion). `done` is in
+    # seconds — matches metrics done_at = at + (n-1)*TYPE_STEP + TYPE_RAMP.
+    done = (len(pieces) - 1) * M.TYPE_STEP + M.TYPE_RAMP
+    if (tp < done and int(ctx.g * 3.2) % 2 == 0) or (done <= tp < done + 0.3):
+        ca = 200 if a_gate is None else min(200, a_gate)
+        cw = int(eng.L["body"] * 0.14) | 1
+        ch = int(eng.L["body"] * 0.9)
+        dr.rectangle([x0 + 4, y + ch * 0.08, x0 + 4 + cw, y + ch],
+                     fill=(255, 255, 255, ca))
+
+
+def draw_pump(eng, dr, L, k, ctx, e):
+    """v1.36 (Onyx draft): per-word scale punch ('word pumping') with optional
+    per-word colors — the market hype move, no box, no plate."""
+    H, W, LY, WHITE, ACCENT, lt, at, slide, a_gate = (
+        ctx.H, ctx.W, ctx.LY, ctx.WHITE, ctx.ACCENT, ctx.lt, ctx.at, ctx.slide, ctx.a_gate)
+    appear = lt - at   # seconds past start; gate opens fully for this kind
+    if ctx.transition_out:
+        appear = min(appear, float(ctx.shot_t) - at)
+    names = L.get("colors") or ["white", "accent"]
+    cols = [ctx.PAL.get(n, WHITE if n == "white" else ACCENT) for n in names]
+    base = eng.L["h1"]
+    eng.word_pump(dr, H * LY["burst_frac"] - slide,
+                  lambda sz: eng._mkfont(eng.preset["fonts"]["display"], sz),
+                  L["text"], cols, appear, tracking=0, base_size=base,
+                  alpha_cap=a_gate)
 
 
 def draw_handle(eng, dr, L, k, ctx, e):
@@ -403,6 +534,8 @@ DISPATCH = {
     "handle": draw_handle,
     "kicker": draw_kicker,       # v1.4 C4e: rule + letterspaced caps, no box
     "burst": draw_burst,         # v1.4 C4e: oversized scale-punch word, no box
+    "typewriter": draw_typewriter,  # v1.36 Onyx draft: per-char reveal + caret
+    "pump": draw_pump,              # v1.36 Onyx draft: per-word scale punch
     "big_number": draw_big_number,
     "cap_lines": draw_cap_lines,
     "terminal": draw_terminal,

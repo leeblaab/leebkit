@@ -1,12 +1,12 @@
 {
   "schema": 1,
   "name": "tpl_onyx",
-  "label": "Onyx — pure black stage, one line per beat (SkillMedev kinetic-typography rules)",
+  "label": "Onyx — pure black stage, kinetic techniques draft (typewriter + pump + color)",
   "preset": "onyx",
   "size": "1080x1920",
   "width": 1080,
   "height": 1920,
-  "target": 15.0,
+  "target": 19.6,
   "fps": 30,
   "voice": "none",
   "music": {"bed": "low_drive"},
@@ -16,39 +16,53 @@
       "t": 2.6,
       "transition": "cut",
       "captions": [
-        {"kind": "kicker", "at": 0.15, "text": "INTRODUCING"},
-        {"kind": "title_block", "at": 0.45, "text": "YOUR BRAND."}
+        {"kind": "kicker", "at": 0.15, "text": "KINETIC TYPE ENGINE", "rule": false,
+         "colors": ["accent", "pink", "white"]},
+        {"kind": "title_block", "at": 0.45, "text": "MOTION IS A LANGUAGE",
+         "colors": ["white", "pink", "white"]}
       ],
-      "vo": "Introducing. Your brand."
+      "vo": "Motion is a language."
+    },
+    {
+      "fill": "solid",
+      "t": 3.6,
+      "transition": "cut",
+      "captions": [
+        {"kind": "typewriter", "at": 0.25,
+         "text": "Every letter lands with a click.",
+         "colors": ["white", "pink", "white", "accent"]}
+      ],
+      "vo": "Every letter lands with a click."
+    },
+    {
+      "fill": "solid",
+      "t": 3.0,
+      "transition": "cut",
+      "captions": [
+        {"kind": "pump", "at": 0.25, "text": "WORDS PUMP ONE BY ONE",
+         "colors": ["white", "pink", "white", "accent", "white"]}
+      ],
+      "vo": "Words pump one by one."
     },
     {
       "fill": "solid",
       "t": 2.6,
       "transition": "cut",
       "captions": [
-        {"kind": "title_block", "at": 0.2, "text": "ONE LINE.", "sub": "PER BEAT"}
+        {"kind": "kicker", "at": 0.15, "text": "COLOR IS RHYTHM", "rule": false},
+        {"kind": "burst", "at": 0.4, "text": "PINK."}
       ],
-      "vo": "One line per beat."
+      "vo": "Color is rhythm. Pink."
     },
     {
       "fill": "solid",
-      "t": 2.6,
+      "t": 3.2,
       "transition": "cut",
       "captions": [
-        {"kind": "kicker", "at": 0.15, "text": "NO CLUTTER"},
-        {"kind": "burst", "at": 0.4, "text": "CLEAN."}
+        {"kind": "typewriter", "at": 0.25, "text": "watch the caret blink.",
+         "colors": ["white", "accent"]}
       ],
-      "vo": "No clutter. Clean."
-    },
-    {
-      "fill": "solid",
-      "t": 2.6,
-      "transition": "cut",
-      "captions": [
-        {"kind": "kicker", "at": 0.15, "text": "ZERO NOISE"},
-        {"kind": "burst", "at": 0.4, "text": "LOUD."}
-      ],
-      "vo": "Zero noise. Loud."
+      "vo": "Watch the caret blink."
     },
     {
       "fill": "solid",
@@ -56,7 +70,8 @@
       "transition": "cut",
       "captions": [
         {"kind": "kicker", "at": 0.15, "text": "BUILT BY LEEBLAAB"},
-        {"kind": "title_block", "at": 0.45, "text": "SHIP IT."}
+        {"kind": "title_block", "at": 0.45, "text": "SHIP IT.",
+         "colors": ["white", "pink"]}
       ],
       "vo": "Built by Leeb-laab. Ship it."
     },

@@ -1,6 +1,6 @@
 {
   "name": "Onyx — pure black stage (v1.4 C4e)",
-  "colors": { "bg": "#000000", "white": "#f7f7fa", "accent": "#00e5ff", "dim": "#aab0b9", "panel": "#000000" },
+  "colors": { "bg": "#000000", "white": "#f7f7fa", "accent": "#00e5ff", "dim": "#aab0b9", "panel": "#000000", "pink": "#ff2e88" },
   "fonts": {
     "display": "ArchivoBlack-Regular.ttf",
     "body": "Inter-var.ttf",

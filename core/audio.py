@@ -576,6 +576,19 @@ def build_audio(proj, media_dir=None, scratch=None, music_override=None):
     starts, cuts = shot_timeline(proj)
     TOTAL = int(round(dur * SR_OUT))
 
+    # v1.36 (Onyx draft): per-letter keyboard clicks for typewriter captions,
+    # sampled exactly where the draw path lands each glyph (at + i*TYPE_STEP).
+    # No shipped project uses kind "typewriter" -> type_clicks stays empty and
+    # every existing render's audio is byte-identical.
+    from . import metrics as _M
+    type_clicks = []
+    for si, s in enumerate(proj["shots"]):
+        for L in s.get("captions", []):
+            if L.get("kind") == "typewriter":
+                t0 = starts[si] + float(L.get("at", 0.2))
+                n = len(str(L.get("text", "")))
+                type_clicks.extend(t0 + i * _M.TYPE_STEP for i in range(n))
+
     if scratch is None:
         scratch = os.path.join(ROOT, "output", "_audio_scratch")
     os.makedirs(scratch, exist_ok=True)
@@ -653,6 +666,21 @@ def build_audio(proj, media_dir=None, scratch=None, music_override=None):
 
     # ---- mix + soft limit (music*0.9 + vo*1.25) ----
     mix = music * 0.9 + vo * 1.25
+    if type_clicks:
+        # mechanical key clicks: noise transient + tick, alternating pitch so
+        # repeated letters never sound like one drone; ducked under the VO.
+        rng = np.random.default_rng(11)
+        for ci, ts in enumerate(type_clicks):
+            i0 = int(ts * SR_OUT)
+            n = int(0.035 * SR_OUT)
+            if i0 + n > TOTAL:
+                continue
+            tt = np.arange(n) / SR_OUT
+            amp = 0.16 * (0.8 + 0.4 * rng.random())
+            cl = rng.standard_normal(n) * np.exp(-tt * 260) * 0.7
+            cl += np.sin(2 * np.pi * rng.uniform(1500, 2300) * tt) * np.exp(-tt * 160) * 0.5
+            duck = 0.4 if (voice != "none" and vo.any()) else 1.0
+            mix[i0:i0 + n] += cl * amp * duck
     mix = np.tanh(mix * 1.4) / np.tanh(1.4)
     peak = np.max(np.abs(mix)) if np.any(mix) else 1.0
     mix = mix / peak * 0.93 if peak > 0 else mix

@@ -126,6 +126,22 @@ def check_project(engine):
                     flags.append({"shot": i, "kind": "timing", "severity": "error",
                                   "message": "shot %d kicker finishes at %.2fs > shot end %.2fs"
                                              % (i, m["done_at"], t)})
+            elif k in ("typewriter", "pump"):
+                # v1.36 (Onyx draft): long-stagger kinds must settle inside the
+                # shot; typewriter lines also need a width check (draw path is
+                # center-fit but does NOT wrap — a too-long line clips).
+                if m["done_at"] > t - 0.1:
+                    flags.append({"shot": i, "kind": "timing", "severity": "error",
+                                  "message": "shot %d %s finishes at %.2fs > shot end %.2fs"
+                                             % (i, k, m["done_at"], t)})
+                if k == "typewriter":
+                    pieces, total = engine.tracked_pieces(
+                        ImageDraw.Draw(Image.new("RGB", (8, 8))),
+                        L.get("text", ""), engine.BODY, 3)
+                    if total > W - 80:
+                        flags.append({"shot": i, "kind": "overflow", "severity": "error",
+                                      "message": "shot %d typewriter line %.0fpx > safe %.0fpx"
+                                                 % (i, total, W - 80)})
             elif k == "cap_lines":
                 # timing runs on WRAPPED lines via metrics (audit B#3)
                 if m["done_at"] > t - 0.1:

@@ -539,6 +539,67 @@ class Engine:
                 x += ws[i]
             x += wsp + tracking
 
+    def word_pump(self, dr, y, mkfont, txt, colors, appear, tracking=0,
+                  base_size=0, kick=None, alpha_cap=None):
+        """v1.36 (Onyx draft): per-word SCALE PUNCH — each word pops in at
+        ~2x size and overshoots down to rest (the market "pump" move), vs
+        word_pop's translate rise. `colors` = list of RGBA per word (cycled).
+        mkfont(size) builds the punch font per frame; base_size is the rest
+        size. Word i's clock: wt = (appear - i*PUMP_STEP)/PUMP_RAMP."""
+        from . import metrics as M
+        if appear <= 0 or not txt:
+            return
+        kick = kick or M.PUMP_KICK
+        words = txt.split(" ")
+        wsp = dr.textlength(" ", font=mkfont(base_size))
+        ws = [dr.textlength(w, font=mkfont(base_size)) for w in words]
+        total = sum(ws) + wsp * (len(words) - 1) + tracking * sum(len(w) for w in words)
+        x = (self.W - total) / 2
+        for i, w in enumerate(words):
+            wt = max(0.0, min(1.0, (appear - i * M.PUMP_STEP) / M.PUMP_RAMP))
+            if wt <= 0:
+                x += ws[i] + wsp + tracking * len(w)
+                continue
+            # punch: sin bump to `kick` at appear, back-out settle to 1.0
+            punch = 1.0 + (kick - 1.0) * math.sin(math.pi * min(1.0, wt * 1.6)) \
+                     * (1.0 if wt < 0.95 else (1.0 - wt) / 0.05)
+            fnt = mkfont(max(1, int(base_size * punch)))
+            a = int(255 * min(1.0, wt * 2.4))
+            if alpha_cap is not None:
+                a = min(a, alpha_cap)
+            col = colors[i % len(colors)]
+            ww = dr.textlength(w, font=fnt)
+            # keep the word's REST footprint centered while it punches
+            xx = x + (ws[i] - ww) / 2
+            if tracking:
+                cx = xx
+                for c in w:
+                    cw = dr.textlength(c, font=fnt)
+                    dr.text((cx, y), c, font=fnt, fill=(col[0], col[1], col[2], a))
+                    cx += cw + int(tracking * punch)
+            else:
+                dr.text((xx, y), w, font=fnt, fill=(col[0], col[1], col[2], a))
+            x += ws[i] + wsp + tracking
+
+    def tracked_pieces(self, dr, txt, fnt, tracking=0):
+        """(pieces, total_w) — pieces = [(char_or_word, advance), ...] for
+        per-piece placement with letter tracking (typewriter layout math)."""
+        if tracking:
+            pieces = [(c, dr.textlength(c, font=fnt) + tracking) for c in txt]
+        else:
+            pieces = []
+            wsp = dr.textlength(" ", font=fnt)
+            for w in txt.split(" "):
+                for c in w:
+                    pieces.append((c, dr.textlength(c, font=fnt)))
+                pieces.append((" ", wsp))
+            if pieces and pieces[-1][0] == " ":
+                pieces.pop()
+        total = sum(a for _, a in pieces)
+        if tracking and txt:
+            total -= tracking   # no trailing gap on the last char
+        return pieces, total
+
     # -------------------------------------------------------------- dim layer
     def _dim_overlay(self, dim):
         key = round(dim, 3)
@@ -622,6 +683,11 @@ class Engine:
             img.paste(Image.alpha_composite(img.convert("RGBA"), black).convert("RGB"), (0, 0))
 
         WHITE, ACCENT, DIMC = self.WHITE, self.ACCENT, self.DIM
+        # v1.36 (Onyx draft): optional per-preset palette extension — colors are
+        # read ONLY when a caption carries an explicit "colors" list of names;
+        # no existing preset declares them, so every shipped render is
+        # pixel-identical (no golden churn).
+        PAL = {name: hex2rgb(h) for name, h in self.preset.get("colors", {}).items()}
         P = self.preset
         LY = self.L
         TRK = self.TRK
@@ -629,6 +695,12 @@ class Engine:
         for ci, L in enumerate(s.get("captions", [])):
             k = L["kind"]
             at = float(L.get("at", 0.2))
+            # v1.36 (Onyx draft): per-kind entrance gate. Long-stagger kinds
+            # (typewriter/pump) need a FULLY-OPEN gate or the shared prog<=0
+            # skip would kill their first stagger slots; shipped kinds keep
+            # the 0.32 gate byte-for-byte (no golden churn).
+            POP_RAMP_GATE = CAPTIONS.M.TYPE_RAMP if k == "typewriter" else \
+                            CAPTIONS.M.PUMP_RAMP if k == "pump" else 0.32
             # panel_* kinds are the shot's message itself (fill=solid frames):
             # run their clock 0.45s early so a black beat never holds with an
             # empty card (Yasser's sheet9 QA: dead gaps before word-pop lines).
@@ -639,7 +711,7 @@ class Engine:
             # frames inconsistent with slide/gating (v1.3 C2).
             if k in ("panel_top", "panel_mid"):
                 at -= CAPTIONS.M.PANEL_SHIFT
-            prog = clamp01((lt - at) / 0.32)
+            prog = clamp01((lt - at) / POP_RAMP_GATE)
             # outgoing-side kill switch: inside a transition window the incoming
             # layer runs its own early clock (OV) while this layer's lt keeps
             # running past the shot end — freeze each caption's animation clock
@@ -670,7 +742,7 @@ class Engine:
                 continue    # unknown kind: validate_project gates these; belt & braces
             ctx = CAPTIONS.FrameCtx(
                 W=W, H=H, LY=LY, P=P, TRK=TRK,
-                WHITE=WHITE, ACCENT=ACCENT, DIMC=DIMC,
+                WHITE=WHITE, ACCENT=ACCENT, DIMC=DIMC, PAL=PAL,
                 lt=lt, at=at, g=g, shot_t=float(s["t"]),
                 prog=prog, a=a, slide=slide,
                 a_gate=a_gate, transition_out=transition_out,
