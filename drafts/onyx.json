@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "name": "tpl_onyx",
+  "label": "Onyx — pure black stage, one line per beat (SkillMedev kinetic-typography rules)",
+  "preset": "onyx",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 15.0,
+  "fps": 30,
+  "voice": "none",
+  "music": {"bed": "low_drive"},
+  "shots": [
+    {
+      "fill": "solid",
+      "t": 2.6,
+      "transition": "cut",
+      "captions": [
+        {"kind": "kicker", "at": 0.15, "text": "INTRODUCING"},
+        {"kind": "title_block", "at": 0.45, "text": "YOUR BRAND."}
+      ],
+      "vo": "Introducing. Your brand."
+    },
+    {
+      "fill": "solid",
+      "t": 2.6,
+      "transition": "cut",
+      "captions": [
+        {"kind": "title_block", "at": 0.2, "text": "ONE LINE.", "sub": "PER BEAT"}
+      ],
+      "vo": "One line per beat."
+    },
+    {
+      "fill": "solid",
+      "t": 2.6,
+      "transition": "cut",
+      "captions": [
+        {"kind": "kicker", "at": 0.15, "text": "NO CLUTTER"},
+        {"kind": "burst", "at": 0.4, "text": "CLEAN."}
+      ],
+      "vo": "No clutter. Clean."
+    },
+    {
+      "fill": "solid",
+      "t": 2.6,
+      "transition": "cut",
+      "captions": [
+        {"kind": "kicker", "at": 0.15, "text": "ZERO NOISE"},
+        {"kind": "burst", "at": 0.4, "text": "LOUD."}
+      ],
+      "vo": "Zero noise. Loud."
+    },
+    {
+      "fill": "solid",
+      "t": 2.6,
+      "transition": "cut",
+      "captions": [
+        {"kind": "kicker", "at": 0.15, "text": "BUILT BY LEEBLAAB"},
+        {"kind": "title_block", "at": 0.45, "text": "SHIP IT."}
+      ],
+      "vo": "Built by Leeb-laab. Ship it."
+    },
+    {
+      "fill": "solid",
+      "t": 2.0,
+      "transition": "cut",
+      "captions": [
+        {"kind": "title_block", "at": 0.2, "text": "LEEBKIT", "sub": "YOUR PROMPT GOES HERE"},
+        {"kind": "handle", "at": 1.1, "text": "@yourhandle"}
+      ],
+      "vo": "Leebkit."
+    }
+  ]
+}

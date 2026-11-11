@@ -1,0 +1,19 @@
+{
+  "name": "Onyx — pure black stage (v1.4 C4e)",
+  "colors": { "bg": "#000000", "white": "#f7f7fa", "accent": "#00e5ff", "dim": "#aab0b9", "panel": "#000000" },
+  "fonts": {
+    "display": "ArchivoBlack-Regular.ttf",
+    "body": "Inter-var.ttf",
+    "mono": "JetBrainsMono-var.ttf"
+  },
+  "sizes": { "logo": 150, "h1": 130, "body": 54, "small": 44, "mono": 46, "mono_s": 36, "big": 300 },
+  "tracking": { "logo": 6, "sub": 14 },
+  "panel_alpha": 224,
+  "term_alpha": 238,
+  "grain_points": 0,
+  "camera_zoom_keyframes": [
+    [0.0, 1.0], [15.0, 1.0]
+  ],
+  "overscan": 1.0,
+  "xf": 0.0
+}
