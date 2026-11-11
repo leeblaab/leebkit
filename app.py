@@ -8,6 +8,8 @@ import hashlib
 import io
 import logging
 
+from PIL import Image
+
 log = logging.getLogger("reelkit")
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
@@ -39,7 +41,7 @@ def _prune_cache(d, keep=PREVIEW_MAX):
     Cheap (listdir+stat) and runs at most once per preview request."""
     try:
         names = [f for f in os.listdir(d)
-                 if f.startswith(("strip_", "anim_", "vo_", "music_", "style_"))]
+                 if f.startswith(("strip_", "anim_", "vo_", "music_", "style_", "genprev_"))]
     except OSError:
         return
     if len(names) <= keep:
@@ -72,7 +74,10 @@ def meta():
              for m in (A.scan_music() or ["synthwave", "pulse"])
              for m in [dict(m) if isinstance(m, dict) else {"id": m}]]
     return {"presets": presets, "music": music, "voices": A.list_voices(),
-            "generators": [{"id": k, "label": v["label"]}
+            # v1.36 obs #2: ship each generator preset's designed palette so the
+            # UI picker can show colour chips — the user could not tell what a
+            # gen shot would look like before rendering it.
+            "generators": [{"id": k, "label": v["label"], "palette": list(v["palette"])}
                            for k, v in G.GEN_PRESETS.items()],
             "piper_ready": bool(A.piper_available() and len(A.list_voices()) > 1)}
 
@@ -318,6 +323,57 @@ def _gallery_task(preset):
     t = asyncio.create_task(_build())
     _GALLERY_TASKS[preset] = t
     return t
+
+
+# ------------------------------------------------- generator picker previews (v1.36 obs #2)
+GENPREV_DIR = os.path.join(ROOT, "output", "_genprevs")
+
+
+def _gen_previews_sync():
+    """One 2-frame looping webp per generator preset, rendered on the actual
+    engine path (render_base + output-res grain via composite_grain — same code
+    a real gen shot takes), with a caption panel overlaid so the picker shows
+    what the shot will actually look like. Cached forever; 6 tiny files.
+    Out of golden-hash scope by design (builds its own Engines)."""
+    P = load_preset("leebdark.json")
+    proj = {"schema": 1, "name": "genprev", "target": 3.0, "fps": 24,
+            "width": 720, "height": 1280,   # C1 tier whitelist: portrait must be tier-legal
+            "shots": [{"t": 3.0, "transition": "cut",
+                       "captions": [{"kind": "title_block", "at": 0.10,
+                                     "text": "WHAT THIS LOOKS LIKE"}],
+                       "vo": ""}]}
+    os.makedirs(GENPREV_DIR, exist_ok=True)
+    _prune_cache(GENPREV_DIR)
+    out = {}
+    for gid in G.GEN_PRESETS:
+        p2 = json.loads(json.dumps(proj))
+        p2["shots"][0]["fill"] = "gen:" + gid
+        p2["shots"][0]["motion"] = "normal"
+        eng = Engine(p2, preset=P)   # fps 24 -> frames 36/72 = 1.5s/3.0s
+        frames = [eng.compose_frame(i).resize((360, 640), Image.LANCZOS)
+                  for i in (36, 72)]
+        h = hashlib.sha256(json.dumps([gid, p2], sort_keys=True).encode()).hexdigest()[:12]
+        path = os.path.join(GENPREV_DIR, "genprev_%s.webp" % h)
+        if not os.path.exists(path):
+            buf = io.BytesIO()
+            frames[0].save(buf, format="WEBP", save_all=True,
+                           append_images=frames[1:], duration=[1300, 1300],
+                           loop=0, quality=80)
+            tmp = path + ".part"
+            with open(tmp, "wb") as f:
+                f.write(buf.getvalue())
+            os.replace(tmp, path)    # atomic (same rule as anim gallery tiles)
+        out[gid] = "/output/_genprevs/genprev_%s.webp" % h
+    return out
+
+
+@app.get("/api/gen_previews")
+async def gen_previews():
+    """Animated thumb per generator preset for the shot-card picker grid."""
+    try:
+        return {"thumbs": await asyncio.to_thread(_gen_previews_sync)}
+    except Exception as e:
+        raise HTTPException(422, str(e))
 
 
 @app.get("/api/anim_gallery/{preset}")

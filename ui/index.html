@@ -99,6 +99,14 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
 #acatrail{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 #acatrail button{padding:5px 10px;font-size:11px}
 #acatrail button.on{border-color:var(--acc);color:var(--acc)}
+/* v1.36 obs #2: generator look picker — animated thumb per preset, palette
+   gradient as the pre-fetch fallback so colours are visible even cold */
+.genpick{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.genpick button{position:relative;padding:0;border:1px solid var(--line);border-radius:4px;overflow:hidden;width:52px;background:#0c0c14;text-align:left}
+.genpick button.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.genpick img,.genpick .gpal{display:block;width:100%;aspect-ratio:9/16;object-fit:cover}
+.genpick .gnm{display:block;font-family:var(--mono);font-size:8.5px;line-height:1.2;padding:2px 3px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.genpick button.on .gnm{color:var(--acc)}
 @media(max-width:1100px){main{grid-template-columns:1fr}}
 </style>
 </head>
@@ -191,6 +199,16 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 let META={presets:[],music:[],voices:[],generators:[]};
+// v1.36 obs #2: animated thumb per generator preset (lazy — fetched the first
+// time a gen shot appears). GEN_THUMBS[gid] = looping webp URL.
+let GEN_THUMBS=null;
+async function ensureGenThumbs(){
+  if(GEN_THUMBS)return GEN_THUMBS;
+  try{const d=await api('/api/gen_previews');GEN_THUMBS=d.thumbs||{}}
+  catch(e){GEN_THUMBS={};toast('gen previews: '+e.message)}
+  renderShots();   // repaint cards now that thumbs exist
+  return GEN_THUMBS;
+}
 const PRESET_SHORT={leebdark:'LEEBLAAB house style'};  // keep dropdown rows short
 let P={schema:1,name:'my_promo',size:'1080x1920',fps:30,target:30,preset:'leebdark',music:{bed:'synthwave'},voice:'none',voice_speed:1.0,vo_lines:[],shots:[]};
 
@@ -214,12 +232,13 @@ async function boot(){
   // the preset dropdown. Load it at boot (endpoint returns instantly from
   // cache and renders missing tiles in the background).
   loadGallery();
+  if(P.shots.some(s=>s.fill&&String(s.fill).startsWith('gen:')))ensureGenThumbs();
 }
 
 // ---------- shots ----------
 function addShot(img){P.shots.push({image:img,t:4.0,transition:'cut',captions:[],vo:''});renderShots()}
 // v1.4 C4: generator-only shot — no image needed (D1: both sources first-class)
-function addGenShot(){P.shots.push({fill:'gen:'+((META.generators||[])[0]?.id||'midnight_drift'),motion:'normal',t:4.0,transition:'cut',captions:[],vo:''});renderShots()}
+function addGenShot(){P.shots.push({fill:'gen:'+((META.generators||[])[0]?.id||'midnight_drift'),motion:'normal',t:4.0,transition:'cut',captions:[],vo:''});renderShots();ensureGenThumbs()}
 const CAP_DEFAULTS={
   panel_top:{kind:'panel_top',at:0.2,lines:['NEW LINE']},
   panel_mid:{kind:'panel_mid',at:0.2,lines:['MID LINE']},
@@ -260,7 +279,9 @@ function renderShots(){
   <div class="card" draggable="true" data-i="${i}">
     <div class="grip">⠿<br><span style="font-size:11px">${String(i+1).padStart(2,'0')}</span></div>
     <div class="thumbwrap">${s.fill&&String(s.fill).startsWith('gen:')
-      ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px" title="${esc((META.generators||[]).find(g=>('gen:'+g.id)===s.fill)?.label||s.fill)}">◍</div>`
+      ? (GEN_THUMBS&&GEN_THUMBS[String(s.fill).slice(4)])
+        ? `<img src="${GEN_THUMBS[String(s.fill).slice(4)]}" alt="" title="${esc((META.generators||[]).find(g=>('gen:'+g.id)===s.fill)?.label||s.fill)}" style="width:100%;height:100%;object-fit:cover">`
+        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px" title="${esc((META.generators||[]).find(g=>('gen:'+g.id)===s.fill)?.label||s.fill)}">◍</div>`
       : `<img src="/media/${String(s.image).replace(/^media\//,'')}">`}
       <div class="rm" data-rm="${i}" title="Remove this shot">×</div></div>
     <div class="fields">
@@ -272,7 +293,9 @@ function renderShots(){
       ${s.fill&&String(s.fill).startsWith('gen:')?`<div style="display:flex;gap:6px;margin-bottom:6px">
         <select data-gen="${i}" style="flex:1;min-width:0;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px;font-size:13px">${(META.generators||[]).map(g=>`<option value="gen:${g.id}" ${'gen:'+g.id===s.fill?'selected':''}>${g.label}</option>`).join('')}</select>
         <select data-motion="${i}" style="min-width:0;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px;font-size:13px"><option value="normal" ${s.motion!=='subtle'?'selected':''}>Motion: Normal</option><option value="subtle" ${s.motion==='subtle'?'selected':''}>Motion: Subtle</option></select>
-      </div>`:''}
+      </div>
+      <label style="font-size:11px">Look — click to switch (preview loops)</label>
+      <div class="genpick" data-gp="${i}">${(META.generators||[]).map(g=>`<button data-genpick="${g.id}" title="${esc(g.label)}${GEN_THUMBS&&GEN_THUMBS[g.id]?' — click the card thumbnail to see it move':''}" class="${'gen:'+g.id===s.fill?'on':''}">${GEN_THUMBS&&GEN_THUMBS[g.id]?`<img src="${GEN_THUMBS[g.id]}" alt="">`:`<span class="gpal" style="background:linear-gradient(135deg,${esc((g.palette||[]).join(','))})"></span>`}<span class="gnm">${esc(g.label)}</span></button>`).join('')}</div>`:''}
       ${s.captions.length?`<label>Caption boxes (edit inline; add more from the Animations panel)</label>${s.captions.map((c,j)=>`<label style="margin-top:6px">${c.kind} #${j+1}</label>${capEditor(i,j)}`).join('')}`:`<label>Caption lines (top panel — quick start)</label>
       <textarea data-cap="${i}" placeholder="BUILT BY&#10;PROMPT ENGINEERING"></textarea>`}
       <label>Voice-over for this shot</label>
@@ -330,10 +353,13 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('click',async e=>{
   const b=e.target;
+  if(b.dataset.genpick!=null){                    // v1.36 obs #2: look picker
+    const card=b.closest('.card');if(!card)return;
+    P.shots[+card.dataset.i].fill='gen:'+b.dataset.genpick;renderShots();return}
   if(b.dataset.rm!=null){P.shots.splice(+b.dataset.rm,1);renderShots();toast('shot removed')}
   if(b.dataset.src!=null){                       // v1.4 C4 background-source toggle
     const i=+b.dataset.i,s=P.shots[i];
-    if(b.dataset.src==='gen'){if(!s.fill||!String(s.fill).startsWith('gen:')){s.fill='gen:'+((META.generators||[])[0]?.id||'midnight_drift');s.motion=s.motion||'normal'}renderShots()}
+    if(b.dataset.src==='gen'){if(!s.fill||!String(s.fill).startsWith('gen:')){s.fill='gen:'+((META.generators||[])[0]?.id||'midnight_drift');s.motion=s.motion||'normal'}renderShots();ensureGenThumbs()}
     else{delete s.fill;delete s.motion;if(!s.image)toast('no image on this shot — drag one onto its thumbnail');renderShots()}
   }
   if(b.id==='btn-addgen'){addGenShot();toast('generator shot added — pick its preset in the card')}
