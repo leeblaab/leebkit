@@ -162,6 +162,25 @@ def projects():
     return {"projects": out}
 
 
+# ------------------------------------------------- templates gallery (v1.4 C4b)
+from core import templates as TPL
+
+
+@app.get("/api/templates")
+def templates():
+    """Curated starter skeletons shipped in templates/ (committed product
+    content — unlike projects/*.json which stay gitignored save-files)."""
+    return {"templates": TPL.list_templates()}
+
+
+@app.get("/api/template/{fname}")
+def get_template(fname: str):
+    try:
+        return TPL.load_template(fname)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
 @app.get("/api/project/{fname}")
 def get_project(fname):
     p = os.path.join(PROJECTS_DIR, os.path.basename(fname))

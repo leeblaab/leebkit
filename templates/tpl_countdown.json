@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "name": "tpl_countdown",
+  "label": "Countdown — launch tease over Grid Pulse",
+  "preset": "leebdark",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 15.0,
+  "fps": 30,
+  "voice": "none",
+  "music": {"bed": "sparkle"},
+  "shots": [
+    {
+      "fill": "gen:grid_pulse",
+      "motion": "normal",
+      "t": 4.0,
+      "transition": "cut",
+      "cam": "pushin",
+      "captions": [
+        {"kind": "title_block", "at": 0.3, "text": "IT'S COMING.", "sub": "DATE OR DROP GOES HERE"},
+        {"kind": "handle", "at": 2.5, "text": "@yourhandle"}
+      ],
+      "vo": "Something is coming. Here is the countdown."
+    },
+    {
+      "fill": "gen:grid_pulse",
+      "motion": "normal",
+      "t": 3.0,
+      "transition": "wipe_up",
+      "cam": "panup",
+      "captions": [
+        {"kind": "big_number", "at": 0.4, "text": "3"}
+      ],
+      "vo": "Three."
+    },
+    {
+      "fill": "gen:grid_pulse",
+      "motion": "normal",
+      "t": 3.0,
+      "transition": "wipe_up",
+      "cam": "pandown",
+      "captions": [
+        {"kind": "big_number", "at": 0.4, "text": "2"}
+      ],
+      "vo": "Two."
+    },
+    {
+      "fill": "gen:ember_flow",
+      "motion": "normal",
+      "t": 3.0,
+      "transition": "flashdip",
+      "cam": "pushin2",
+      "captions": [
+        {"kind": "big_number", "at": 0.4, "text": "1"}
+      ],
+      "vo": "One."
+    },
+    {
+      "fill": "gen:ember_flow",
+      "motion": "normal",
+      "t": 2.0,
+      "transition": "fade",
+      "cam": "pushin",
+      "captions": [
+        {"kind": "cta", "at": 0.3, "text": "GOING LIVE NOW"}
+      ],
+      "vo": "Going live now."
+    }
+  ]
+}

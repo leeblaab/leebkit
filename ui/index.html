@@ -107,6 +107,14 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
 .genpick img,.genpick .gpal{display:block;width:100%;aspect-ratio:9/16;object-fit:cover}
 .genpick .gnm{display:block;font-family:var(--mono);font-size:8.5px;line-height:1.2;padding:2px 3px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .genpick button.on .gnm{color:var(--acc)}
+/* ---- v1.4 C4b templates gallery (left rail, below Animations) ---- */
+#tplgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+.tcard{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px;cursor:pointer;
+transition:border-color .15s;display:flex;flex-direction:column;gap:7px}
+.tcard:hover{border-color:var(--acc)}
+.tpal{display:block;width:100%;aspect-ratio:9/16;border-radius:4px}
+.tmeta{font-family:var(--mono);font-size:11px;color:var(--txt);line-height:1.35;text-align:center}
+.tsub{font-family:var(--mono);font-size:9.5px;color:var(--dim);text-align:center;margin-top:-3px}
 @media(max-width:1100px){main{grid-template-columns:1fr}}
 </style>
 </head>
@@ -133,6 +141,11 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
     <div id="acatrail"></div>
     <div id="animgrid"><span class="noflags">pick images first — tiles show each move on a blank background</span></div>
     <div class="totsub" style="margin-top:8px">Click a card to apply it to the selected shot. A transition belongs to the NEXT shot (it's how that shot arrives); camera moves act on the shot itself. Tiles are live previews — they loop.</div>
+  </div>
+  <div class="panel">
+    <h3>Templates</h3>
+    <div id="tplgrid"><span class="noflags">loading…</span></div>
+    <div class="totsub" style="margin-top:8px">Ready-made skeletons over generator backgrounds — no images needed. Click one to load it into the editor; rewrite the copy in place, then Save (it saves as your own project, the template stays untouched).</div>
   </div>
 </section>
 
@@ -235,6 +248,7 @@ async function boot(){
   // the preset dropdown. Load it at boot (endpoint returns instantly from
   // cache and renders missing tiles in the background).
   loadGallery();
+  loadTemplates();   // v1.4 C4b: shipped skeletons, instant from templates/
   if(P.shots.some(s=>s.fill&&String(s.fill).startsWith('gen:')))ensureGenThumbs();
 }
 
@@ -559,6 +573,37 @@ $('#animgrid').addEventListener('click',e=>{const c=e.target.closest('[data-anim
 
 // tiles depend on the preset's colors/fonts: reload the gallery on switch
 $('#preset').onchange=e=>{P.preset=e.target.value;loadGallery()};
+
+// ---------- templates gallery (v1.4 C4b) ----------
+let TPLS=[];
+async function loadTemplates(){
+  try{const j=await api('/api/templates');TPLS=j.templates||[]}catch(e){TPLS=[]}
+  const gp={};(META.generators||[]).forEach(g=>gp[g.id]=g.palette||[]);   // /api/meta ships palette per generator (obs #2)
+  paintTemplates(gp);
+}
+function paintTemplates(gp){
+  const g=$('#tplgrid');
+  if(!TPLS.length){g.innerHTML='<span class="noflags">no templates shipped</span>';return}
+  g.innerHTML=TPLS.map(t=>{
+    const gens=[...new Set((t.gens||[]).map(x=>String(x).replace(/^gen:/,'')))];
+    const pal=[];gens.forEach(x=>(gp[x]||[]).slice(0,2).forEach(c=>pal.push(c)));   // designed hex from /api/meta, no render needed
+    return `<div class="tcard" data-tpl="${esc(t.file)}">`+
+      (pal.length?`<span class="tpal" style="background:linear-gradient(160deg,${pal.join(',')})"></span>`:'')+
+      `<div class="tmeta">${esc(t.label||t.name)}</div>`+
+      `<div class="tsub">${t.shots} shots · ${(+t.target).toFixed(0)}s · ${gens.map(g=>g.replace(/_/g,' ')).join(', ')}</div></div>`;
+  }).join('');
+}
+$('#tplgrid').addEventListener('click',async e=>{
+  const c=e.target.closest('[data-tpl]');if(!c)return;
+  try{
+    const proj=await api('/api/template/'+encodeURIComponent(c.dataset.tpl));
+    // same in-place mutation as project-load: handlers close over P by reference.
+    Object.keys(P).forEach(k=>delete P[k]);Object.assign(P,proj);
+    if(!Array.isArray(P.shots))P.shots=[];
+    hydrateControls();
+    toast('template loaded — rewrite the copy, then Save');
+  }catch(err){toast('template: '+err.message)}
+});
 $('#animkind').onchange=e=>{
   const i=_animShot;const s=P.shots[i];if(!s)return toast('add images first');
   s.captions.push(JSON.parse(JSON.stringify(CAP_DEFAULTS[e.target.value])));

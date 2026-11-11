@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "name": "tpl_product_drop",
+  "label": "Product Drop — hype reveal over Ember Flow",
+  "preset": "leebdark",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 15.0,
+  "fps": 30,
+  "voice": "none",
+  "music": {"bed": "low_drive"},
+  "shots": [
+    {
+      "fill": "gen:ember_flow",
+      "motion": "normal",
+      "t": 4.0,
+      "transition": "cut",
+      "cam": "pushin",
+      "captions": [
+        {"kind": "title_block", "at": 0.3, "text": "NEW DROP.", "sub": "THIS IS THE HOOK LINE"},
+        {"kind": "handle", "at": 2.4, "text": "@yourhandle"}
+      ],
+      "vo": "Every great launch starts with one bold frame."
+    },
+    {
+      "fill": "gen:midnight_drift",
+      "motion": "subtle",
+      "t": 3.0,
+      "transition": "fade",
+      "cam": "pandown",
+      "captions": [
+        {"kind": "panel_mid", "at": 0.5, "lines": ["BUILT TO LAND", "FRAME BY FRAME", "MADE TO SHIP"]}
+      ],
+      "vo": "Built for the moment you have been waiting for."
+    },
+    {
+      "fill": "gen:ember_flow",
+      "motion": "normal",
+      "t": 4.0,
+      "transition": "wipe_left",
+      "cam": "pushin2",
+      "captions": [
+        {"kind": "chips", "at": 0.3, "items": ["FEATURE ONE", "FEATURE TWO"]},
+        {"kind": "accent_word", "at": 2.6, "text": "REVEALED"}
+      ],
+      "vo": "Feature one. Feature two. Revealed."
+    },
+    {
+      "fill": "gen:signal_field",
+      "motion": "normal",
+      "t": 4.0,
+      "transition": "slideL",
+      "cam": "panup",
+      "captions": [
+        {"kind": "big_number", "at": 0.5, "text": "50%"},
+        {"kind": "small", "at": 2.3, "text": "launch-week only"}
+      ],
+      "vo": "Fifty percent off, launch week only."
+    }
+  ]
+}

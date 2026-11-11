@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "name": "tpl_stat_hit",
+  "label": "Stat Hit — numbers punch over Deep Current",
+  "preset": "leebdark",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 15.0,
+  "fps": 30,
+  "voice": "none",
+  "music": {"bed": "pulse"},
+  "shots": [
+    {
+      "fill": "gen:deep_current",
+      "motion": "normal",
+      "t": 4.0,
+      "transition": "cut",
+      "cam": "pushin",
+      "captions": [
+        {"kind": "title_block", "at": 0.3, "text": "THE NUMBER.", "sub": "ONE STAT THAT SPEAKS FIRST"}
+      ],
+      "vo": "Let the number do the talking."
+    },
+    {
+      "fill": "gen:deep_current",
+      "motion": "normal",
+      "t": 4.0,
+      "transition": "whip",
+      "cam": "pandown",
+      "captions": [
+        {"kind": "big_number", "at": 0.5, "text": "10X"},
+        {"kind": "small", "at": 2.4, "text": "faster than the old way"}
+      ],
+      "vo": "Ten times faster than the old way."
+    },
+    {
+      "fill": "gen:signal_field",
+      "motion": "normal",
+      "t": 3.5,
+      "transition": "flashdip",
+      "cam": "pushin2",
+      "captions": [
+        {"kind": "chips", "at": 0.3, "items": ["NO CLOUD", "NO SUBSCRIPTION"]}
+      ],
+      "vo": "No cloud. No subscription."
+    },
+    {
+      "fill": "gen:midnight_drift",
+      "motion": "subtle",
+      "t": 3.5,
+      "transition": "fade",
+      "cam": "pushout",
+      "captions": [
+        {"kind": "cta", "at": 0.6, "text": "LINK IN BIO"},
+        {"kind": "handle", "at": 2.0, "text": "@yourhandle"}
+      ],
+      "vo": "Link in bio."
+    }
+  ]
+}

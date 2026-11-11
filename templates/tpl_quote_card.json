@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "name": "tpl_quote_card",
+  "label": "Quote Card — calm statement over Paper Grain",
+  "preset": "leebdark",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 15.0,
+  "fps": 30,
+  "voice": "none",
+  "music": {"bed": "ambient_glow"},
+  "shots": [
+    {
+      "fill": "gen:paper_grain",
+      "motion": "subtle",
+      "t": 4.5,
+      "transition": "cut",
+      "cam": "pushin",
+      "captions": [
+        {"kind": "title_block", "at": 0.3, "text": "THE QUOTE.", "sub": "OR THE BIG IDEA, IN THREE WORDS"}
+      ],
+      "vo": "Start with the sentence you want people to remember."
+    },
+    {
+      "fill": "gen:paper_grain",
+      "motion": "subtle",
+      "t": 5.0,
+      "transition": "fade",
+      "cam": "panup",
+      "captions": [
+        {"kind": "panel_top", "at": 0.6, "lines": ["THE QUOTE HERE", "SHORT AND BOLD"]}
+      ],
+      "vo": "The quote goes here. It wraps and fits itself, so long lines never break the frame."
+    },
+    {
+      "fill": "gen:deep_current",
+      "motion": "normal",
+      "t": 3.0,
+      "transition": "fade",
+      "cam": "pushout",
+      "captions": [
+        {"kind": "cta", "at": 0.6, "text": "FOLLOW FOR MORE"}
+      ],
+      "vo": "Follow for more every week."
+    },
+    {
+      "fill": "gen:paper_grain",
+      "motion": "subtle",
+      "t": 2.5,
+      "transition": "cut",
+      "cam": "pushin",
+      "captions": [
+        {"kind": "handle", "at": 0.4, "text": "@yourhandle"}
+      ],
+      "vo": ""
+    }
+  ]
+}
