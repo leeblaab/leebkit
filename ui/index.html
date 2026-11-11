@@ -381,7 +381,14 @@ document.addEventListener('click',async e=>{
     const i=+b.dataset.i,s=P.shots[i];
     if(b.dataset.src==='gen'){if(!s.fill||!String(s.fill).startsWith('gen:')){s.fill='gen:'+((META.generators||[])[0]?.id||'midnight_drift');s.motion=s.motion||'normal'}renderShots();ensureGenThumbs()}
     else{delete s.fill;delete s.motion;if(!s.image)toast('no image on this shot — drag one onto its thumbnail');renderShots()}
-  }
+    if(b.dataset.src==='img'){                    // v1.4 templates: also open the
+      const pick=document.createElement('input');  // file picker right away, so a
+      pick.type='file';pick.accept='image/*';      // solid-stage template shot gets
+      pick.onchange=async()=>{if(!pick.files.length)return;  // its photo in one click
+        const fd=new FormData();fd.append('file',pick.files[0]);
+        const r=await fetch('/api/upload',{method:'POST',body:fd});const j=await r.json();
+        if(r.ok){P.shots[+b.dataset.i].image=j.path;renderShots();toast('shot '+(+b.dataset.i+1)+' background set')}else toast('upload failed')};
+      pick.click()}}
   if(b.id==='btn-addgen'){addGenShot();toast('generator shot added — pick its preset in the card')}
   if(b.dataset.dur!=null){                        // patch in place: a full renderShots()
     const i=+b.dataset.dur,d=+b.dataset.v;        // rebuild killed focus mid-typing (audit #10)
@@ -624,6 +631,11 @@ $('#tplgrid').addEventListener('click',async e=>{
     // same in-place mutation as project-load: handlers close over P by reference.
     Object.keys(P).forEach(k=>delete P[k]);Object.assign(P,proj);
     if(!Array.isArray(P.shots))P.shots=[];
+    // v1.4 templates: solid-stage skeleton shots come with NO background —
+    // pre-mark them as image-source so each card immediately shows the
+    // Image/Generator toggle and its thumbnail answers a drag-drop or click
+    // (the user's own photo lands per scene, exactly like a normal project).
+    P.shots.forEach(s=>{if(!s.image&&!(s.fill&&String(s.fill).startsWith('gen:')))s.fill='image'});
     hydrateControls();
     toast('template loaded — rewrite the copy, then Save');
   }catch(err){toast('template: '+err.message)}
