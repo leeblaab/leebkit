@@ -286,15 +286,14 @@ class Queue:
                 j.error = "canceled before ffmpeg encode"
                 return
             j.state = "mux"
-            cmd = ["ffmpeg", "-y", "-framerate", str(eng.FPS),
-                   "-i", os.path.join(frames_dir, "f_%04d.png"),
-                   "-i", wav,
-                   "-c:v", "libx264", "-preset", "medium", "-crf", "19",
-                   "-pix_fmt", "yuv420p", "-profile:v", "high", "-movflags", "+faststart",
-                   "-c:a", "aac", "-b:a", "192k", "-shortest", out_mp4]
-            r = subprocess.run(cmd, capture_output=True, text=True)
-            if r.returncode != 0:
-                raise RuntimeError("ffmpeg: " + r.stderr[-600:])
+            # audit #10 (v1.31): single encoder definition — the old inline copy
+            # ran crf 19/preset medium while render_cli encoded crf 18/slow, so
+            # app jobs and CLI renders of the SAME project differed. Now both
+            # go through render_cli.encode_video (crf 18/slow; draft path keeps
+            # veryfast/23). Lazy import: render_cli is a CLI entry script, not
+            # an import-time dependency of the queue.
+            from render_cli import encode_video as _encode
+            _encode(frames_dir, out_mp4, fps=eng.FPS, audio_wav=wav)
             A.verify_durations(out_mp4, float(j.proj["target"]))   # hard gate
             shutil.rmtree(frames_dir, ignore_errors=True)
             j.out = out_mp4

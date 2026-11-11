@@ -55,10 +55,18 @@ def render_frames(proj_path, media_dir, frames_dir, n, jobs=1, progress=None):
     return time.time() - t0
 
 
-def encode_video(frames_dir, out_mp4, fps=30, crf="18", preset_v="slow"):
-    cmd = ["ffmpeg", "-y", "-framerate", str(fps), "-i", os.path.join(frames_dir, "f_%04d.png"),
-           "-c:v", "libx264", "-preset", preset_v, "-crf", crf,
-           "-pix_fmt", "yuv420p", "-profile:v", "high", "-movflags", "+faststart", out_mp4]
+def encode_video(frames_dir, out_mp4, fps=30, crf="18", preset_v="slow", audio_wav=None):
+    """Single encoder definition (audit #10 v1.31): core/queue.py used to carry
+    its own copy at crf 19/preset medium, so CLI and app outputs differed. The
+    queue now calls this with the same quality constants; --draft overrides."""
+    cmd = ["ffmpeg", "-y", "-framerate", str(fps), "-i", os.path.join(frames_dir, "f_%04d.png")]
+    if audio_wav:
+        cmd += ["-i", audio_wav]
+    cmd += ["-c:v", "libx264", "-preset", preset_v, "-crf", crf,
+            "-pix_fmt", "yuv420p", "-profile:v", "high", "-movflags", "+faststart"]
+    if audio_wav:
+        cmd += ["-c:a", "aac", "-b:a", "192k", "-shortest"]
+    cmd.append(out_mp4)
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError("ffmpeg video encode failed:\n" + r.stderr[-2000:])
