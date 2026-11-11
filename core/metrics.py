@@ -33,6 +33,14 @@ CAPLINE_LINE_STEP = 0.45    # nominal; capline_step(n) NORMALIZES it so the
                             # wp clamps at 1 and slot 3's clock was -0.35)
 CHIP_STEP = 0.35
 CHIP_RAMP = 0.4
+TITLE_PLATE_K = 1.3     # title_block element clock gain (C7): the sub-plate
+                        # alpha AND underline growth share ONE settle —
+                        # done_at = at + POP_RAMP/TITLE_PLATE_K. Was a private
+                        # prog*1.3 in draw_title_block for the plate while the
+                        # underline ran raw prog (element-clock spread).
+TITLE_RISE_PX = 24      # C7: back-out overshoot rise for the whole title block
+                        # (ease_ow, same curve as word_pop) at the 1080 tier;
+                        # scales via layout S. External typography review.
 TERM_FIRST_AT = 0.4     # terminal first row at lt=0.4 (kind clock, not `at`)
 TERM_ROW_STEP = 0.5
 TERM_ROW_RAMP = 0.3
@@ -127,6 +135,9 @@ def measure(eng, L, k, shot_t, at_raw):
         lines, tsize, trk = eng.fit_title(_probe_dr(), L.get("text", ""),
                                           eng.L["logo"], eng.L["title_limit"])
         m.update(lines=lines, tsize=tsize, trk=trk)
+        # C7: title elements (underline, sub plate) settle on the shared
+        # TITLE_PLATE_K gain clock — done_at feeds the timing gate below.
+        m["done_at"] = at + POP_RAMP / TITLE_PLATE_K
         if L.get("sub"):
             m["sub_lines"] = eng.fit_small_lines(_probe_dr(), L["sub"],
                                                  eng.SMALL, eng.TRK.get("sub", 0))

@@ -113,6 +113,8 @@ def build_layout(W, H, sizes, landscape=None):
 
     # ---- shared motion offsets (scale with canvas) ----
     L["slide_dy"] = max(10, int(round(36 * S)))   # caption slide-in rise
+    from . import metrics as _M   # C7: title pop-in rise shares the metrics clock source
+    L["title_rise"] = max(8, int(round(_M.TITLE_RISE_PX * S)))
     return L
 
 

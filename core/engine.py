@@ -498,10 +498,13 @@ class Engine:
         limit = self.W - 160 - 2 * self.L["sub_pad"]
         return self.wrap_words(dr, text.split(" "), fnt, limit, tracking=tracking)
 
-    def draw_title_lines(self, dr, y_center, lines, fnt, fill, tracking, line_h):
+    def draw_title_lines(self, dr, y_center, lines, fnt, fill, tracking, line_h,
+                         rise=0.0):
+        """C7: `rise` = back-out overshoot offset (px) shared by the whole
+        title block — glyphs, underline and sub plate lift as ONE element."""
         ys = [y_center - (len(lines) - 1) * line_h / 2 + j * line_h for j in range(len(lines))]
         for y, l in zip(ys, lines):
-            self.draw_center_text(dr, y, l, fnt, fill, tracking=tracking)
+            self.draw_center_text(dr, y - rise, l, fnt, fill, tracking=tracking)
         return ys
 
     def word_pop(self, dr, y, fnt, txt, color, appear, tracking=0, dy=30, alpha_cap=None):

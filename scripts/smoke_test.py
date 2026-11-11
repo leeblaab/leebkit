@@ -325,6 +325,13 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_share_formats.py")],
 ok("share formats test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.4 C7: title_block pop-in elements share ONE settle clock (TITLE_PLATE_K
+# in metrics; underline + sub plate consume it; checks gate title done_at).
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_title_easing.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("title easing test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)

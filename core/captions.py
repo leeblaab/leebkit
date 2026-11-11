@@ -69,6 +69,11 @@ def draw_title_block(eng, dr, L, k, ctx, e):
     WHITE, ACCENT, DIMC, a, prog, slide = (ctx.WHITE, ctx.ACCENT, ctx.DIMC,
                                            ctx.a, ctx.prog, ctx.slide)
     txt = L.get("text", "")
+    # C7: ONE element clock for the whole block — settle gain TITLE_PLATE_K +
+    # back-out rise (ease_ow, same overshoot curve word_pop uses; external
+    # typography review). Glyphs, underline and sub plate lift together.
+    ep = clamp01(prog * M.TITLE_PLATE_K)
+    rise = (1 - ease_ow(ep)) * LY["title_rise"]
     # auto-wrap to the safe width (shrink only as last resort) so a
     # long title can never run past the frame edge
     lines, tsize, trk = eng.fit_title(dr, txt, LY["logo"], LY["title_limit"])
@@ -79,8 +84,9 @@ def draw_title_block(eng, dr, L, k, ctx, e):
     # underline + subtitle ride below the last title line
     base_y = H * LY["title_frac"] - (nlines - 1) * line_h / 2
     eng.draw_title_lines(dr, base_y - slide, lines, tfnt,
-                         (WHITE[0], WHITE[1], WHITE[2], a), trk, line_h)
-    lw = int(min(LY["ul_max"], max(LY["ul_min"], tsize * 4)) * ease_o(prog))
+                         (WHITE[0], WHITE[1], WHITE[2], a), trk, line_h, rise=rise)
+    lw = int(min(LY["ul_max"], max(LY["ul_min"], tsize * 4))
+             * ease_o(ep))   # C7: shared settle clock
     ul_y = H * LY["title_frac"] + (nlines - 1) * line_h / 2 + int(tsize * LY["ul_gap_k"])
     dr.rectangle(((W - lw) / 2, ul_y - slide, (W + lw) / 2, ul_y + LY["ul_h"] - slide),
                  fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
@@ -92,10 +98,10 @@ def draw_title_block(eng, dr, L, k, ctx, e):
         sub_lines = _wrap(eng, dr, sub.split(" "), eng.SMALL,
                           eng.W - 160 - 2 * LY["sub_pad"],
                           tracking=TRK.get("sub", 0), ctx=ctx)
-        sy = ul_y + int(tsize * 0.42) + LY["sub_gap"] - slide
+        sy = ul_y + int(tsize * 0.42) + LY["sub_gap"] - slide - rise   # C7: rides the same lift
         pad = LY["sub_pad"]
         line_h_s = int(eng.SIZES["small"] * 1.35)
-        plate_a = int(150 * min(1.0, prog * 1.3))
+        plate_a = int(150 * min(1.0, prog * M.TITLE_PLATE_K))   # C7: metrics constant replaces private 1.3
         for li, sl in enumerate(sub_lines):
             ly_ = sy + li * line_h_s
             sw = eng._measure_tracked(dr, sl, eng.SMALL, TRK.get("sub", 0))

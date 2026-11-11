@@ -129,6 +129,13 @@ def check_project(engine):
                 if m["done_at"] > t - 0.1:
                     flags.append({"shot": i, "kind": "timing", "severity": "error",
                                   "message": "shot %d chips finish at %.2fs > shot end %.2fs" % (i, m["done_at"], t)})
+            elif k == "title_block":
+                # C7: title elements settle on the shared TITLE_PLATE_K clock;
+                # gate like panels/chips so a late `at` never leaves the
+                # underline still growing at the cut.
+                if m["done_at"] > t - 0.1:
+                    flags.append({"shot": i, "kind": "timing", "severity": "error",
+                                  "message": "shot %d title elements finish at %.2fs > shot end %.2fs" % (i, m["done_at"], t)})
 
     # --- flag 4: VO longer than its shot window ---
     voice = engine.proj.get("voice", "none")
