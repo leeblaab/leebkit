@@ -311,6 +311,13 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_anim_gallery.py")],
 ok("anim gallery test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.4 C4b: every procedural bed must synthesize clean at all durations and
+# scan_music() must agree with BEDS (UI dropdown can never list a dead id).
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_music_beds.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("music beds test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)

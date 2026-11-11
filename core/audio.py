@@ -98,6 +98,9 @@ def scan_music():
     """User beds in music/ + procedural names."""
     out = [{"id": "synthwave", "label": "Synthwave (procedural)"},
            {"id": "pulse", "label": "Pulse (procedural)"},
+           {"id": "low_drive", "label": "Low Drive (procedural)"},
+           {"id": "sparkle", "label": "Sparkle (procedural)"},
+           {"id": "ambient_glow", "label": "Ambient Glow (procedural)"},
            {"id": "none", "label": "No music"}]
     if os.path.isdir(MUSIC_DIR):
         for f in sorted(os.listdir(MUSIC_DIR)):
@@ -236,7 +239,181 @@ def bed_pulse(dur, cuts, t_typing=None):
     return out
 
 
-BEDS = {"synthwave": bed_synthwave, "pulse": bed_pulse}
+def bed_low_drive(dur, cuts, t_typing=None):
+    """92bpm dark-drive bed: gliding sub bass, sparse clap, hat rolls. Heavier
+    and slower than synthwave — good for hard-cut product/feature montages."""
+    SR = SR_OUT
+    t = np.arange(int(SR * dur)) / SR
+    out = np.zeros_like(t)
+    rng = np.random.default_rng(23)
+    bpm = 92
+    beat = 60 / bpm
+    # sub bass: root per section (cycle CHORD roots), glide into each note
+    bounds = [0.0] + sorted(cuts) + [dur]
+    segs = [(bounds[i], bounds[i + 1]) for i in range(len(bounds) - 1)][:6]
+    roots = [CHORD[i % 3][0] for i in range(6)]
+    body0 = bounds[1] if len(bounds) > 2 else 0.5
+    body1 = bounds[-2] if len(bounds) > 2 else dur - 0.5
+    for n, ts in enumerate(np.arange(max(0.4, body0), min(dur - 0.3, body1), beat)):
+        m = (t >= ts) & (t < min(dur, ts + beat * 1.9))
+        tt = t[m] - ts
+        root = next((r for (s0, s1), r in zip(segs, roots) if s0 <= ts < s1), roots[0])
+        f0, f1 = root * 1.5, root          # downward glide each note
+        ph = 2 * np.pi * (f1 * tt + (f0 - f1) * tt * np.exp(-tt * 6))
+        sub = np.sin(ph) * np.exp(-tt * 2.2)
+        out[m] += sub * 0.34
+    # clap: bandpassed noise bursts on beats 2 and 4 of each bar
+    claps = rng.standard_normal(len(t))
+    claps = onepole(claps, 0.5) - onepole(onepole(claps, 0.5), 0.05)
+    for n, ts in enumerate(np.arange(max(0.4, body0), min(dur - 0.3, body1), beat)):
+        if n % 4 not in (1, 3):
+            continue
+        m = (t >= ts) & (t < ts + 0.12)
+        tt = t[m] - ts
+        out[m] += claps[m] * np.exp(-tt * 28) * 0.30
+    # hats: sixteenth rolls, accent every other, roll fill into each cut
+    step = beat / 4
+    for ts in np.arange(max(0.4, body0), min(dur - 0.2, body1), step):
+        m = (t >= ts) & (t < ts + 0.035)
+        amp = 0.05 if int(round((ts - body0) / step)) % 2 else 0.022
+        out[m] += rng.standard_normal(m.sum()) * np.exp(-(t[m] - ts) * 110) * amp
+    for c in cuts:                              # roll fill in the last beat
+        for ts in np.arange(max(0.0, c - beat), c, step / 2):
+            m = (t >= ts) & (t < ts + 0.03)
+            p = (ts - (c - beat)) / beat
+            out[m] += rng.standard_normal(m.sum()) * np.exp(-(t[m] - ts) * 130) * (0.02 + 0.05 * max(0, p))
+    # impacts at cuts: kick thump + crash
+    for c in cuts:
+        m = (t >= c) & (t < min(dur, c + 1.1))
+        tt = t[m] - c
+        k = np.sin(2 * np.pi * (44 * np.exp(-tt * 6) + 30) * tt) * np.exp(-tt * 6)
+        out[m] += k * 0.5 + rng.standard_normal(m.sum()) * np.exp(-tt * 4.5) * 0.14
+    if t_typing:
+        s0, s1 = t_typing
+        for ts in np.arange(s0 + 0.4, s1 - 0.4, 0.13):
+            m = (t >= ts) & (t < ts + 0.05)
+            tt = t[m] - ts
+            out[m] += np.sin(2 * np.pi * rng.uniform(1600, 2200) * tt) * np.exp(-tt * 70) * 0.045
+    out[: int(SR * 0.6)] *= np.linspace(0, 1, int(SR * 0.6))
+    tail = min(int(SR * 2.2), len(out) // 3)
+    out[-tail:] *= np.linspace(1, 0, tail) ** 1.5
+    # loudness trim to the pulse/synthwave band (mean ~-19 dBFS) so beds
+    # switch without a volume jump in the UI audition A/B; BEFORE normalize
+    # so the peak bound below still holds
+    out *= 1.15
+    peak = np.max(np.abs(out))
+    if peak > 0:
+        out = out / peak * 0.84
+    return np.tanh(out * 1.3) / np.tanh(1.3) * 0.9
+
+
+def bed_sparkle(dur, cuts, t_typing=None):
+    """130bpm bright upbeat bed: fast A-minor pluck arpeggio, four-on-floor
+    kick, offbeat open hat — for energetic launches and feature teasers."""
+    SR = SR_OUT
+    t = np.arange(int(SR * dur)) / SR
+    out = np.zeros_like(t)
+    rng = np.random.default_rng(31)
+    bpm = 130
+    beat = 60 / bpm
+    scale = [220.0, 261.63, 329.63, 392.0, 440.0, 523.25]
+    step = beat / 2                            # eighth-note arps
+    for n, ts in enumerate(np.arange(0.3, dur - 0.4, step)):
+        m = (t >= ts) & (t < ts + step)
+        tt = t[m] - ts
+        f = scale[(n * 5) % len(scale)]        # coprime walk = never repeats flatly
+        p = np.sin(2 * np.pi * f * tt) * np.exp(-tt * 7)
+        p += 0.35 * np.sin(2 * np.pi * f * 2 * tt) * np.exp(-tt * 11)
+        env = 0.75 + 0.25 * np.sin(2 * np.pi * (ts / (beat * 8)) * 2)
+        out[m] += p * 0.095 * env
+    # four-on-floor kick
+    for ts in np.arange(0.3, dur - 0.4, beat):
+        m = (t >= ts) & (t < ts + 0.3)
+        tt = t[m] - ts
+        out[m] += np.sin(2 * np.pi * (52 * np.exp(-tt * 8) + 30) * tt) * np.exp(-tt * 8) * 0.42
+    # offbeat open hat
+    for ts in np.arange(0.3 + beat / 2, dur - 0.4, beat):
+        m = (t >= ts) & (t < ts + 0.09)
+        tt = t[m] - ts
+        out[m] += rng.standard_normal(m.sum()) * np.exp(-tt * 35) * 0.05
+    # crash + uplifter at each cut
+    for c in cuts:
+        m = (t >= c) & (t < min(dur, c + 1.4))
+        tt = t[m] - c
+        out[m] += rng.standard_normal(m.sum()) * np.exp(-tt * 3.5) * 0.16
+        s = max(0.0, c - 1.2)
+        m2 = (t >= s) & (t < c)
+        tt2 = t[m2] - s
+        p2 = tt2 / (c - s)
+        out[m2] += np.sin(2 * np.pi * (300 + 1200 * p2) * tt2) * p2 ** 2 * 0.06
+    if t_typing:
+        s0, s1 = t_typing
+        for ts in np.arange(s0 + 0.4, s1 - 0.4, 0.13):
+            m = (t >= ts) & (t < ts + 0.05)
+            tt = t[m] - ts
+            out[m] += np.sin(2 * np.pi * rng.uniform(2000, 2800) * tt) * np.exp(-tt * 70) * 0.045
+    out[: int(SR * 0.5)] *= np.linspace(0, 1, int(SR * 0.5))
+    tail = min(int(SR * 2.0), len(out) // 3)
+    out[-tail:] *= np.linspace(1, 0, tail) ** 1.5
+    peak = np.max(np.abs(out))
+    if peak > 0:
+        out = out / peak * 0.82
+    return out
+
+
+def bed_ambient_glow(dur, cuts, t_typing=None):
+    """Beatless pad bed: slow-swelling stacked saw pads cycling the chord
+    colors + soft noise wash + gentle swell into each cut. For voice-heavy
+    explainers where drums would fight the VO."""
+    SR = SR_OUT
+    t = np.arange(int(SR * dur)) / SR
+    out = np.zeros_like(t)
+    rng = np.random.default_rng(41)
+    bounds = [0.0] + sorted(cuts) + [dur]
+    segs = [(bounds[i], bounds[i + 1]) for i in range(len(bounds) - 1)]
+    for si, ((s0, s1), ch) in enumerate(zip(segs, [CHORD[i % 3] for i in range(len(segs))])):
+        if s1 - s0 < 0.4:
+            continue
+        m = (t >= s0) & (t < s1)
+        tt = t[m] - s0
+        d = np.zeros_like(tt)
+        for f in ch:
+            d += saw_harm(f * 0.5 * 1.004, tt, n=8) + saw_harm(f * 0.5 * 0.996, tt, n=8)
+        d = onepole(d, 0.02)                    # dark pad: heavy lowpass
+        swell = np.sin(np.pi * np.clip(tt / (s1 - s0), 0, 1)) ** 0.7
+        d *= 0.5 + 0.5 * np.sin(2 * np.pi * 0.09 * tt + si)
+        out[m] += d * swell * 0.045
+    # soft noise wash (air), very low
+    wash = onepole(rng.standard_normal(len(t)), 0.4) - onepole(onepole(rng.standard_normal(len(t)), 0.4), 0.02)
+    out += wash * 0.012
+    # gentle swell into each cut (no drums — VO-friendly)
+    for c in cuts:
+        s = max(0.0, c - 1.8)
+        if c - s < 0.3:
+            continue
+        m = (t >= s) & (t < min(dur, c + 0.8))
+        tt = t[m] - s
+        p = np.clip(tt / (c - s + 0.8), 0, 1)
+        out[m] += onepole(rng.standard_normal(m.sum()), 0.25) * np.sin(np.pi * p) ** 2 * 0.06
+    if t_typing:
+        s0, s1 = t_typing
+        for ts in np.arange(s0 + 0.4, s1 - 0.4, 0.13):
+            m = (t >= ts) & (t < ts + 0.05)
+            tt = t[m] - ts
+            out[m] += np.sin(2 * np.pi * rng.uniform(1700, 2400) * tt) * np.exp(-tt * 70) * 0.04
+    out[: int(SR * 1.2)] *= np.linspace(0, 1, int(SR * 1.2))
+    tail = min(int(SR * 2.5), len(out) // 3)
+    out[-tail:] *= np.linspace(1, 0, tail) ** 1.5
+    peak = np.max(np.abs(out))
+    if peak > 0:
+        out = out / peak * 0.8
+    # loudness trim to the pulse/synthwave band (see low_drive note)
+    return out * 0.65
+
+
+BEDS = {"synthwave": bed_synthwave, "pulse": bed_pulse,
+        "low_drive": bed_low_drive, "sparkle": bed_sparkle,
+        "ambient_glow": bed_ambient_glow}
 
 
 # ------------------------------------------------------------------ Piper VO
