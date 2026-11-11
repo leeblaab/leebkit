@@ -60,3 +60,42 @@ cb553a8(obs1) 5f4f43a(obs2) de73245(obs3).
 HARD RULES unchanged: never touch live uvicorn :8735 / no test renders through
 that port; "do delegation" = DO NOT delegate; one commit per step, gates green;
 no push/tag without Yasser's word; ONE v1.4 release at C7; tiers 720p/FHD/2K.
+
+--- UPDATE Nov 11 (C5 shipped, local chain 4e25abb..aac6198) ---
+C5 share export GIF/WebP SHIPPED (aac6198), nothing pushed:
+- core/share_caps.py (new): GIF_MAX_W=640 / GIF_MAX_S=6.0 / GIF_FPS=12 =
+  Yasser's ruling ("GIF is a share teaser, not the master"); WEBP_MAX_W=960 /
+  WEBP_MAX_S=8.0 (my design). Caps are ONE source of truth for CLI+app+tests.
+- render_cli.py: --gif/--webp encode from the EXISTING frame dir via ffmpeg
+  palettegen/paletteuse split into two passes; select=lte(n,K)*not(mod(n,S))
+  + setpts=N/out_fps/TB (the /TB is load-bearing — bare N/12 collapsed 36->2
+  frames; probe-verified). WebP via PIL (quality 80, method 4); ffprobe cannot
+  report animated-webp dims/frames — PIL seek-loop is the webp prober.
+  ffmpeg 8 gotcha: subprocess -vf passes verbatim, escape arg-internal commas
+  as \, and chain filters with bare commas; palettegen option colons \:.
+- queue.py: Job.share_fmt rides submit(); encode_share runs AFTER the mp4
+  duration gate, BEFORE frames rmtree (same frame dir, no re-render).
+- app.py /api/render pops share_fmt (422 unless gif/webp); /api/outputs lists
+  teasers grouped under their master mp4 (teaser never shows without its mp4);
+  outputs_clear hides .gif/.webp too. ui: #share-fmt select beside Render MP4,
+  teaser links in the output row. P never carries share_fmt into saved JSON.
+- tests/test_share_formats.py (13 checks) wired into smoke -> SMOKE PASS 43
+  checks (node --check of edited inline JS included). GOLDEN PASS 1314 with
+  hashes.json UNMODIFIED — C5 changes zero mp4 pixels (plan rule honored;
+  the fresh-session prompt's "C5 is a pixel commit" line was WRONG, plan.md
+  says golden stays PASS unmodified for C5).
+- In-process queue leg verified: submit(share_fmt='gif') -> done + gif
+  320x480@12fps/36f beside the mp4. NEVER via port 8735.
+- SCRATCH PITFALL (bit hard once): a standalone script that calls Queue() must
+  wrap everything in `if __name__ == "__main__":` — Windows spawn re-imports
+  __main__ per pool child, each child re-submits the job -> infinite render
+  storm (~70 junk mp4s in output/, cleaned; scratch/c5queue_leg.py removed).
+
+NEXT: C6 AI-workflow README section (zero code, pure docs): "Use LEEBKIT with
+ChatGPT/Claude" — prompt templates emitting valid project JSON v3, schema
+contract, paste into app or render_cli.py. Then C7 optional easing polish +
+the single v1.4 release. C4b templates-gallery half still parked per Yasser
+("Do C5 first; templates later in v1.4"). Linux hashes-linux.json regen STILL
+pending before any push. Chain: a017b40(C1) 125a5d9(C2) 3c0aa3d+fb9a500(C3)
+422f642+bd669c9(C4) c030e23+15324dc(C4d) 6ce1dfd(C4e) cb553a8 5f4f43a de73245
+(obs) 4e25abb 53d7897(docs) aac6198(C5).
