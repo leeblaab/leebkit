@@ -154,3 +154,37 @@ NEXT SESSION ORDER:
 4) Version bump / release notes (mention genpick fix; state preview status).
 5) Push + tag v1.4 ONLY on Yasser's explicit word.
 Chain tail: ...aac6198(C5) dbb3d1b(C6) 19f200b(C7) 38903e0(docs) 4591330(genpick fix).
+
+--- UPDATE Nov 11 (C4b templates gallery SHIPPED; chain ...7969904..9ffaacf) ---
+C4b TEMPLATES GALLERY SHIPPED (9ffaacf, LEEBLAAB identity verified) — the LAST
+code work for v1.4 is now DONE. Nothing pushed (Yasser's word still gates).
+- core/templates.py: list_templates()/load_template(); basename-only traversal
+  guard; manifest built FROM the template files (hand-written manifest drifts).
+- templates/ (COMMITTED product content — projects/*.json stays gitignored):
+  4 curated skeletons, every shot fill=gen:<preset> -> cold install renders
+  zero-image. tpl_product_drop / quote_card / stat_hit / countdown, all 15.0s,
+  voice:none + per-shot vo copy slots (syncVoLines rebuilds vo_lines on save),
+  procedural beds only (sparkle/low_drive/ambient_glow/pulse). CC0 external
+  beds SKIPPED per decision-A fallback (provenance unverifiable).
+- app.py: GET /api/templates, GET /api/template/{fname} (ValueError->404).
+- ui: Templates panel under Animations; thumbs = palette gradients from
+  /api/meta keyed by manifest gens (NOT rendered frames — my design choice);
+  click hydrates P in place + hydrateControls(); save -> new projects/ file.
+- Gates: tests/test_templates.py (28 checks) wired into smoke -> SMOKE PASS 45;
+  GOLDEN PASS 1314 hashes.json UNMODIFIED; CLI gate render_cli tpl_countdown
+  --draft -> ffprobe h264 1080x1920@30fps 450f 15.0s (frames_dir housekeeping
+  deletes output/_frames_* after encode — run ffprobe on the mp4, not frames).
+- PITFALLS hit this session: (1) word-stagger gate span=max_words*WORD_STEP
+  (0.18)+WORD_RAMP(0.36)<=1.0s -> max 4 words per RAW panel line BEFORE wrap;
+  fit_panel_lines wrapping can ADD words-per-line beyond the raw split, so
+  template copy stays <=3 words/line for margin. (2) Engine(proj,preset,...):
+  2nd positional must be a preset DICT or None — a bare id string crashes at
+  P["colors"] ("string indices"). (3) compose_frame returns PIL Image (.size),
+  not ndarray. (4) render_cli --out is the mp4 FILE path, not a dir.
+NEXT (release prep, in order): 1) regen Linux golden hashes-linux.json
+(bootstrap workflow on GitHub Actions = proven path) BEFORE any push;
+2) final gate at HEAD smoke 45 + golden both platforms; 3) version bump +
+release notes (genpick fix, templates gallery, music beds; state preview
+slowness status); 4) push + tag v1.4 ONLY on Yasser's word.
+Chain tail: ...aac6198(C5) dbb3d1b(C6) 19f200b(C7) 38903e0(docs) 4591330(genpick)
+88f9be3 7969904(docs) 9ffaacf(C4b).
