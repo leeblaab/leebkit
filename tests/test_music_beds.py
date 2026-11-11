@@ -83,3 +83,16 @@ except ValueError:
 
 print("ALL PASS" if not FAILS else "FAILED: " + ", ".join(FAILS))
 sys.exit(1 if FAILS else 0)
+
+# C4e obs #1 (Yasser live test): file-bed id/mode robustness. The UI writes
+# mode:"file" with a "file:<name>" bed; older hand-written configs carry a bare
+# filename or even a stale mode. Every shape must resolve to mode=file — never
+# silently fall through to a procedural bed.
+from core.audio import _normalize_music as _nm
+check("CC0 file: id + explicit file mode", _nm({"mode": "file", "bed": "file:bed_cave_drone.mp3"})["mode"] == "file")
+check("CC0 bare filename + stale procedural mode", _nm({"mode": "procedural", "bed": "bed_old_key.mp3"})["mode"] == "file")
+check("CC0 file: id + procedural mode", _nm({"mode": "procedural", "bed": "file:bed_one_cool_minute.mp3"})["mode"] == "file")
+check("CC0 procedural bed name untouched", _nm({"mode": "procedural", "bed": "synthwave"})["mode"] == "procedural")
+
+print("ALL PASS" if not FAILS else "FAILED: " + ", ".join(FAILS))
+sys.exit(1 if FAILS else 0)

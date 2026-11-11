@@ -545,9 +545,17 @@ def _normalize_music(cfg):
         return {"mode": "none", "bed": "none"}
     looks_like_file = any(str(bed).lower().endswith(ext)
                           for ext in (".mp3", ".wav", ".m4a", ".ogg"))
+    # C4e (Yasser live test obs #1): an explicit mode:"file" must ALWAYS win —
+    # the UI writes exactly that. The old condition also demanded mode NOT be
+    # procedural, so a file bed arriving with a stale/mismatched mode silently
+    # fell through to procedural and rendered the wrong track.
     if cfg.get("mode") == "file" or ("file" in cfg and looks_like_file) or \
             (cfg.get("mode") not in ("procedural", "file") and looks_like_file
              and bed not in BEDS):
+        return {"mode": "file", "bed": str(bed)}
+    # A bare filename that is NOT a procedural bed name is a file bed too,
+    # whatever mode string came along with it (scan_music ids carry no mode).
+    if looks_like_file and bed not in BEDS:
         return {"mode": "file", "bed": str(bed)}
     return {"mode": "procedural", "bed": str(bed)}
 

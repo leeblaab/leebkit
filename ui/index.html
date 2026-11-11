@@ -434,7 +434,10 @@ $('#format').onchange=e=>{P.size=e.target.value;const[w,h]=P.size.split('x').map
 $('#voice').onchange=e=>{P.voice=e.target.value;
   if(P.voice!=='none'&&!META.piper_ready)toast('Tip: pip install piper-tts — voice models found in vo/models/')}
 $('#vospeed').onchange=e=>{P.voice_speed=+e.target.value};
-$('#music').onchange=e=>{const v=e.target.value;P.music=/\.mp3$|\.wav$|\.m4a$|\.ogg$/.test(v)?{mode:'file',bed:v}:(v==='none'?{mode:'none',bed:'none'}:{mode:'procedural',bed:v})};
+// C4e (Yasser live test obs #1): scan_music ids are "file:<name>.mp3" — the old
+// regex matched only a BARE filename, so file beds fell into the procedural
+// branch: preview rendered silence and the bed was silently swapped.
+$('#music').onchange=e=>{const v=e.target.value;P.music=/^file:|\.mp3$|\.wav$|\.m4a$|\.ogg$/.test(v)?{mode:'file',bed:v}:(v==='none'?{mode:'none',bed:'none'}:{mode:'procedural',bed:v})};
 
 // ---------- duration slider (5-45s): rescale shot durations proportionally ----------
 function setTarget(v,quiet){
@@ -486,7 +489,9 @@ $('#musicprev').onclick=async e=>{
   if(P.music&&P.music.mode==='none')return toast('music is off — pick a bed first');
   const b=e.currentTarget;b.disabled=true;b.textContent='…';
   try{
-    if(P.music&&P.music.mode==='file'){new Audio('/music/'+encodeURIComponent(bed)+'?t='+Date.now()).play()}
+    // C4e obs #1: file beds stream straight from the /music mount (the preview
+    // API only knows procedural ids). Strip the "file:" id prefix for the URL.
+    if(P.music&&P.music.mode==='file'){const f=String(bed).replace(/^file:/,'');new Audio('/music/'+encodeURIComponent(f)+'?t='+Date.now()).play()}
     else{const j=await api('/api/music_preview',{bed});new Audio(j.url+'?t='+Date.now()).play()}
   }catch(err){toast('music preview: '+err.message)}
   finally{b.disabled=false;b.textContent='▶'}
