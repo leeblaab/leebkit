@@ -83,6 +83,13 @@ def build_layout(W, H, sizes, landscape=None):
     L["handle_frac"] = 0.73
     L["accent_frac"] = 0.415
 
+    # ---- v1.4 C4e market-style kinds (kicker / burst — no box, no plate) ----
+    L["kicker_frac"] = 0.30
+    L["kicker_trk"] = max(6, int(round(16 * S)))   # letterspaced small caps
+    L["kicker_rule_h"] = max(2, int(round(4 * S)))
+    L["kicker_rule_gap"] = sc(18)
+    L["burst_frac"] = 0.44
+
     # ---- big_number ----
     L["bignum_frac"] = 0.24
 

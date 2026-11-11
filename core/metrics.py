@@ -33,6 +33,7 @@ CAPLINE_LINE_STEP = 0.45    # nominal; capline_step(n) NORMALIZES it so the
                             # wp clamps at 1 and slot 3's clock was -0.35)
 CHIP_STEP = 0.35
 CHIP_RAMP = 0.4
+KICKER_RAMP = 0.6       # v1.4 C4e: kicker word stagger (ep = prog/KICKER_RAMP)
 TITLE_PLATE_K = 1.3     # title_block element clock gain (C7): the sub-plate
                         # alpha AND underline growth share ONE settle —
                         # done_at = at + POP_RAMP/TITLE_PLATE_K. Was a private
@@ -146,5 +147,12 @@ def measure(eng, L, k, shot_t, at_raw):
         wl = max(L.get("text", "").split(" "),
                  key=lambda w: eng.SMALL.getlength(w), default="")
         m.update(longest_word=wl)
+
+    elif k == "kicker":
+        # staggered word rise: ep reaches 1 at POP_RAMP/KICKER_RAMP; the last
+        # word (i=nw-1) needs ep >= (nw-1)*0.15 + 0.45 to fully settle
+        nw = len(L.get("text", "").split(" "))
+        done_at = at + POP_RAMP / KICKER_RAMP * max(1.0, (nw - 1) * 0.15 + 0.45)
+        m.update(done_at=done_at)
 
     return m

@@ -79,6 +79,12 @@ def check_project(engine):
                     # engine wraps the note inside its chip, so only a single
                     # monster word can actually overflow (longest via metrics)
                     over(m["longest_word"], engine.SMALL, limit=LIM["small_chip_limit"])
+                elif k == "burst":
+                    # burst draws at h1 * up to 1.0 scale (overshoot peaks at
+                    # 1.0; measure at full size so the flag is conservative)
+                    bf = engine._mkfont(engine.preset["fonts"]["display"],
+                                        engine.L["h1"])
+                    over(L.get("text", ""), bf, limit=W - 80)
                 else:
                     lim = {"cta": LIM["cta_limit"], "big_number": W - 80}.get(k, W - 80)
                     over(L.get("text", ""), engine.H1 if k == "accent_word" else
@@ -114,6 +120,11 @@ def check_project(engine):
                 if m["done_at"] > t - 0.15:
                     flags.append({"shot": i, "kind": "timing", "severity": "error",
                                   "message": "shot %d panel words finish at %.2fs but shot ends at %.2fs"
+                                             % (i, m["done_at"], t)})
+            elif k == "kicker":
+                if m["done_at"] > t - 0.1:
+                    flags.append({"shot": i, "kind": "timing", "severity": "error",
+                                  "message": "shot %d kicker finishes at %.2fs > shot end %.2fs"
                                              % (i, m["done_at"], t)})
             elif k == "cap_lines":
                 # timing runs on WRAPPED lines via metrics (audit B#3)

@@ -188,6 +188,67 @@ def draw_cta(eng, dr, L, k, ctx, e):
     dr.text((x, y), txt, font=eng.BODY, fill=(WHITE[0], WHITE[1], WHITE[2], a))
 
 
+# ---- v1.4 C4e market-style kinds (tpl_stomp restyle) ----------------------
+# Yasser's live-test feedback: boxed panels + noisy backgrounds read as "old
+# style". These two kinds carry a phrase with NO box and NO plate: an accent
+# hairline rule + letterspaced small caps (kicker), and a raw oversized pop
+# word (burst). Clean stage, type does the work.
+
+def draw_kicker(eng, dr, L, k, ctx, e):
+    clamp01, ease_o, ease_ow = e
+    H, W, LY, ACCENT, prog, slide, a = (ctx.H, ctx.W, ctx.LY, ctx.ACCENT,
+                                        ctx.prog, ctx.slide, ctx.a)
+    txt = L["text"]
+    ep = clamp01(prog / M.KICKER_RAMP)
+    trk = LY["kicker_trk"]
+    w = eng._measure_tracked(dr, txt, eng.SMALL, trk)
+    rule_w = int(w * ease_o(ep))          # rule grows with the settle clock
+    y = H * LY["kicker_frac"] - slide
+    dr.rectangle(((W - rule_w) / 2, y - LY["kicker_rule_gap"],
+                  (W + rule_w) / 2, y - LY["kicker_rule_gap"] + LY["kicker_rule_h"]),
+                 fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
+    # letterspaced small caps, staggered rise (same overshoot curve as word_pop)
+    words = txt.split(" ")
+    wsp = dr.textlength(" ", font=eng.SMALL)
+    ws = [dr.textlength(x, font=eng.SMALL) for x in words]
+    total = sum(ws) + wsp * (len(words) - 1) + trk * sum(len(x) for x in words)
+    x = (W - total) / 2
+    for i, word in enumerate(words):
+        wt = clamp01((ep - i * 0.15) / 0.45)
+        if wt <= 0:
+            x += ws[i] + wsp + trk * len(word)
+            continue
+        eoc = ease_ow(wt)
+        aa = int(a * min(1.0, wt * 1.6))
+        yy = y + (1 - eoc) * 24
+        if trk:
+            for c in word:
+                dr.text((x, yy), c, font=eng.SMALL,
+                        fill=(ACCENT[0], ACCENT[1], ACCENT[2], aa))
+                x += dr.textlength(c, font=eng.SMALL) + trk
+        else:
+            dr.text((x, yy), word, font=eng.SMALL,
+                    fill=(ACCENT[0], ACCENT[1], ACCENT[2], aa))
+            x += ws[i] + wsp
+
+
+def draw_burst(eng, dr, L, k, ctx, e):
+    clamp01, ease_o, ease_ow = e
+    H, W, LY, ACCENT, prog, slide = ctx.H, ctx.W, ctx.LY, ctx.ACCENT, ctx.prog, ctx.slide
+    txt = L["text"]
+    # oversized pop-in: starts slightly SMALL and overshoots to full size —
+    # the market stomp move (scale punch, no box, no plate)
+    ez = ease_ow(prog)
+    scale = 0.82 + 0.18 * ez
+    fnt = eng._mkfont(eng.preset["fonts"]["display"], int(eng.L["h1"] * scale))
+    w = dr.textlength(txt, font=fnt)
+    a = int(255 * min(1.0, prog * 2.2))
+    if ctx.a_gate is not None:
+        a = min(a, ctx.a_gate)
+    dr.text(((W - w) / 2, H * LY["burst_frac"] - slide), txt, font=fnt,
+            fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
+
+
 def draw_handle(eng, dr, L, k, ctx, e):
     H, LY, ACCENT, slide = ctx.H, ctx.LY, ctx.ACCENT, ctx.slide
     eng.draw_center_text(dr, H * LY["handle_frac"] - slide, L["text"], eng.BODY,
@@ -340,6 +401,8 @@ DISPATCH = {
     "small": draw_small,
     "cta": draw_cta,
     "handle": draw_handle,
+    "kicker": draw_kicker,       # v1.4 C4e: rule + letterspaced caps, no box
+    "burst": draw_burst,         # v1.4 C4e: oversized scale-punch word, no box
     "big_number": draw_big_number,
     "cap_lines": draw_cap_lines,
     "terminal": draw_terminal,
