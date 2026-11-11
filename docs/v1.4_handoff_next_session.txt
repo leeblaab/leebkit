@@ -21,3 +21,42 @@ C4 landed shape (grounded):
 NEXT TASK: C4d grain-quality fix SHIPPED (c030e23) — Yasser's live test flagged gen backgrounds as "noisy low-res texture"; root cause was grain baked into the BW/8 base and magnified ~8x by the Ken-Burns upscale. Engine now composites the fixed-seed grain tile at OUTPUT resolution after crop+LANCZOS (render_base + composite_grain, uint8 fast path, _GRAIN_CACHE). Golden 54 gens_leebdark_* frames drifted deliberately -> hashes.json regen, GOLDEN PASS 1314. TODO before any push: regen Linux baseline (golden_frames.py --os-name linux --update or bootstrap workflow) — flag to Yasser. Then C4b templates gallery + CC0 beds, C5 GIF/WebP, C6 AI-workflow README, C7 optional easing polish.
 
 HARD RULES: never touch his live uvicorn on 127.0.0.1:8735 or submit test renders through that port (CLI/in-process/ffprobe only); "do delegation" means DO NOT delegate; one commit per plan step, each gate-green; nothing pushed or tagged without Yasser's explicit word; v1.4 ships as ONE release at C7 — tiers locked 720p/FHD/2K, no 4K. After C3: C4 mixed/generator-only e2e, C4b templates gallery + CC0 beds, C5 GIF/WebP, C6 AI-workflow README, C7 optional easing polish.
+
+--- UPDATE Nov 11 (live-test observation round, local chain cb553a8..de73245) ---
+Three observations from Yasser's live test, ALL FIXED locally, nothing pushed:
+
+obs #1 SHIPPED (cb553a8): animation gallery tiles stuck on "rendering" for
+neonlight. Root cause: C1 portrait-tier whitelist rejected the internal 540x960
+gallery render size -> generate_gallery raised in Engine.__init__, _gallery_task
+swallowed it with bare except. Fix: gallery renders at tier-legal 720x1280 then
+LANCZOS-down to the same 270x480 tile; _gallery_task now logs via logging.getLogger("reelkit"). tests/test_anim_gallery.py wired into smoke (was 41 checks).
+
+obs #2 SHIPPED (5f4f43a): generator shots had no visible way to choose/preview
+the look. app.py: /api/meta ships `palette` per generator; GET /api/gen_previews
+renders one 2-frame looping webp (360x640, Engine path at 720x1280, captioned)
+per GEN_PRESET, cached under output/_genprevs/ (_prune_cache genprev_ prefix).
+ui: ensureGenThumbs() lazy loader; shot-card thumb IS the loop for gen shots;
+new .genpick strip = 6 clickable look buttons (animated thumb, palette-gradient
+fallback cold) -> data-genpick sets fill='gen:<id>'. Verified in-process (6 thumbs
+1.4s, 360x640 2-frame webp); node --check via smoke green.
+
+obs #3 SHIPPED (de73245): music library expansion = C4b beds half of the plan.
+Plan constraint (CC0-only external) -> three NEW procedural numpy beds, zero
+license risk: low_drive (92bpm dark), sparkle (130bpm upbeat), ambient_glow
+(beatless VO-friendly pad). Loudness-trimmed INTO the existing band before
+normalization (mean ~-19..-20 dBFS; watch peak<=0.95 gate — trim goes BEFORE
+peak normalize). scan_music labels added; meta/music_preview/normalize pick up
+BEDS automatically, zero other wiring. tests/test_music_beds.py in smoke -> 42
+checks. GOLDEN PASS 1314 (audio-only change, pixels untouched). docs/v1.4_c4b_music_plan.md.
+
+NEXT: C4b templates gallery half (templates land ON generator backgrounds —
+storyboard/templates gallery over GEN_PRESETS; CC0 external beds stay parked
+unless provenance verifiable), then C5 GIF/WebP share export, C6 AI-workflow
+README section, C7 optional easing polish. Linux hashes-linux.json regen STILL
+pending before any push (bootstrap workflow). Chain: a017b40(C1) 125a5d9(C2)
+3c0aa3d(C3) fb9a500 422f642(C4) bd669c9 c030e23(C4d) 15324dc 6ce1dfd(C4e)
+cb553a8(obs1) 5f4f43a(obs2) de73245(obs3).
+
+HARD RULES unchanged: never touch live uvicorn :8735 / no test renders through
+that port; "do delegation" = DO NOT delegate; one commit per step, gates green;
+no push/tag without Yasser's word; ONE v1.4 release at C7; tiers 720p/FHD/2K.
