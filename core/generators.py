@@ -10,7 +10,10 @@ Design decisions this module enforces (docs/v1.4_plan.md D2/D4/D5/D6):
   * Amplitude tiers (D5): `amp` is a multiplier on DISPLACEMENT only —
     "Subtle" ≈ 0.4x amplitude; shot speed never feeds back into the driver.
   * Grain = ONE static noise texture drifting with the driver (never fresh
-    noise per frame), so neighbor frames stay coherent.
+    noise per frame), so neighbor frames stay coherent. The grain tile is
+    generated at OUTPUT resolution and composited AFTER the Ken-Burns
+    upscale (C4d): grain built on a small base and magnified reads as
+    coarse mushy snow instead of fine film texture.
   * Perf (D6): coordinate grids + static pattern layers are built once per
     (preset, W, H) and cached; per-frame work is vectorized numpy only —
     no Python pixel loops. The Engine calls this at BASE resolution
@@ -80,6 +83,9 @@ MULT_GRAIN = 1.0      # grain texture drifts with the driver
 
 _LAYER_CACHE = {}     # (preset, W, H) -> dict of static float32 layers
 _GRID_CACHE = {}      # (W, H) -> (X, Y, R) normalized coordinate grids
+_GRAIN_CACHE = {}     # (name, W, H) -> fixed-seed noise tile (C4d: built at
+                      # output size by the Engine; 2048^2 rng draw is ~40 ms
+                      # once per project, never per frame)
 
 
 def palette(name):
@@ -153,10 +159,7 @@ def _static_layers(name, W, H):
     # would seam).
     g = spec["grain_gain"]
     if g:
-        h = hashlib.sha256(("grain|%s|%d|%d" % (name, W, H)).encode()).digest()
-        rng = np.random.default_rng(int.from_bytes(h[:8], "little"))
-        S = 1 << max(9, int(math.ceil(math.log2(max(W, H)))))
-        grain_t = rng.standard_normal((S, S)).astype(np.float32) * (g / 2.0)
+        grain_t = _grain_tile(name, W, H)
     else:
         grain_t = None
 
@@ -178,9 +181,113 @@ def _grain_crop(tile, dx, dy, W, H):
     return tile[np.ix_(ys, xs)]
 
 
+def _grain_tile(name, W, H):
+    """Fixed-seed power-of-two white-noise tile sized >= (W, H) for a grain
+    crop window. Same construction everywhere it is used: the Engine pulls
+    this at OUTPUT size for the post-upscale composite (C4d), render() uses
+    it at its own (base) size so direct-call output stays golden-stable.
+
+    CACHED per (name, W, H): a 2048^2 rng draw is ~40 ms and was being paid
+    PER FRAME uncached — the tile content never changes, only the crop
+    window drifts."""
+    g = GEN_PRESETS[name]["grain_gain"]
+    if not g:
+        return None
+    key = (name, W, H)
+    tile = _GRAIN_CACHE.get(key)
+    if tile is not None:
+        return tile
+    h = hashlib.sha256(("grain|%s|%d|%d" % (name, W, H)).encode()).digest()
+    rng = np.random.default_rng(int.from_bytes(h[:8], "little"))
+    S = 1 << max(9, int(math.ceil(math.log2(max(W, H)))))
+    tile = _GRAIN_CACHE[key] = rng.standard_normal((S, S)).astype(np.float32) * (g / 2.0)
+    return tile
+
+
+def grain_drift(name, offset, amp):
+    """Grain crop-window offset for driver position `offset` — the exact
+    drift rule render() applies, exposed so the Engine keeps motion
+    semantics identical when it composites grain itself (C4d)."""
+    drv = float(offset) * 2.0 * math.pi * 0.10 * MULT_GRAIN * float(amp) * 18.0
+    return int(round(drv))
+
+
+def composite_grain(img, name, W, H, offset, amp=1.0):
+    """Add the drifting grain texture to an RGB PIL image at (W, H). The
+    Engine composites grain at OUTPUT resolution AFTER the Ken-Burns crop+
+    LANCZOS upscale (C4d): grain baked into a small base and magnified reads
+    as coarse mushy snow, not fine film texture.
+
+    Fast path when `img` is an RGB uint8 numpy array: integer add + clip in
+    one fused pass (~2x faster than the float32 round-trip, which dominated
+    the per-frame cost at FHD). PIL images still work via the float path."""
+    tile = _grain_tile(name, W, H)
+    if tile is None:
+        return img
+    Sh, Sw = tile.shape
+    gd = grain_drift(name, offset, amp)
+    crop = _grain_crop(tile, gd % (Sw - W + 1), (-gd // 2) % (Sh - H + 1), W, H)
+    if isinstance(img, np.ndarray) and img.dtype == np.uint8:
+        gi = crop.astype(np.int16)          # once per frame, not broadcast
+        out = np.clip(img.astype(np.int16) + gi[..., None], 0, 255).astype(np.uint8)
+        return out
+    a = np.asarray(img, dtype=np.float32)
+    a += crop[..., None]
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), "RGB")
+
+
+def render_base(name, W, H, offset, amp=1.0):
+    """Grain-free generator frame (base + pattern + vignette) for the Engine
+    path (C4d): the engine upscales this via the Ken-Burns crop path and
+    composites full-resolution grain afterwards with composite_grain."""
+    if name not in GEN_PRESETS:
+        raise ValueError("unknown generator preset %r (choices: %s)"
+                         % (name, ", ".join(sorted(GEN_PRESETS))))
+    spec = GEN_PRESETS[name]
+    L = _static_layers(name, W, H)
+    X, Y = L["X"], L["Y"]
+    p = spec["palette"]
+    acc_glow = _hex(p[2])
+
+    drv = float(offset) * 2.0 * math.pi * 0.10
+    pmul = drv * MULT_PATTERN * float(amp)
+
+    acc = np.zeros((H, W), dtype=np.float16)
+    if name in ("midnight_drift", "deep_current"):
+        for k in range(spec["waves"]):
+            w = 0.9 + 0.35 * k
+            ph = pmul * (1.0 + 0.25 * k) + k * 1.7
+            ridge = np.sin(Y * (2.2 + k) * math.pi + X * 1.4 * w + ph,
+                           dtype=np.float16)
+            np.maximum(ridge, 0, out=ridge)
+            acc += ridge ** 6 * np.float16(0.35 / (1 + 0.5 * k))
+    elif name == "ember_flow":
+        for k in range(spec["blobs"]):
+            a = pmul * (1.0 + 0.2 * k) + k * 2.1
+            cx = 0.55 * math.cos(a * 0.7 + k)
+            cy = 0.45 * math.sin(a * 0.9 + k * 1.3)
+            d2 = (X - cx) ** 2 + (Y - cy) ** 2
+            acc += np.exp(-d2 * 6.0, dtype=np.float16) * np.float16(0.30)
+    elif L["field"] is not None:
+        f = L["field"]
+        shift = int(pmul * 12.0) % W
+        if shift:
+            f = np.roll(f, -shift, axis=1)
+        pulse = 0.55 + 0.45 * math.sin(pmul * 2.0)
+        acc += (f * (0.55 * pulse)).astype(np.float16)
+
+    img = L["base"].copy()
+    img += acc[..., None].astype(np.float32) * acc_glow[None, None]
+    img *= L["vig"]
+    return Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB")
+
+
 def render(name, W, H, offset, amp=1.0):
     """Composite one generator frame at shared-driver position `offset`
-    (seconds) with displacement amplitude `amp`. Returns PIL RGB image."""
+    (seconds) with displacement amplitude `amp`, grain INCLUDED. Returns PIL
+    RGB image at native (W, H). Direct-call semantics are frozen since C3
+    (golden gen corpus calls this); the Engine uses render_base +
+    composite_grain instead so grain lands at output resolution (C4d)."""
     if name not in GEN_PRESETS:
         raise ValueError("unknown generator preset %r (choices: %s)"
                          % (name, ", ".join(sorted(GEN_PRESETS))))
@@ -227,9 +334,12 @@ def render(name, W, H, offset, amp=1.0):
     img = L["base"].copy()
     img += acc[..., None].astype(np.float32) * acc_glow[None, None]
 
-    # grain texture drifts with the driver (static content, MOVING crop).
-    # Offsets are wrapped into [0, tile - frame) so the crop window always
-    # sits inside one tile copy (no seam at the wrap line).
+    # C4d: the grain layer is composited by the ENGINE at output resolution
+    # after the Ken-Burns upscale (composite_grain), because grain baked
+    # into a BW/8 base and magnified ~8x reads as coarse mushy snow. The
+    # add below stays for direct render() calls (tests, tools) so their
+    # pixels — and the golden gen corpus, which calls render() directly at
+    # small sizes — are unchanged.
     if L["grain"] is not None:
         Sh, Sw = L["grain"].shape
         gd = int(round(drv * MULT_GRAIN * float(amp) * 18.0))

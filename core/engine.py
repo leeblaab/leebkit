@@ -26,7 +26,9 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from .layout import build_layout, clamp_font_sizes
 from .camutil import cam_name
 from .audio import VO_SPEED_RANGE  # v1.4 C2: one source of truth for speed bounds
-from .generators import GEN_PRESETS, render as gen_render  # v1.4 C3
+from .generators import (GEN_PRESETS, render as gen_render,
+                         render_base as gen_base,
+                         composite_grain as gen_grain)  # v1.4 C3 / C4d
 from . import captions as CAPTIONS   # per-kind draw (C3a); captions never imports engine
 
 
@@ -578,7 +580,7 @@ class Engine:
             # therefore apply to generated shots too.
             amp = 0.4 if s.get("motion", "normal") == "subtle" else 1.0
             bw, bh = max(64, int(self.BW / 8)), max(64, int(self.BH / 8))
-            gbase = gen_render(gen_name, bw, bh, offset=lt, amp=amp)
+            gbase = gen_base(gen_name, bw, bh, offset=lt, amp=amp)
             z = self.track(g)
             px, py = self.CAM.get(cam_name(s), (0, 0))
             p = ease_io(clamp01(lt / float(s["t"])))
@@ -587,7 +589,15 @@ class Engine:
             cw, ch = int(bw / z), int(bh / z)
             x0 = int(max(0, min(bw - cw, cx - cw / 2)))
             y0 = int(max(0, min(bh - ch, cy - ch / 2)))
-            img = gbase.crop((x0, y0, x0 + cw, y0 + ch)).resize((W, H), Image.LANCZOS)
+            # C4d: upscale stays in the numpy world — PIL LANCZOS on the base
+            # array's view, then integer grain add (composite_grain fast
+            # path). Grain composited at OUTPUT resolution after the upscale:
+            # baked into the BW/8 base and magnified ~8x it read as coarse
+            # mushy snow (Yasser's live-test observation). Same drift rule
+            # (grain_drift), same gains, just full-res texture underneath.
+            up = np.asarray(Image.fromarray(np.asarray(gbase)).crop(
+                (x0, y0, x0 + cw, y0 + ch)).resize((W, H), Image.LANCZOS))
+            img = Image.fromarray(gen_grain(up, gen_name, W, H, offset=lt, amp=amp))
             base = img   # generated bases take the SAME dim-overlay path as images
         elif base is not None:
             z = self.track(g)
