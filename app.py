@@ -6,6 +6,9 @@ import shutil
 import asyncio
 import hashlib
 import io
+import logging
+
+log = logging.getLogger("reelkit")
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
@@ -306,8 +309,11 @@ def _gallery_task(preset):
     async def _build():
         try:
             await asyncio.to_thread(AG.generate_gallery, preset)
-        except Exception:
-            pass   # UI shows 'generating...' placeholders; next poll picks tiles up
+        except Exception as e:
+            # audit v1.36 (live-test obs #1): the bare `pass` made a broken
+            # gallery size invisible — tiles sat on "rendering..." forever with
+            # no trace. Log loudly; UI still shows placeholders next poll.
+            log.warning("anim gallery build failed for %s: %s", preset, e)
 
     t = asyncio.create_task(_build())
     _GALLERY_TASKS[preset] = t

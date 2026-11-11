@@ -46,10 +46,14 @@ ANIM_LABELS = {
     "panup": "Pan up", "pandown": "Pan down", "pandiag": "Diagonal pan",
 }
 
-# validate_project floors width/height at 320: render tiles at 360x640 and
-# downscale to 270x480 for the grid (LANCZOS down keeps text crisp)
+# tiles render at the lowest portrait tier and LANCZOS-downscale to 270x480 for
+# the grid. v1.4 C1 locked portrait projects to the 720/1080/1440 tier whitelist,
+# which rejected the old 540x960 gallery size — generate_gallery then crashed
+# inside Engine.__init__ -> validate_project and the UI sat on "rendering..."
+# placeholders forever (live-test observation #1, v1.36). Tier-legal 720x1280
+# costs ~1.8x the old tile time; still under a second per tile.
 TILE_W, TILE_H = 270, 480
-RENDER_W, RENDER_H = 540, 960
+RENDER_W, RENDER_H = 720, 1280
 TRANS_FPS = 30          # denser sampling of the XF window (validate gates fps 24/30)
 CAM_FPS = 24            # 2.5s pan sweep -> 60 frames
 WEBP_MS = {"trans": 1000 // TRANS_FPS, "cam": 1000 // CAM_FPS}

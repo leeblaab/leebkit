@@ -304,6 +304,13 @@ try:
 except FileNotFoundError:
     print("SKIP node --check (node not installed)")
 
+# v1.36 obs #1: animation gallery tiles must actually become ready for every
+# preset (the C1 tier whitelist silently killed the old 540x960 gallery size).
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_anim_gallery.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("anim gallery test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)
