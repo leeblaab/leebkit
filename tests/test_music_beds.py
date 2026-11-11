@@ -48,5 +48,38 @@ for m in A.scan_music():
     if m["id"] != "none" and not m["id"].startswith("file:"):
         check("scan_music id %s is a real bed" % m["id"], m["id"] in A.BEDS)
 
+# ---- v1.4 CC0 external beds (music/*.mp3, provenance in music/ATTRIBUTIONS.md)
+# build_audio mode=file: loudness-matched to the procedural band then peak 0.84,
+# so a hot or quiet master can never bury VO or drift out of the mix band.
+_cc0 = sorted(f for f in os.listdir(A.MUSIC_DIR) if f.startswith("bed_")
+              and f.endswith(".mp3"))
+check("CC0 beds present", len(_cc0) >= 2, _cc0)
+check("CC0 provenance file", os.path.isfile(os.path.join(A.MUSIC_DIR, "ATTRIBUTIONS.md")))
+_proj = {"target": 15.0, "voice": "none", "shots": [
+    {"t": 7.5, "fill": "gen:midnight_drift", "captions": []},
+    {"t": 7.5, "fill": "gen:grid_pulse", "captions": []}]}
+_scratch = os.path.join(ROOT, "output", "_music_beds_scratch")
+for fn in _cc0:
+    p = dict(_proj)
+    p["music"] = {"mode": "file", "bed": fn}
+    wav = A.build_audio(p, scratch=os.path.join(_scratch, fn[:-4]))
+    import wave as _w
+    with _w.open(wav, "rb") as w:
+        sr = w.getframerate()
+        d = np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(np.float64) / 32768
+        if w.getnchannels() == 2:
+            d = d.reshape(-1, 2).mean(axis=1)
+    check("%s bed length" % fn, len(d) == int(15.0 * sr), "%d" % len(d))
+    mean_db = 20 * np.log10(max(float(np.mean(np.abs(d))), 1e-9))
+    check("%s mix band" % fn, -23.0 <= mean_db <= -8.0, "mean=%.1f dBFS" % mean_db)
+# traversal guard must still fire for relative beds escaping music/
+try:
+    p = dict(_proj)
+    p["music"] = {"mode": "file", "bed": "../secrets"}
+    A.build_audio(p, scratch=_scratch)
+    check("CC0 traversal guard", False, "no ValueError")
+except ValueError:
+    check("CC0 traversal guard", True)
+
 print("ALL PASS" if not FAILS else "FAILED: " + ", ".join(FAILS))
 sys.exit(1 if FAILS else 0)

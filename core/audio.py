@@ -579,6 +579,16 @@ def build_audio(proj, media_dir=None, scratch=None, music_override=None):
         if not os.path.isabs(fn) and not (_p == _b or _p.startswith(_b + os.sep)):
             raise ValueError("music bed %r escapes the music/ folder" % fn)
         d = load_music_file(path)
+        # v1.4 CC0 beds: external tracks arrive at whatever loudness they were
+        # mastered at (commercial masters sit ~-9 dBFS mean vs our procedural
+        # band ~-19); match the procedural loudness band, then peak-normalize
+        # to 0.84 exactly like bed_pulse — otherwise a hot master buries VO.
+        mean = float(np.mean(np.abs(d))) if len(d) else 0.0
+        if mean > 0:
+            d = d * (10 ** ((-19.5 - (20 * np.log10(mean))) / 20.0))
+        peak = float(np.max(np.abs(d))) if len(d) else 0.0
+        if peak > 0:
+            d = d / peak * 0.84
         music = np.zeros(TOTAL)
         n = min(len(d), TOTAL)
         music[:n] = d[:n]
