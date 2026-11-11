@@ -84,10 +84,13 @@ def _spawn_child(x):          # module-level so it pickles on spawn
 
 
 class Job:
-    def __init__(self, proj, media_dir):
+    def __init__(self, proj, media_dir, share_fmt=None):
         self.id = uuid.uuid4().hex[:10]
         self.proj = proj
         self.media_dir = media_dir
+        # v1.4 C5: optional share teaser encoded from the SAME frame dir
+        # right after the mp4 gate ("gif"/"webp"; None = master only).
+        self.share_fmt = share_fmt
         self.name = proj.get("name", "project")
         self.state = "queued"      # queued|frames|encode|audio|mux|done|error|canceled
         self.frames_done = 0
@@ -110,7 +113,8 @@ class Job:
         return {"id": self.id, "name": self.name, "state": self.state,
                 "frames_done": self.frames_done, "frames_total": self.frames_total,
                 "pct": pct,
-                "error": self.error, "out": os.path.basename(self.out) if self.out else None}
+                "error": self.error, "out": os.path.basename(self.out) if self.out else None,
+                "share_fmt": self.share_fmt}
 
 
 class Queue:
@@ -137,7 +141,7 @@ class Queue:
         except OSError:
             pass
 
-    def submit(self, proj, media_dir=None):
+    def submit(self, proj, media_dir=None, share_fmt=None):
         with self._cond:
             queued = sum(1 for j in self.jobs if j.state == "queued")
             if queued >= MAX_QUEUED:
@@ -151,7 +155,7 @@ class Queue:
             # default must match Engine convention: images are media-relative,
             # so the queue default was ROOT (wrong base) — every path resolved one
             # level too deep unless callers passed media/ explicitly.
-            j = Job(proj, media_dir or os.path.join(ROOT, "media"))
+            j = Job(proj, media_dir or os.path.join(ROOT, "media"), share_fmt=share_fmt)
             self.jobs.append(j)
         self._pending.put(j)
         with self._cond:
@@ -295,6 +299,13 @@ class Queue:
             from render_cli import encode_video as _encode
             _encode(frames_dir, out_mp4, fps=eng.FPS, audio_wav=wav)
             A.verify_durations(out_mp4, float(j.proj["target"]))   # hard gate
+            # C5 share teaser rides the SAME frame dir (no re-render), encoded
+            # AFTER the mp4 gate so a bad master never yields share files.
+            if j.share_fmt:
+                from render_cli import encode_share as _share
+                _share(frames_dir, os.path.splitext(out_mp4)[0] + "." + j.share_fmt,
+                       j.share_fmt, src_fps=float(j.proj.get("fps", 30)),
+                       src_w=int(j.proj.get("width", eng.W)))
             shutil.rmtree(frames_dir, ignore_errors=True)
             j.out = out_mp4
             j.state = "done"

@@ -456,8 +456,14 @@ def render(proj: dict):
         validate_project(proj)
     except ValueError as e:
         raise HTTPException(422, str(e))
+    # v1.4 C5: optional share teaser format rides the job (caps enforced inside
+    # encode_share from core.share_caps — GIF 640px/6s/12fps, WebP 960px/8s;
+    # "GIF is a share teaser, not the master").
+    fmt = (proj.pop("share_fmt", None) or "").lower().strip()
+    if fmt and fmt not in ("gif", "webp"):
+        raise HTTPException(422, "share_fmt must be 'gif' or 'webp' (got %r)" % fmt)
     try:
-        j = QUEUE.submit(proj, media_dir=os.path.join(ROOT, "media"))
+        j = QUEUE.submit(proj, media_dir=os.path.join(ROOT, "media"), share_fmt=fmt or None)
     except QueueFull as e:
         raise HTTPException(429, str(e))
     return {"job": j.snapshot()}
@@ -482,13 +488,29 @@ def outputs():
     od = os.path.join(ROOT, "output")
     ignored = _ignored_outputs(od)
     files = [f for f in os.listdir(od)
-             if f.endswith(".mp4") and f not in ignored]
+             if (f.endswith(".mp4") or f.endswith(".gif") or f.endswith(".webp"))
+             and f not in ignored]
     # newest FIRST by modification time — the old reverse-alphabetical sort
     # buried fresh renders under older files (user: "the new video is never on top")
     files.sort(key=lambda f: os.path.getmtime(os.path.join(od, f)), reverse=True)
     for f in files:
-        out.append({"file": f, "url": "/output/" + f,
-                    "size": os.path.getsize(os.path.join(od, f))})
+        entry = {"file": f, "url": "/output/" + f,
+                 "size": os.path.getsize(os.path.join(od, f))}
+        # C5 share teasers ride beside their master in the listing (sorted by
+        # mtime they land adjacent anyway); a teaser never shows without its mp4
+        if not f.endswith(".mp4"):
+            stem = os.path.splitext(f)[0]
+            if not os.path.isfile(os.path.join(od, stem + ".mp4")):
+                continue
+        else:
+            stem = f[:-4]
+            for ext in (".gif", ".webp"):
+                sib = stem + ext
+                if os.path.isfile(os.path.join(od, sib)):
+                    entry.setdefault("share", []).append(
+                        {"file": sib, "url": "/output/" + sib,
+                         "size": os.path.getsize(os.path.join(od, sib))})
+        out.append(entry)
     return {"outputs": out}
 
 
@@ -507,7 +529,8 @@ def _ignored_outputs(od):
 def outputs_clear():
     od = os.path.join(ROOT, "output")
     os.makedirs(od, exist_ok=True)
-    names = [f for f in os.listdir(od) if f.endswith(".mp4")]
+    names = [f for f in os.listdir(od)
+             if f.endswith(".mp4") or f.endswith(".gif") or f.endswith(".webp")]
     with open(os.path.join(od, ".history_ignore"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(sorted(_ignored_outputs(od) | set(names))) + "\n")
     return {"ok": True, "hidden": len(names)}

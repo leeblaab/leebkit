@@ -318,6 +318,13 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_music_beds.py")],
 ok("music beds test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.4 C5: GIF/WebP share teasers must encode and respect the caps in
+# core/share_caps.py (GIF 640px/6s/12fps — Yasser ruling).
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_share_formats.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("share formats test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)

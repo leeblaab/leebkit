@@ -120,6 +120,9 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
   <select id="btn-load" title="Load a saved project" style="font-family:var(--mono);font-size:12px;background:#0c0c14;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><option value="">Load project…</option></select>
   <button id="btn-preview">Storyboard<span style="color:var(--acc)"> ⚑</span></button>
   <button id="btn-render" class="primary">Render MP4<kbd>Ctrl+Enter</kbd></button>
+  <!-- v1.4 C5: optional share teaser encoded from the same render (caps are
+       server-enforced: GIF 640px/6s/12fps, WebP 960px/8s — teaser, not master) -->
+  <select id="share-fmt" title="Also export a share teaser alongside the MP4" style="font-family:var(--mono);font-size:12px;background:#0c0c14;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><option value="">share: none</option><option value="gif">share GIF (640px/6s)</option><option value="webp">share WebP (960px/8s)</option></select>
 </header>
 
 <main>
@@ -656,7 +659,8 @@ $('#btn-preview').onclick=async()=>{
 };
 $('#btn-render').onclick=async()=>{
   syncVoLines();
-  try{const j=await api('/api/render',P);toast('render queued ('+j.job.id+')');$('#prog').style.display='block'}catch(e){toast(e.message)}
+  const body={...P};const sf=$('#share-fmt').value;if(sf)body.share_fmt=sf;
+  try{const j=await api('/api/render',body);toast('render queued ('+j.job.id+')');$('#prog').style.display='block'}catch(e){toast(e.message)}
 };
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')$('#btn-render').click()});
 
@@ -702,7 +706,7 @@ $('#btn-cancel-job').onclick=async e=>{
 };
 
 async function refreshOutputs(){const j=await api('/api/outputs');
-  $('#outputs').innerHTML=j.outputs.length?j.outputs.map(o=>`<div class="outrow"><a href="${o.url}" target="_blank">${o.file}</a><span style="color:var(--dim)">${(o.size/1048576).toFixed(1)} MB</span></div>`).join(''):'<span class="noflags">none yet</span>'}
+  $('#outputs').innerHTML=j.outputs.length?j.outputs.map(o=>`<div class="outrow"><a href="${o.url}" target="_blank">${o.file}</a><span style="color:var(--dim)">${(o.size/1048576).toFixed(1)} MB${(o.share||[]).map(s=>` · <a href="${s.url}" target="_blank" title="share teaser (caps enforced server-side)">${s.file.split('.').pop()}</a>`).join('')}</span></div>`).join(''):'<span class="noflags">none yet</span>'}
 
 boot().then(()=>{setTarget(P.target,true);fpsHint()});renderShots();connectWS();
 // hydrate Project rail from P (saved projects may carry a non-default format)
