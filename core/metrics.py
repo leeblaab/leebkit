@@ -48,6 +48,14 @@ TYPE_RAMP = 0.10        # per-character appear ramp
 PUMP_STEP = 0.24        # word pump: per-word stagger
 PUMP_KICK = 1.30        # word pump: scale punch peak (word_pump)
 PUMP_RAMP = 0.30        # word pump: per-word progress ramp
+# --- v1.4 kinetic drafts: mask-wipe / split-slide / slam / track-in / flash --
+SLAM_RAMP = 0.26        # slam: scale-down-from-overscan settle ramp
+SLAM_FROM = 1.85        # slam: start scale (text "falls into" the frame)
+SPLIT_RAMP = 0.34       # split: half-lines slide-to-center ramp
+TRACK_RAMP = 0.55       # trackin: tracking-expand settle ramp
+FLASH_STEP = 0.16       # flashpop: per-word stagger
+FLASH_RAMP = 0.22       # flashpop: per-word ramp (peak alpha mid-ramp)
+WIPE_K = 1.4            # mask-wipe: prog gain (done_at = at + POP_RAMP/WIPE_K)
 TERM_FIRST_AT = 0.4     # terminal first row at lt=0.4 (kind clock, not `at`)
 TERM_ROW_STEP = 0.5
 TERM_ROW_RAMP = 0.3
@@ -175,5 +183,39 @@ def measure(eng, L, k, shot_t, at_raw):
         nw = len(L.get("text", "").split(" "))
         done_at = at + (nw - 1) * PUMP_STEP + PUMP_RAMP
         m.update(done_at=done_at)
+
+    # --- v1.4 kinetic drafts: settle clocks mirror captions.py exactly ------
+    elif k == "wipe":
+        # mask edge sweeps on prog*WIPE_K (draw_wipe); full reveal at prog=1/WIPE_K
+        done_at = at + POP_RAMP / WIPE_K
+        m.update(done_at=done_at)
+
+    elif k == "split":
+        # halves settle with ease_o(prog): offset ~0 when prog>=~0.95; the
+        # shared gate fully opens at at+POP_RAMP -> settle there.
+        done_at = at + POP_RAMP
+        m.update(done_at=done_at)
+
+    elif k == "slam":
+        # scale settles when sp = clamp01(prog/SLAM_RAMP*POP_RAMP) hits 1,
+        # i.e. prog >= SLAM_RAMP/POP_RAMP -> lt = at + SLAM_RAMP
+        done_at = at + SLAM_RAMP
+        m.update(done_at=done_at)
+
+    elif k == "trackin":
+        # tracking closes when tp hits 1 -> lt = at + TRACK_RAMP
+        done_at = at + TRACK_RAMP
+        m.update(done_at=done_at)
+
+    elif k == "flashpop":
+        nw = len(L.get("text", "").split(" "))
+        done_at = at + (nw - 1) * FLASH_STEP + FLASH_RAMP
+        m.update(done_at=done_at)
+
+    elif k == "maskline":
+        # word stagger mirrors word_pop clocks (WORD_STEP/WORD_RAMP)
+        nw = len(L.get("text", "").split(" "))
+        done_at = at + (nw - 1) * WORD_STEP + WORD_RAMP
+        m.update(done_at=done_at, nwords=nw)
 
     return m

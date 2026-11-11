@@ -1,0 +1,19 @@
+{
+  "name": "Signal — editorial condensed stage (v1.4 C4e)",
+  "colors": { "bg": "#0a0b0d", "white": "#f2f3f5", "accent": "#ff9f1c", "dim": "#a7abb3", "panel": "#101216", "pink": "#ff2e88", "blue": "#4ea8de" },
+  "fonts": {
+    "display": "BebasNeue-Regular.ttf",
+    "body": "Oswald-Variable.ttf",
+    "mono": "JetBrainsMono-var.ttf"
+  },
+  "sizes": { "logo": 160, "h1": 140, "body": 58, "small": 46, "mono": 46, "mono_s": 36, "big": 320 },
+  "tracking": { "logo": 8, "sub": 14 },
+  "panel_alpha": 224,
+  "term_alpha": 238,
+  "grain_points": 0,
+  "camera_zoom_keyframes": [
+    [0.0, 1.0], [15.0, 1.0]
+  ],
+  "overscan": 1.0,
+  "xf": 0.0
+}

@@ -1,0 +1,19 @@
+{
+  "name": "Volt — acid-lime poster stage (v1.4 C4e)",
+  "colors": { "bg": "#07090a", "white": "#f5f7f2", "accent": "#c8ff2e", "dim": "#9aa39a", "panel": "#0d1012", "pink": "#ff2e88", "lime": "#c8ff2e" },
+  "fonts": {
+    "display": "Anton-Regular.ttf",
+    "body": "Inter-var.ttf",
+    "mono": "JetBrainsMono-var.ttf"
+  },
+  "sizes": { "logo": 170, "h1": 150, "body": 56, "small": 46, "mono": 46, "mono_s": 36, "big": 320 },
+  "tracking": { "logo": 4, "sub": 14 },
+  "panel_alpha": 224,
+  "term_alpha": 238,
+  "grain_points": 0,
+  "camera_zoom_keyframes": [
+    [0.0, 1.0], [15.0, 1.0]
+  ],
+  "overscan": 1.0,
+  "xf": 0.0
+}

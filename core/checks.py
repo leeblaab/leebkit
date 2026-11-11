@@ -126,10 +126,12 @@ def check_project(engine):
                     flags.append({"shot": i, "kind": "timing", "severity": "error",
                                   "message": "shot %d kicker finishes at %.2fs > shot end %.2fs"
                                              % (i, m["done_at"], t)})
-            elif k in ("typewriter", "pump"):
+            elif k in ("typewriter", "pump", "flashpop", "maskline"):
                 # v1.36 (Onyx draft): long-stagger kinds must settle inside the
                 # shot; typewriter lines also need a width check (draw path is
                 # center-fit but does NOT wrap — a too-long line clips).
+                # v1.4 kinetic drafts: flashpop/maskline are word-stagger kinds
+                # with the same contract.
                 if m["done_at"] > t - 0.1:
                     flags.append({"shot": i, "kind": "timing", "severity": "error",
                                   "message": "shot %d %s finishes at %.2fs > shot end %.2fs"
@@ -142,6 +144,32 @@ def check_project(engine):
                         flags.append({"shot": i, "kind": "overflow", "severity": "error",
                                       "message": "shot %d typewriter line %.0fpx > safe %.0fpx"
                                                  % (i, total, W - 80)})
+            elif k in ("wipe", "split", "slam", "trackin"):
+                # v1.4 kinetic drafts: single-beat kinds — settle on their
+                # metrics clock AND width gate at the draw font (h1; slam's
+                # overscan start is measured like burst, conservatively).
+                if m["done_at"] > t - 0.1:
+                    flags.append({"shot": i, "kind": "timing", "severity": "error",
+                                  "message": "shot %d %s finishes at %.2fs > shot end %.2fs"
+                                             % (i, k, m["done_at"], t)})
+                if k == "wipe":
+                    for wl in engine.wrap_words(
+                            ImageDraw.Draw(Image.new("RGB", (8, 8))),
+                            L.get("text", "").split(" "), engine.H1,
+                            engine.L["safe_w"]):
+                        over(wl, engine.H1, limit=engine.L["safe_w"], label="wipe line")
+                elif k == "trackin":
+                    # tracking at t=0 widens the lockup: check the WIDE state
+                    trk = int(engine.L["h1"] * 0.35)
+                    over(L.get("text", ""), engine.H1,
+                         limit=W - 80 - trk * max(0, len(L.get("text", "")) - 1),
+                         label="trackin")
+                elif k == "split":
+                    over(L.get("text", ""), engine.H1, limit=W - 80)
+                else:  # slam: rest size must fit; overscan start is transient
+                    bf = engine._mkfont(engine.preset["fonts"]["display"],
+                                        int(engine.L["h1"] * M.SLAM_FROM))
+                    over(L.get("text", ""), bf, limit=W - 40, label="slam")
             elif k == "cap_lines":
                 # timing runs on WRAPPED lines via metrics (audit B#3)
                 if m["done_at"] > t - 0.1:

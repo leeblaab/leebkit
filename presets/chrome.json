@@ -1,0 +1,19 @@
+{
+  "name": "Chrome — tech mono stage (v1.4 C4e)",
+  "colors": { "bg": "#05060a", "white": "#eef2f7", "accent": "#7c5cff", "dim": "#98a2b3", "panel": "#0b0e14", "pink": "#ff2e88", "cyan": "#22d3ee" },
+  "fonts": {
+    "display": "Syne-Variable.ttf",
+    "body": "Sora-Variable.ttf",
+    "mono": "JetBrainsMono-var.ttf"
+  },
+  "sizes": { "logo": 150, "h1": 132, "body": 54, "small": 44, "mono": 48, "mono_s": 38, "big": 300 },
+  "tracking": { "logo": 6, "sub": 14 },
+  "panel_alpha": 224,
+  "term_alpha": 238,
+  "grain_points": 0,
+  "camera_zoom_keyframes": [
+    [0.0, 1.0], [15.0, 1.0]
+  ],
+  "overscan": 1.0,
+  "xf": 0.0
+}

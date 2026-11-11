@@ -20,6 +20,9 @@ No import of core.engine here (engine imports captions lazily inside
 render_layer to avoid a cycle)."""
 
 from collections import namedtuple
+import math
+
+from PIL import Image, ImageDraw
 
 from . import metrics as M   # stagger-clock constants: draw and checks share one source
 
@@ -295,8 +298,16 @@ def draw_burst(eng, dr, L, k, ctx, e):
     a = int(255 * min(1.0, prog * 2.2))
     if ctx.a_gate is not None:
         a = min(a, ctx.a_gate)
+    # v1.4 (kinetic drafts): burst honors an explicit per-caption "colors"
+    # list (first name wins for the whole stomp word); without it the accent
+    # fill is byte-identical to every shipped render. Fixes the Onyx draft's
+    # "PINK." scene drawing cyan instead of pink (Yasser QA).
+    col = ACCENT
+    names = L.get("colors")
+    if names:
+        col = ctx.PAL.get(names[0], ACCENT)
     dr.text(((W - w) / 2, H * LY["burst_frac"] - slide), txt, font=fnt,
-            fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
+            fill=(col[0], col[1], col[2], a))
 
 
 def _tint_pieces(L, ctx):
@@ -378,6 +389,181 @@ def draw_pump(eng, dr, L, k, ctx, e):
                   lambda sz: eng._mkfont(eng.preset["fonts"]["display"], sz),
                   L["text"], cols, appear, tracking=0, base_size=base,
                   alpha_cap=a_gate)
+
+
+def _kin_cols(L, ctx, default):
+    """v1.4 kinetic drafts: per-caption 'colors' name list -> RGB list; empty
+    list means the kind's single `default` color (byte-identical fallback)."""
+    names = L.get("colors") or []
+    if not names:
+        return [default]
+    return [ctx.PAL.get(n, default) for n in names]
+
+
+def draw_wipe(eng, dr, L, k, ctx, e):
+    """v1.4 (kinetic drafts): mask-wipe reveal — glyphs sit still, a vertical
+    edge sweeps across them left->right. Optional per-line 'colors'."""
+    clamp01 = e[0]
+    H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
+                                            ctx.prog, ctx.slide, ctx.a_gate)
+    lines = _wrap(eng, dr, L["text"].split(" "), eng.H1, LY["safe_w"], ctx=ctx)
+    wp = clamp01(prog * M.WIPE_K)   # metrics done_at mirrors this gain
+    cols = _kin_cols(L, ctx, WHITE)
+    line_h = int(eng.L["h1"] * 1.06)
+    n = max(1, len(lines))
+    y0 = H * LY["accent_frac"] - (n - 1) * line_h / 2 - slide
+    for j, ln in enumerate(lines):
+        eng.line_wipe(dr, y0 + j * line_h, eng.H1, ln, cols[j % len(cols)],
+                      wp, tracking=2, alpha_cap=a_gate)
+
+
+def draw_split(eng, dr, L, k, ctx, e):
+    """v1.4 (kinetic drafts): split-slide — first half of the words slides in
+    from the left, second half from the right, meeting at center."""
+    clamp01, ease_o = e[0], e[1]
+    H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
+                                            ctx.prog, ctx.slide, ctx.a_gate)
+    words = L["text"].split(" ")
+    if not words or not "".join(words):
+        return
+    fnt = eng.H1
+    mid = (len(words) + 1) // 2
+    left, right = " ".join(words[:mid]).strip(), " ".join(words[mid:]).strip()
+    lw = dr.textlength(left, font=fnt) if left else 0.0
+    rw = dr.textlength(right, font=fnt) if right else 0.0
+    gap = eng.L["h1"] * 0.22
+    total = lw + rw + gap
+    x = (W - total) / 2
+    sp = ease_o(prog)   # settle on the shared gated clock; metrics done_at = at+POP_RAMP
+    off = (1 - sp) * W * 0.35
+    a = int(255 * min(1.0, prog * 2.0))
+    if a_gate is not None:
+        a = min(a, a_gate)
+    cols = _kin_cols(L, ctx, WHITE)
+    y = H * LY["accent_frac"] - slide
+    if left:
+        dr.text((x - off, y), left, font=fnt, fill=cols[0] + (a,))
+    if right:
+        dr.text((x + lw + gap + off, y), right, font=fnt,
+                fill=cols[min(1, len(cols) - 1)] + (a,))
+
+
+def draw_slam(eng, dr, L, k, ctx, e):
+    """v1.4 (kinetic drafts): scale-down slam — the word starts huge (past the
+    frame) and falls into rest size: the market 'stamp' move."""
+    clamp01 = e[0]
+    H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
+                                            ctx.prog, ctx.slide, ctx.a_gate)
+    sp = clamp01(prog / M.SLAM_RAMP * 0.32)   # gate-normalized settle clock
+    scale = M.SLAM_FROM - (M.SLAM_FROM - 1.0) * (sp ** 0.7)
+    fnt = eng._mkfont(eng.preset["fonts"]["display"], int(eng.L["h1"] * scale))
+    txt = L["text"]
+    w = dr.textlength(txt, font=fnt)
+    a = int(255 * min(1.0, prog * 3.0))
+    if a_gate is not None:
+        a = min(a, a_gate)
+    col = _kin_cols(L, ctx, WHITE)[0]
+    dr.text(((W - w) / 2, H * LY["burst_frac"] - slide), txt, font=fnt, fill=col + (a,))
+
+
+def draw_trackin(eng, dr, L, k, ctx, e):
+    """v1.4 (kinetic drafts): tracking-expand — letters start wide apart and
+    close ranks into the lockup while fading in."""
+    clamp01 = e[0]
+    H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
+                                            ctx.prog, ctx.slide, ctx.a_gate)
+    tp = clamp01(prog / M.TRACK_RAMP * 0.32)
+    trk = int(eng.L["h1"] * 0.35 * (1 - e[1](tp)))
+    a = int(255 * min(1.0, prog * 2.4))
+    if a_gate is not None:
+        a = min(a, a_gate)
+    cols = _kin_cols(L, ctx, WHITE)
+    txt = L["text"]
+    # per-word color cycles; tracking shared across the line
+    words = txt.split(" ")
+    fnt = eng.H1
+    wsp = dr.textlength(" ", font=fnt)
+    ws = [dr.textlength(w, font=fnt) for w in words]
+    total = sum(ws) + wsp * (len(words) - 1) + trk * sum(len(w) for w in words)
+    x = (W - total) / 2
+    y = H * LY["accent_frac"] - slide
+    for i, w in enumerate(words):
+        col = cols[i % len(cols)]
+        cx = x
+        for c in w:
+            cw = dr.textlength(c, font=fnt)
+            dr.text((cx, y), c, font=fnt, fill=col + (a,))
+            cx += cw + trk
+        x += ws[i] + wsp + trk * len(w)
+
+
+def draw_flashpop(eng, dr, L, k, ctx, e):
+    """v1.4 (kinetic drafts): flash pop — each word snaps in with a brief
+    alpha FLASH overshoot (flash to ~2x then settle). Per-word colors cycle."""
+    clamp01 = e[0]
+    H, W, LY, WHITE, lt, at, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
+                                              ctx.lt, ctx.at, ctx.slide, ctx.a_gate)
+    appear = lt - at
+    if ctx.transition_out:
+        appear = min(appear, float(ctx.shot_t) - at)
+    words = L["text"].split(" ")
+    fnt = eng.H1
+    wsp = dr.textlength(" ", font=fnt)
+    ws = [dr.textlength(w, font=fnt) for w in words]
+    total = sum(ws) + wsp * (len(words) - 1)
+    x = (W - total) / 2
+    y = H * LY["accent_frac"] - slide
+    cols = _kin_cols(L, ctx, WHITE)
+    for i, w in enumerate(words):
+        wt = clamp01((appear - i * M.FLASH_STEP) / M.FLASH_RAMP)
+        if wt <= 0:
+            x += ws[i] + wsp
+            continue
+        # flash curve: alpha spikes at the snap-in, settles to full by wt=1
+        fa = min(255, int(255 * (0.4 + 1.6 * math.sin(math.pi * min(1.0, wt * 0.8))))) \
+            if wt < 1 else 255
+        if a_gate is not None:
+            fa = min(fa, a_gate)
+        e_ow = 1 - (1 - wt) ** 3
+        dy = (1 - e_ow) * eng.L["h1"] * 0.06
+        dr.text((x, y + dy), w, font=fnt, fill=cols[i % len(cols)] + (fa,))
+        x += ws[i] + wsp
+
+
+def draw_maskline(eng, dr, L, k, ctx, e):
+    """v1.4 (kinetic drafts): line-mask typewriter — words rise from BEHIND a
+    baseline mask (each word clipped until it clears the line), no caret."""
+    clamp01 = e[0]
+    H, W, LY, WHITE, lt, at, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
+                                              ctx.lt, ctx.at, ctx.slide, ctx.a_gate)
+    appear = lt - at
+    if ctx.transition_out:
+        appear = min(appear, float(ctx.shot_t) - at)
+    txt = L["text"]
+    fnt = eng.BODY
+    words = txt.split(" ")
+    wsp = dr.textlength(" ", font=fnt)
+    ws = [dr.textlength(w, font=fnt) for w in words]
+    total = sum(ws) + wsp * (len(words) - 1)
+    x0 = (W - total) / 2
+    y = H * LY["caplines_frac"] - slide
+    cols = _kin_cols(L, ctx, WHITE)
+    asc = int(eng.L["body"] * 1.05)   # mask window height above the baseline row
+    x = x0
+    for i, w in enumerate(words):
+        wt = clamp01((appear - i * M.WORD_STEP) / M.WORD_RAMP)
+        if wt <= 0:
+            x += ws[i] + wsp
+            continue
+        rise = (1 - wt) ** 2 * asc   # quadratic rise out of the mask window
+        a = int(255 * min(1.0, wt * 2.2))
+        if a_gate is not None:
+            a = min(a, a_gate)
+        tmp = Image.new("RGBA", (int(ws[i]) + 8, asc), (0, 0, 0, 0))
+        td = ImageDraw.Draw(tmp)
+        td.text((4, -rise), w, font=fnt, fill=cols[i % len(cols)] + (a,))
+        eng._canvas.paste(tmp, (int(x) - 4, int(y)), tmp)
+        x += ws[i] + wsp
 
 
 def draw_handle(eng, dr, L, k, ctx, e):
@@ -536,6 +722,12 @@ DISPATCH = {
     "burst": draw_burst,         # v1.4 C4e: oversized scale-punch word, no box
     "typewriter": draw_typewriter,  # v1.36 Onyx draft: per-char reveal + caret
     "pump": draw_pump,              # v1.36 Onyx draft: per-word scale punch
+    "wipe": draw_wipe,              # v1.4 kinetic drafts: mask-wipe reveal
+    "split": draw_split,            # v1.4: halves slide in from frame edges
+    "slam": draw_slam,              # v1.4: scale-down stamp from oversize
+    "trackin": draw_trackin,        # v1.4: tracking-expand lockup
+    "flashpop": draw_flashpop,      # v1.4: word stagger w/ alpha flash
+    "maskline": draw_maskline,      # v1.4: words rise out of a baseline mask
     "big_number": draw_big_number,
     "cap_lines": draw_cap_lines,
     "terminal": draw_terminal,

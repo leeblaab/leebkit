@@ -539,6 +539,36 @@ class Engine:
                 x += ws[i]
             x += wsp + tracking
 
+    def line_wipe(self, dr, y, fnt, txt, color, prog, tracking=0, alpha_cap=None):
+        """v1.4 (kinetic drafts): horizontal mask-wipe reveal — the glyphs sit
+        still and a vertical edge sweeps left->right across them (the market
+        "wipe-on" move). prog 0..1 opens the mask; no motion on the text."""
+        if prog <= 0:
+            return
+        W = self.W
+        w = self._measure_tracked(dr, txt, fnt, tracking)
+        x0 = (W - w) / 2
+        reveal = int(w * min(1.0, prog))
+        if reveal <= 0:
+            return
+        tmp = Image.new("RGBA", (reveal, fnt.size * 2), (0, 0, 0, 0))
+        td = ImageDraw.Draw(tmp)
+        # draw the FULL text offset by -x0 so the crop window shows the glyphs
+        # at their true frame position: a wipe means the letters never move,
+        # only their left-to-right reveal.
+        if tracking:
+            cx = -int(x0)
+            for c in txt:
+                cw = td.textlength(c, font=fnt)
+                if cx < reveal:
+                    td.text((cx, 0), c, font=fnt, fill=color + (255,))
+                cx += cw + tracking
+        else:
+            td.text((-int(x0), 0), txt, font=fnt, fill=color + (255,))
+        if alpha_cap is not None and alpha_cap < 255:
+            tmp.putalpha(tmp.getchannel("A").point(lambda v: v * alpha_cap // 255))
+        self._canvas.paste(tmp, (int(x0), int(y)), tmp)
+
     def word_pump(self, dr, y, mkfont, txt, colors, appear, tracking=0,
                   base_size=0, kick=None, alpha_cap=None):
         """v1.36 (Onyx draft): per-word SCALE PUNCH — each word pops in at
@@ -677,6 +707,10 @@ class Engine:
             img = Image.new("RGB", (W, H), self.BG)
 
         dr = ImageDraw.Draw(img, "RGBA")
+        # v1.4 kinetic drafts: mask-kind helpers (line_wipe/maskline) paste
+        # their offscreen strips onto this frame's canvas; captions.py reads
+        # it via eng._canvas (set per frame before the caption loop).
+        self._canvas = img
         dim = float(s.get("dim", 0.4))
         if base is not None and dim > 0:
             black = self._dim_overlay(dim)
@@ -700,7 +734,9 @@ class Engine:
             # skip would kill their first stagger slots; shipped kinds keep
             # the 0.32 gate byte-for-byte (no golden churn).
             POP_RAMP_GATE = CAPTIONS.M.TYPE_RAMP if k == "typewriter" else \
-                            CAPTIONS.M.PUMP_RAMP if k == "pump" else 0.32
+                            CAPTIONS.M.PUMP_RAMP if k == "pump" else \
+                            CAPTIONS.M.SLAM_RAMP if k == "slam" else \
+                            CAPTIONS.M.TRACK_RAMP if k == "trackin" else 0.32
             # panel_* kinds are the shot's message itself (fill=solid frames):
             # run their clock 0.45s early so a black beat never holds with an
             # empty card (Yasser's sheet9 QA: dead gaps before word-pop lines).
