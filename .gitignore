@@ -20,3 +20,6 @@ scratch/
 
 # portable ffmpeg downloaded by LEEBKIT-setup.bat
 tools/
+
+# CI-only venv (smoke workflows) — explicit, never rely on .venv/ prefix matching
+.venv_ci/
