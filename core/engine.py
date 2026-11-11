@@ -127,6 +127,17 @@ def validate_project(proj):
         for c in s.get("captions", []):
             if "kind" not in c:
                 raise ValueError("shot %d caption missing kind" % i)
+            # DISPATCH whitelist (audit #5): render_layer's .get(k) silently
+            # skips unknown kinds — the comment there claimed validate gates
+            # these; now it actually does.
+            if c["kind"] not in CAPTIONS.DISPATCH:
+                raise ValueError("shot %d caption kind %r unknown (choices: %s)"
+                                 % (i, c["kind"], ", ".join(sorted(CAPTIONS.DISPATCH))))
+            if "at" in c:
+                a = float(c["at"])
+                if not (0.0 <= a <= float(s.get("t", 0))):
+                    raise ValueError("shot %d caption at=%.2fs outside shot window 0..%.2fs"
+                                     % (i, a, float(s.get("t", 0))))
     return proj
 
 
@@ -261,8 +272,13 @@ class Engine:
     def _scan_images(self):
         d = self.media_dir
         out = []
-        for root, _, files in os.walk(d):
-            if any(seg in root for seg in ("output", "frames", ".git")):
+        # audit #11 (v1.31): unqualified substring match — a media dir named
+        # "keyframes" or "my_outputs" was skipped wholesale. Match path
+        # COMPONENTS instead: only a real segment named output/frames/.git skips.
+        skip = {"output", "frames", ".git"}
+        for root, dirs, files in os.walk(d):
+            if set(os.path.relpath(root, d).replace("\\", "/").split("/")) & skip:
+                dirs[:] = []
                 continue
             for f in files:
                 if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
