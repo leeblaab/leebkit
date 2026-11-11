@@ -103,6 +103,15 @@ def validate_project(proj):
     h = int(proj.get("height", 1920))
     if not (320 <= w <= 3840 and 320 <= h <= 3840):
         raise ValueError("width/height must be 320-3840 (got %dx%d)" % (w, h))
+    # v1.4 C1: portrait projects must land on a supported tier — 9:16 at one of
+    # 720p / FHD / 2K. Square and landscape formats stay free-form (v1.2), and
+    # the 320x480 tiny-probe escape hatch stays legal for smoke/QA projects.
+    if h > w:
+        if (w, h) not in ((720, 1280), (1080, 1920), (1440, 2560), (320, 480)):
+            raise ValueError(
+                "portrait width/height must be a supported tier "
+                "(720x1280, 1080x1920, 1440x2560 — got %dx%d; square and "
+                "landscape formats accept any size in range)" % (w, h))
     fps = int(proj.get("fps", 30))
     if fps not in (24, 30):
         raise ValueError("fps must be 24 or 30 (got %d)" % fps)

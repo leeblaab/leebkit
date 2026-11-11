@@ -137,7 +137,7 @@ font-size:10px;color:var(--ok);background:rgba(0,0,0,.55);padding:2px 6px;border
   <div class="panel">
     <h3>Project</h3>
     <div class="row"><label>Name</label><input id="pname" value="my_promo" style="flex:1;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px"></div>
-    <div class="row"><label>Format</label><select id="format"><option value="1080x1920">9:16 portrait (Reels / Shorts / TikTok)</option><option value="1080x1080">1:1 square (feed post)</option><option value="1920x1080">16:9 landscape (YouTube / web)</option></select></div>
+    <div class="row"><label>Format</label><select id="format"><option value="1080x1920">9:16 portrait FHD (Reels / Shorts / TikTok)</option><option value="720x1280">9:16 portrait 720p (fast drafts, small files)</option><option value="1440x2560">9:16 portrait 2K (crisp, slower render)</option><option value="1080x1080">1:1 square (feed post)</option><option value="1920x1080">16:9 landscape (YouTube / web)</option></select></div>
     <div class="totsub" id="formathint">9:16 is the native LEEBKIT look; square and landscape auto-adapt the layout.</div>
   <div class="row"><label>Preset</label><select id="preset"></select></div>
     <div class="row"><label>Voice</label><select id="voice"></select><button id="voiceprev" title="Audition this voice (first try takes ~10s — it starts the offline voice engine)" style="padding:0 12px">&#9654;</button></div>
@@ -357,6 +357,7 @@ async function uploadFiles(files){
 }
 
 // ---------- project config ----------
+var PORTRAIT_SIZES={'1080x1920':1,'720x1280':1,'1440x2560':1};  // v1.4 C1 tiers
 $('#format').onchange=e=>{P.size=e.target.value;const[w,h]=P.size.split('x').map(Number);P.width=w;P.height=h;
   $('#formathint').textContent=P.height>P.width?'9:16 is the native LEEBKIT look; square and landscape auto-adapt the layout.':
     'Layout, panels and fonts auto-scale for this canvas — check the storyboard strip after switching.'};
@@ -553,7 +554,7 @@ async function refreshProjects(){
 function hydrateControls(){
   const opt=(sel,v)=>{if([...sel.options].some(o=>o.value===String(v)))sel.value=String(v)};
   opt($('#preset'),P.preset);
-  $('#format').value=P.size in {'1080x1920':1,'1080x1080':1,'1920x1080':1}?P.size:'1080x1920';
+  $('#format').value=P.size in {'1080x1920':1,'720x1280':1,'1440x2560':1,'1080x1080':1,'1920x1080':1}?P.size:'1080x1920';
   if(!('width'in P)){const[w,h]=String(P.size).split('x').map(Number);P.width=w;P.height=h;}
   opt($('#fps'),P.fps||30);fpsHint();
   opt($('#voice'),P.voice);
@@ -637,7 +638,7 @@ async function refreshOutputs(){const j=await api('/api/outputs');
 
 boot().then(()=>{setTarget(P.target,true);fpsHint()});renderShots();connectWS();
 // hydrate Project rail from P (saved projects may carry a non-default format)
-$('#format').value=P.size in {'1080x1920':1,'1080x1080':1,'1920x1080':1}?P.size:'1080x1920';
+$('#format').value=P.size in {'1080x1920':1,'720x1280':1,'1440x2560':1,'1080x1080':1,'1920x1080':1}?P.size:'1080x1920';
 if(!('width'in P)){const[w,h]=String(P.size).split('x').map(Number);P.width=w;P.height=h;}
 </script>
 </body>

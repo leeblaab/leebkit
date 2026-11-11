@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "name": "c1_720",
+  "target": 3.0,
+  "fps": 24,
+  "width": 720,
+  "height": 1280,
+  "preset": "leebdark.json",
+  "voice": "none",
+  "shots": [
+    {"t": 1.5, "transition": "cut", "captions": [
+      {"kind": "title_block", "at": 0.2, "text": "720 TIER E2E"},
+      {"kind": "cta", "text": "GO", "at": 0.8}
+    ]},
+    {"t": 1.5, "transition": "fade", "captions": [
+      {"kind": "big_number", "at": 0.3, "text": "42%"}
+    ]}
+  ]
+}
