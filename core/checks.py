@@ -92,8 +92,12 @@ def check_project(engine):
                                   "message": "shot %d chips row %.0fpx > safe %.0fpx"
                                              % (i, m["total"], LIM["chips_total_limit"])})
             elif k == "terminal":
-                for rline in L.get("rows", []):
-                    if rline.strip() and engine.MONO.getlength(rline) > LIM["term_line_limit"]:
+                # audit #9: renderer uses MONO for rows 0-1 and MONOS below
+                # (captions.draw_terminal) — checker measured every row with
+                # MONO, so small-font rows were under-flagged.
+                for r, rline in enumerate(L.get("rows", [])):
+                    fnt = engine.MONO if r < 2 else engine.MONOS
+                    if rline.strip() and fnt.getlength(rline) > LIM["term_line_limit"]:
                         flags.append({"shot": i, "kind": "overflow", "severity": "warn",
                                       "message": "shot %d terminal line '%s' clips (engine truncates it)"
                                                  % (i, rline[:38])})

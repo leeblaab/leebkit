@@ -216,9 +216,15 @@ def draw_cap_lines(eng, dr, L, k, ctx, e):
     wp = clamp01((lt - at) / M.CAPLINE_RAMP)
     if ctx.transition_out:
         wp = min(wp, clamp01((float(ctx.shot_t) - at) / M.CAPLINE_RAMP))
-    for j, line in enumerate(L["lines"]):   # draw path uses RAW lines (checks.py wraps+measures); do not "fix" here — pixels would change
+    # v1.31 (audit #3): wrap like the checker/metrics do — RAW lines could run
+    # off-canvas unflagged and the box grew only for panels. The old "pixels
+    # would change" comment protected a divergence, not a feature: checker and
+    # renderer must agree by construction. Golden baselines regenerate with it.
+    lines = _wrap_panel(eng, dr, L["lines"], eng.BODY, ctx)
+    step = M.capline_step(len(lines))   # normalized so the last line ALWAYS draws (audit #1)
+    for j, line in enumerate(lines):
         eng.word_pop(dr, H * LY["caplines_frac"] + j * LY["capline_h"] - slide, eng.BODY, line, WHITE,
-                     wp - j * M.CAPLINE_LINE_STEP, tracking=3, alpha_cap=a_gate)
+                     wp - j * step, tracking=3, alpha_cap=a_gate)
 
 
 def draw_terminal(eng, dr, L, k, ctx, e):
@@ -241,7 +247,7 @@ def draw_terminal(eng, dr, L, k, ctx, e):
                     LY["term_dot0"] + (d_ + 1) * LY["term_dot_step"], y0 + LY["term_dot_y"] + LY["term_dot_step"] - slide),
                    fill=(cc[0], cc[1], cc[2], a))
     # typing runs until ~1s before shot end; bar animates mid-shot: no freeze
-    rows = L.get("rows", ["> PROMPT", "", "> RENDERING...", "\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591  0%"])
+    rows = L.get("rows", M.TERM_DEFAULT_ROWS)   # single source (audit #8)
     prompt_txt = rows[1] if len(rows) > 1 else ""
     type_end = s_t - 1.0
     prog_t = clamp01((lt - 0.5) / max(0.3, type_end - 0.5))
