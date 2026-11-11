@@ -355,10 +355,12 @@ document.addEventListener('input',e=>{
   if(e.target.id==='pname')P.name=e.target.value;
 });
 document.addEventListener('click',async e=>{
+  // v1.36 obs #2: look picker — closest() so clicks on the inner img/span.gnm hit too
+  const gp=e.target.closest&&e.target.closest('[data-genpick]');
+  if(gp){
+    const card=gp.closest('.card');if(!card)return;
+    P.shots[+card.dataset.i].fill='gen:'+gp.dataset.genpick;renderShots();return}
   const b=e.target;
-  if(b.dataset.genpick!=null){                    // v1.36 obs #2: look picker
-    const card=b.closest('.card');if(!card)return;
-    P.shots[+card.dataset.i].fill='gen:'+b.dataset.genpick;renderShots();return}
   if(b.dataset.rm!=null){P.shots.splice(+b.dataset.rm,1);renderShots();toast('shot removed')}
   if(b.dataset.src!=null){                       // v1.4 C4 background-source toggle
     const i=+b.dataset.i,s=P.shots[i];
