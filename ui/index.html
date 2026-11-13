@@ -510,17 +510,30 @@ $('#voiceprev').onclick=async e=>{
 };
 
 // ---------- music audition (right panel) ----------
+// live-test bug #1 (v1.4): a bed preview played forever — no stop control and
+// starting another left the first running underneath. One shared element now:
+// click toggles play/stop, switching bed or starting any other audition stops
+// the previous one, and finishing naturally resets the button.
+let _musicAud=null;
+function _musBtn(g){const b=$('#musicprev');b.textContent=g}
 $('#musicprev').onclick=async e=>{
+  const b=e.currentTarget;
+  if(_musicAud&&!_musicAud.paused){_musicAud.pause();_musBtn('▶');return}   // click again = stop
   const bed=(P.music&&P.music.bed)||'synthwave';
   if(P.music&&P.music.mode==='none')return toast('music is off — pick a bed first');
-  const b=e.currentTarget;b.disabled=true;b.textContent='…';
+  if(_musicAud)_musicAud.pause();                    // never two beds at once
+  b.disabled=true;b.textContent='…';
   try{
+    let url;
     // C4e obs #1: file beds stream straight from the /music mount (the preview
     // API only knows procedural ids). Strip the "file:" id prefix for the URL.
-    if(P.music&&P.music.mode==='file'){const f=String(bed).replace(/^file:/,'');new Audio('/music/'+encodeURIComponent(f)+'?t='+Date.now()).play()}
-    else{const j=await api('/api/music_preview',{bed});new Audio(j.url+'?t='+Date.now()).play()}
-  }catch(err){toast('music preview: '+err.message)}
-  finally{b.disabled=false;b.textContent='▶'}
+    if(P.music&&P.music.mode==='file'){url='/music/'+String(bed).replace(/^file:/,'')+'?t='+Date.now()}
+    else{const j=await api('/api/music_preview',{bed});url=j.url+'?t='+Date.now()}
+    _musicAud=new Audio(url);
+    _musicAud.onended=()=>{_musBtn('▶')};
+    await _musicAud.play();_musBtn('■');             // playing — click again to stop
+  }catch(err){toast('music preview: '+err.message);_musBtn('▶')}
+  finally{b.disabled=false}
 };
 
 // ---------- animations & text boxes (right panel) ----------
