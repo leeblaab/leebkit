@@ -125,7 +125,8 @@ transition:border-color .15s;display:flex;flex-direction:column;gap:7px}
   <div class="spacer"></div>
   <button id="btn-save">Save project</button>
   <button id="btn-new" title="Start a fresh blank project (current work is kept only if you saved it)" style="font-family:var(--mono);font-size:12px;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 10px">New project</button>
-  <select id="btn-load" title="Load a saved project" style="font-family:var(--mono);font-size:12px;background:#0c0c14;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><option value="">Load project…</option></select>
+  <select id="btn-load" title="Load a recent project (newest first)" style="font-family:var(--mono);font-size:12px;background:#0c0c14;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 10px"><option value="">Load project…</option><option value="__folder__">Load from folder…</option></select>
+  <input type="file" id="projfile" accept=".json" hidden>
   <button id="btn-preview">Storyboard<span style="color:var(--acc)"> ⚑</span></button>
   <button id="btn-render" class="primary">Render MP4<kbd>Ctrl+Enter</kbd></button>
   <!-- v1.4 C5: optional share teaser encoded from the same render (caps are
@@ -703,10 +704,40 @@ $('#btn-save').onclick=async()=>{syncVoLines();try{const j=await api('/api/proje
 async function refreshProjects(){
   try{const j=await api('/api/projects');
     const sel=$('#btn-load'),cur=sel.value;
-    sel.innerHTML='<option value="">Load project…</option>'+j.projects.map(p=>`<option value="${esc(p.file)}">${esc(p.name||p.file)}</option>`).join('');
+    // live-test bug #3: server returns newest-edited first (mtime). Cap the
+    // visible list at the 5 most recent + always keep "Load from folder…" so
+    // a project saved elsewhere is still reachable.
+    const recents=(j.projects||[]).slice(0,5);
+    sel.innerHTML='<option value="">Load project…</option>'
+      +recents.map(p=>`<option value="${esc(p.file)}">${esc(p.name||p.file)}</option>`).join('')
+      +'<option value="__folder__">Load from folder…</option>';
     sel.value=cur;
   }catch(e){}
 }
+function loadProjectObj(proj,f){
+  // mutate P in place: every handler closes over the global P by reference
+  Object.keys(P).forEach(k=>delete P[k]);Object.assign(P,proj);
+  if(!Array.isArray(P.shots))P.shots=[];
+  hydrateControls();
+  toast('loaded '+f);
+}
+$('#btn-load').onchange=async e=>{
+  const f=e.target.value;if(!f)return;
+  if(f==='__folder__'){e.target.value='';$('#projfile').click();return;}
+  try{
+    const proj=await api('/api/project/'+encodeURIComponent(f));
+    loadProjectObj(proj,f);
+  }catch(err){toast('load: '+err.message)}
+  e.target.value='';
+};
+// "Load from folder…": read any .json project file straight off disk (client-
+// side; the server never sees a path). Mirrors the dropdown-load semantics.
+$('#projfile').onchange=async e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  try{loadProjectObj(JSON.parse(await f.text()),f.name)}
+  catch(err){toast('load: '+err.message)}
+  e.target.value='';
+};
 function hydrateControls(){
   const opt=(sel,v)=>{if([...sel.options].some(o=>o.value===String(v)))sel.value=String(v)};
   opt($('#preset'),P.preset);
@@ -719,18 +750,6 @@ function hydrateControls(){
   $('#targetslider').value=P.target;$('#targetval').textContent=P.target+'s';$('#target').textContent=(+P.target).toFixed(1)+'s';
   renderShots();renderAnimList();updateTotals();loadGallery();
 }
-$('#btn-load').onchange=async e=>{
-  const f=e.target.value;if(!f)return;
-  try{
-    const proj=await api('/api/project/'+encodeURIComponent(f));
-    // mutate P in place: every handler closes over the global P by reference
-    Object.keys(P).forEach(k=>delete P[k]);Object.assign(P,proj);
-    if(!Array.isArray(P.shots))P.shots=[];
-    hydrateControls();
-    toast('loaded '+f);
-  }catch(err){toast('load: '+err.message)}
-  e.target.value='';
-};
 // C4e (Yasser live test): after loading a project there was no way back to a
 // blank one short of restarting the server. Same in-place mutation as load;
 // defaults mirror the initial P literal, minus vo_lines (stale shot indices).

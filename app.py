@@ -210,13 +210,18 @@ async def music_upload(file: UploadFile = File(...)):
 @app.get("/api/projects")
 def projects():
     out = []
-    for f in sorted(os.listdir(PROJECTS_DIR)):
-        if f.endswith(".json"):
+    for f in os.listdir(PROJECTS_DIR):
+        if f.endswith(".json") and not f.startswith("_"):
+            path = os.path.join(PROJECTS_DIR, f)
             try:
-                p = json.load(open(os.path.join(PROJECTS_DIR, f), encoding="utf-8"))
-                out.append({"file": f, "name": p.get("name", f), "target": p.get("target")})
+                p = json.load(open(path, encoding="utf-8"))
+                out.append({"file": f, "name": p.get("name", f), "target": p.get("target"),
+                            "modified": int(os.path.getmtime(path))})
             except Exception:
                 pass
+    # live-test bug #3: newest-edited first so the UI can show a useful
+    # recent-projects list (was sorted by filename, i.e. oldest/random).
+    out.sort(key=lambda p: p["modified"], reverse=True)
     return {"projects": out}
 
 
