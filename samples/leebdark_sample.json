@@ -40,9 +40,9 @@
         {
           "kind": "panel_top",
           "lines": [
-            "EVERY IMAGE",
+            "EVERY PROMO",
             "STARTS WITH",
-            "A PROMPT."
+            "A PROJECT."
           ],
           "at": 0.2
         }
@@ -60,10 +60,10 @@
           "kind": "terminal",
           "at": 0.3,
           "rows": [
-            "> PROMPT",
-            "cinematic portrait, dramatic...",
-            "> MODEL  qwen-image / z-image",
-            "> RATIO 9:16   BATCH 08",
+            "> PROJECT  leebdark.json",
+            "shots: 8   captions: 34...",
+            "> PRESET   leebdark",
+            "> RATIO 9:16   RES 1080x1920",
             "> RENDERING...",
             "\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588  100%"
           ]
@@ -82,7 +82,7 @@
         {
           "kind": "panel_mid",
           "lines": [
-            "ONE PROMPT.",
+            "ONE PROJECT.",
             "INFINITE",
             "VARIATIONS."
           ],
@@ -107,12 +107,12 @@
         },
         {
           "kind": "accent_word",
-          "text": "ComfyUI",
+          "text": "OFFLINE",
           "at": 1.0
         },
         {
           "kind": "small",
-          "text": "Your GPU. Your models. Your style.",
+          "text": "Your machine. Your renders. Your style.",
           "at": 1.9
         }
       ]
@@ -128,16 +128,16 @@
         {
           "kind": "panel_top",
           "lines": [
-            "TEXT TO IMAGE,",
-            "FULLY LOCAL."
+            "KINETIC VIDEO,",
+            "FULLY OFFLINE."
           ],
           "at": 0.3
         },
         {
           "kind": "chips",
           "items": [
-            "PROMPT DATASETS",
-            "TEXT-TO-IMAGE",
+            "VOICEOVER + MUSIC",
+            "KINETIC TYPE",
             "9:16"
           ],
           "at": 1.4
@@ -155,14 +155,14 @@
       "captions": [
         {
           "kind": "big_number",
-          "text": "6000+",
+          "text": "30s",
           "at": 0.3
         },
         {
           "kind": "cap_lines",
           "lines": [
-            "PROMPTS IN",
-            "THIS DATASET"
+            "FULL PROMO,",
+            "LOW TENS OF SECONDS"
           ],
           "at": 1.0
         }
@@ -190,7 +190,7 @@
         },
         {
           "kind": "small",
-          "text": "ComfyUI  \u00b7  Prompt Datasets  \u00b7  Text-to-Image",
+          "text": "Kinetic type  \u00b7  Voiceover  \u00b7  Music beds",
           "at": 2.2
         },
         {
@@ -205,27 +205,27 @@
     {
       "shot": 1,
       "offset": 0.5,
-      "text": "Every image starts with a prompt."
+      "text": "Every motion starts with a project."
     },
     {
       "shot": 3,
       "offset": 0.6,
-      "text": "One prompt. Infinite variations."
+      "text": "One project. Infinite variations."
     },
     {
       "shot": 4,
       "offset": 0.4,
-      "text": "Powered by Comfy UI. Your GPU, your models, your style."
+      "text": "Rendered on your machine. Your footage, your style."
     },
     {
       "shot": 5,
       "offset": 0.4,
-      "text": "Text to image, fully local."
+      "text": "Kinetic video, fully offline."
     },
     {
       "shot": 6,
       "offset": 0.4,
-      "text": "Six thousand prompts in this dataset."
+      "text": "Six presets. One engine."
     },
     {
       "shot": 7,
