@@ -1,11 +1,16 @@
 # Runtime deps — pinned to the range this build is tested against
 # (scripts/smoke_test.py runs green on these exact versions; see inline notes).
 # Upper bounds guard against untested major-version breakage.
-fastapi>=0.110,<1.0            # tested: 0.162.0
-uvicorn[standard]>=0.29,<1.0   # tested: 0.54.0
-python-multipart>=0.0.9,<1.0   # tested: 0.0.33
-pillow>=10.0,<14.0             # tested: 13.0.0
-numpy>=1.26,<3.0               # tested: 2.5.4
+# Lower bounds are NOT decoration: they match what the current gate actually
+# runs. A too-low floor let an offline venv self-heal install ancient wheels
+# (fastapi 0.133-era) that broke LEEBKIT at import time with no way to fix it
+# without internet -- if you ever restore a venv offline, pin to these exact
+# versions.
+fastapi>=0.162,<1.0            # tested: 0.162.5
+uvicorn[standard]>=0.54,<1.0   # tested: 0.54.0
+python-multipart>=0.0.33,<1.0  # tested: 0.0.33
+pillow>=13.0,<14.0             # tested: 13.0.0
+numpy>=2.5,<3.0                # tested: 2.5.4
 
 # Optional extras ---------------------------------------------------------
 # On-device voiceover (TTS). Without it the app still works: the UI shows an
