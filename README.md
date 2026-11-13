@@ -4,8 +4,9 @@
 
 ![LEEBKIT 12s promo — looped preview (full voiced MP4 links below)](docs/leebkit_promo.gif)
 
-Full 12s video with voiceover + music (from the v1.3 release):
-https://github.com/leeblaab/leebkit/releases/download/v1.3/promo_v13.mp4
+Full 12s video with voiceover + music:
+https://github.com/leeblaab/leebkit/releases/download/v1.4/promo_v14.mp4
+(v1.3 cut still available at the v1.3 release.)
 *Same project JSON ships in `samples/promo_v12.json` (its 4 stills in
 `samples/media/`), reproducible with one command below.*
 
@@ -27,9 +28,20 @@ stills (Ken Burns), kinetic text, transitions, voiceover and music with auto-duc
 rendered entirely on your machine by Python + ffmpeg. Double-click `start.bat`, open the
 webUI, get an MP4.
 
-**Status: v1.3 — November 2026.** Everything listed below is built and in daily use.
-v1.3 adds: golden-frame regression harness (1260 hashed frames + ffprobe frame-count
-gate, run on every push), wipe_left/wipe_up transitions with correct caption timing,
+**Status: v1.4 — November 2026.** Everything listed below is built and in daily use.
+v1.4 adds: eight kinetic caption kinds — `kicker` (rule + tracked caps stagger), `burst`
+(scale-punch word, per-word color), plus `wipe`, `split`, `slam`, `trackin`, `flashpop`,
+`maskline` — all metrics/checker parity with the renderer; a composition layer so any
+shot can override its layout (`layout: {frac}`) and any caption line takes `align:
+left|center`; per-scene photo slots when loading a template draft (drag-drop or click to
+pick); three new palettes (`volt`, `signal`, `chrome`) plus `onyx`, with five extra OFL
+display fonts; music picker with friendly CC0 bed names + upload-your-own MP3 row
+(same sniff/cap hardening as image uploads); recent-projects dropdown (mtime-sorted,
+load-from-folder); music audition toggle; `start.bat` opens the browser only once the
+port answers and self-heals a stale venv safely. Share teasers: `--gif` (640px/6s/12fps
+cap) and `--webp`. Golden corpus now 1314 hashed frames; CI runs smoke + golden on every
+push (Linux) and the full corpus weekly (Windows).
+v1.3 adds: golden-frame regression harness, wipe_left/wipe_up transitions with correct caption timing,
 caption engine split into per-kind measure/draw modules so the pre-render checker and
 the renderer share one source of truth (no more false overflow warnings), metrics cache
 (measure once per shot, not per frame — long-text projects no longer pay the fit/shrink
@@ -74,7 +86,9 @@ same project JSON you'd get from `samples/promo_v12.json`:
 - **Title auto-wrap** — big display titles AND small caption/sub lines measure themselves and
   wrap/scale to stay inside the frame; hard cuts render cleanly with zero overlay bleed
   between shots.
-- **Presets** — `leebdark` (LEEBLAAB house style) and `neonlight`, JSON hand-editable.
+- **Presets** — seven looks: `leebdark` (LEEBLAAB house style), `neonlight`, `volt`,
+  `signal`, `chrome`, `onyx`, plus format variants; all JSON hand-editable. `drafts/`
+  ships working template projects showing every kinetic kind in action.
 - **Render queue** — background job, live frame-counter progress over websocket; every
   render ends with an ffprobe both-streams duration gate, so a mux desync fails loudly.
 - **CLI renderer** — `render_cli.py` runs the same engine headless, with parallel frame
@@ -100,7 +114,7 @@ terms, and every unknown value in the JSON fails loudly at save time with the ex
 Write me a LEEBKIT promo project as a single JSON object — no markdown fences, no commentary.
 Contract:
 
-- Top level: `"schema": 1` (exactly), `"name"`, `"preset"` (`leebdark` or `neonlight`),
+- Top level: `"schema": 1` (exactly), `"name"`, `"preset"` (one of `leebdark`, `neonlight`, `volt`, `signal`, `chrome`, `onyx`),
   `"size"` (`"720x1280"`, `"1080x1920"` or `"1440x2560"` for vertical; square/landscape like
   `"1080x1080"`, `"1920x1080"` also fine), `"target"` (total seconds, e.g. 30.0), `"fps"` (24 or 30).
 - Optional voiceover: `"voice"` (e.g. `"en_US-lessac-medium"`) and `"vo_lines"`:
@@ -121,7 +135,9 @@ Contract:
 - Captions per shot: `"captions": [{"kind": ..., "at": <seconds into shot, within 0..t>, ...}]`.
   Kinds and their payload: `title_block` (`text`, optional `sub`), `small` (`text`),
   `cta` (`text`), `panel_top` / `panel_mid` (`lines`: array of strings),
-  `chips` (`items`: array of short strings), `cap_lines` (array in `"lines"`).
+  `chips` (`items`: array of short strings), `cap_lines` (array in `"lines"`),
+  `kicker` (`text`, optional `rule`), `burst` (`word`, optional `color`), `terminal`
+  (`rows`: array of strings; progress bar is derived).
 - Use ALL CAPS for big titles, lowercase for small lines. No fields beyond this contract.
 
 My promo: <describe your product/offer, tone, and length>. My image files: <list them>.
@@ -208,8 +224,11 @@ core/audio.py        Piper VO pipeline, procedural music, ducking, mux
 core/checks.py       pre-render red-flag checks (pixel-measured, not eyeballed)
 core/queue.py        background render queue with progress broadcast
 ui/index.html        the entire frontend — single-page vanilla JS/CSS, no framework
-presets/             leebdark.json, neonlight.json (hand-editable styles)
-samples/             example project JSON (bring your own images)
+presets/             seven hand-editable styles (leebdark, neonlight, volt, signal,
+                     chrome, onyx + variants)
+drafts/              template showcase projects using every kinetic caption kind
+music/               CC0 music beds + provenance ledger (ATTRIBUTIONS.md)
+samples/             example project JSON + 4 sample stills (fully reproducible render)
 assets/fonts/        bundled OFL fonts
 docs/QUICKSTART.md
 ```
@@ -220,7 +239,9 @@ uploads and renders never leave your machine.
 ## Contributing
 
 PRs for bug fixes welcome; open an issue before big features — the pillars above are the
-filter. DCO sign-off required (`CONTRIBUTING.md`). Keep anything commercial out of this repo:
+filter. Every push runs the smoke suite + sampled golden frames on Linux, and the full
+golden corpus (1314 hashed frames) weekly on Windows — pixel drift fails CI. DCO sign-off
+required (`CONTRIBUTING.md`). Keep anything commercial out of this repo:
 preset/content packs and future Pro-tier features stay proprietary to LEEBLAAB.
 
 ## License

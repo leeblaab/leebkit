@@ -17,8 +17,9 @@ network calls.
    total against your target length.
 3. Type caption lines (one per line, big two-line style) and an optional
    voice-over line per shot.
-4. Pick a **preset** (leebdark / neonlight), a **music bed** (procedural or your
-   own mp3 in `music/`), and a **voice** (Piper models in `vo/models/`).
+4. Pick a **preset** (leebdark, neonlight, volt, signal, chrome, onyx), a **music
+   bed** (procedural, one of the bundled CC0 beds — click to audition, click again to
+   stop — or upload your own mp3), and a **voice** (Piper models in `vo/models/`).
 5. Hit **Storyboard ⚑** — one strip, all shots, plus automatic red-flags for
    text overflow, animations that can't finish in their shot window, empty
    image slots, and VO longer than its shot. Fix flagged cards (red border)
@@ -29,8 +30,11 @@ network calls.
 ## CLI (no browser)
     python render_cli.py myproject.json --out output/my.mp4
 
-Project JSON is the source of truth: hand-edit `projects/*.json` or start from
-`samples/leebdark_sample.json`. Schema notes in README §Project JSON.
+Project JSON is the source of truth: hand-edit `projects/*.json`, start from
+`samples/leebdark_sample.json`, or load one of the `drafts/*.json` template showcases
+(every kinetic caption kind in action — loaded drafts give you per-scene photo slots).
+Schema notes in README §"Use LEEBKIT with ChatGPT / Claude". Share teasers without
+opening a video editor: `--gif` or `--webp` on the CLI.
 
 ## Voice-over setup (optional)
     pip install piper-tts
