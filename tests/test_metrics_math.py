@@ -29,13 +29,16 @@ class FakeEng:
     def _wpx(self, s):
         return len(s) * self._cw
 
-    def fit_panel_lines(self, dr, lines, fnt):
+    def fit_panel_lines(self, dr, lines, fnt, avail_w=None):
+        # v1.4 composition layer: avail_w overrides the wrap limit (mirrors
+        # core/engine.py Engine.fit_panel_lines); None = preset default.
+        limit = self.L["panel_text_limit"] if avail_w is None else avail_w
         out = []
         for l in lines:
             cur = ""
             for word in l.split(" "):
                 cand = (cur + " " + word).strip()
-                if self._wpx(cand) <= self.L["panel_text_limit"] or not cur:
+                if self._wpx(cand) <= limit or not cur:
                     cur = cand
                 else:
                     out.append(cur)

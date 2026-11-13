@@ -44,7 +44,9 @@ FrameCtx = namedtuple("FrameCtx", [
     "slide",               # eased slide offset px
     "a_gate",              # outgoing-transition alpha cap or None
     "transition_out",      # XF window length or None (stagger-freeze input)
-    "cap_idx",             # (shot_idx, caption_idx): C3b per-caption cache slot
+    "cap_idx",             # (shot_idx, caption_idx): C3b per-caption slot for fit/wrap caches
+    "align",               # v1.4 composition layer: "center" (default) | "left"
+    "avail_w",             # horizontal budget for a left-aligned run (wrap-aware widths)
 ])
 
 
@@ -67,10 +69,11 @@ def _wrap(eng, dr, words, fnt, limit, tracking=0, ctx=None):
     return list(hit)   # copy so callers never mutate the cache
 
 
-def _draw_tinted_line(eng, dr, y_center, words, fills, fnt, tracking):
+def _draw_tinted_line(eng, dr, y_center, words, fills, fnt, tracking, xa=None):
     """v1.36 (Onyx draft): draw one title line word-by-word with per-word RGBA
     fills, mirroring draw_center_text's tracked layout math exactly (per-char
-    advances + tracking) so tinted lines sit pixel-identical to white ones."""
+    advances + tracking) so tinted lines sit pixel-identical to white ones.
+    v1.4 composition layer: `xa` overrides the start x (left-align)."""
     W = eng.W
     wsp = dr.textlength(" ", font=fnt)
     pieces = []   # (char_or_space, advance)
@@ -80,7 +83,7 @@ def _draw_tinted_line(eng, dr, y_center, words, fills, fnt, tracking):
         if wi < len(words) - 1:
             pieces.append((" ", wsp, None))
     total = sum(a + tracking for (c, a, f) in pieces) - tracking
-    x = (W - total) / 2
+    x = (W - total) / 2 if xa is None else xa
     for c, adv, fill in pieces:
         if fill is not None:
             dr.text((x, y_center), c, font=fnt, fill=fill)
@@ -116,9 +119,14 @@ def draw_title_block(eng, dr, L, k, ctx, e):
     nlines = max(1, len(lines))
     # underline + subtitle ride below the last title line
     base_y = H * LY["title_frac"] - (nlines - 1) * line_h / 2
+    # v1.4 composition layer: left-align anchor (None = shipped center path).
+    # Wrap limit already comes from LY["title_limit"], which a per-shot
+    # "layout" override can narrow to the left column — width-aware by design.
+    xa = eng.x_anchor(ctx, 0) if ctx.align == "left" else None
     if tfills is None:
         eng.draw_title_lines(dr, base_y - slide, lines, tfnt,
-                             (WHITE[0], WHITE[1], WHITE[2], a), trk, line_h, rise=rise)
+                             (WHITE[0], WHITE[1], WHITE[2], a), trk, line_h, rise=rise,
+                             xa=xa)
     else:
         # per-word fill: word index continues across wrapped lines so the
         # white/pink alternation follows the READING order of the title
@@ -130,11 +138,12 @@ def draw_title_block(eng, dr, L, k, ctx, e):
             fills = [(tfills[woff + j][0], tfills[woff + j][1], tfills[woff + j][2], a)
                      for j in range(len(words))]
             woff += len(words)
-            _draw_tinted_line(eng, dr, y, words, fills, tfnt, trk)
+            _draw_tinted_line(eng, dr, y, words, fills, tfnt, trk, xa=xa)
     lw = int(min(LY["ul_max"], max(LY["ul_min"], tsize * 4))
              * ease_o(ep))   # C7: shared settle clock
     ul_y = H * LY["title_frac"] + (nlines - 1) * line_h / 2 + int(tsize * LY["ul_gap_k"])
-    dr.rectangle(((W - lw) / 2, ul_y - slide, (W + lw) / 2, ul_y + LY["ul_h"] - slide),
+    ux = xa if xa is not None else (W - lw) / 2
+    dr.rectangle((ux, ul_y - slide, ux + lw, ul_y + LY["ul_h"] - slide),
                  fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
     sub = L.get("sub", "")
     if sub:
@@ -189,7 +198,8 @@ def draw_panel(eng, dr, L, k, ctx, e):
         col = ACCENT if (j == n - 1 and (line.endswith(".") or k == "panel_mid")) else WHITE
         eng.word_pop(dr, py + LY["panel_pad_y"] + j * LY["line_h_panel"] - slide,
                      eng.H1, line, col,
-                     wprog * (span / 0.55) - j * Sv, tracking=2, alpha_cap=a_gate)
+                     wprog * (span / 0.55) - j * Sv, tracking=2, alpha_cap=a_gate,
+                     xa=(LY["left_inset"] - 6) if ctx.align == "left" else None)
 
 
 def draw_small(eng, dr, L, k, ctx, e):
@@ -202,7 +212,12 @@ def draw_small(eng, dr, L, k, ctx, e):
     txt = L["text"]
     sl_lines = _wrap(eng, dr, txt.split(" "), eng.SMALL, LY["small_chip_limit"], ctx=ctx) or [""]
     w = max(dr.textlength(l, font=eng.SMALL) for l in sl_lines)
-    x = (W - w) / 2
+    # v1.4 composition layer: left-align pins the chip's TEXT COLUMN to the
+    # shared inset; the rounded plate hugs it with the same padding on both
+    # sides (the plate edge may reach closer to the frame than a centered
+    # chip — checks.py budgets the pad against W - 2*inset for align:left).
+    left_aligned = ctx.align == "left"
+    x = eng.x_anchor(ctx, w) if left_aligned else (W - w) / 2
     bh = LY["small_chip_h"] + (len(sl_lines) - 1) * LY["small_line_h"]
     chip_a = int(195 * ease_o(prog))
     if ctx.a_gate is not None:
@@ -212,8 +227,13 @@ def draw_small(eng, dr, L, k, ctx, e):
                          radius=16, fill=(eng.PANEL[0], eng.PANEL[1], eng.PANEL[2],
                                           chip_a))
     for j, l in enumerate(sl_lines):
-        eng.draw_center_text(dr, H * LY["small_frac"] + j * LY["small_line_h"] - slide, l, eng.SMALL,
-                             (WHITE[0], WHITE[1], WHITE[2], a))
+        if left_aligned:
+            lx = eng.x_anchor(ctx, dr.textlength(l, font=eng.SMALL))
+            dr.text((lx, H * LY["small_frac"] + j * LY["small_line_h"] - slide), l,
+                    font=eng.SMALL, fill=(WHITE[0], WHITE[1], WHITE[2], a))
+        else:
+            eng.draw_center_text(dr, H * LY["small_frac"] + j * LY["small_line_h"] - slide, l, eng.SMALL,
+                                 (WHITE[0], WHITE[1], WHITE[2], a))
 
 
 def draw_cta(eng, dr, L, k, ctx, e):
@@ -222,7 +242,9 @@ def draw_cta(eng, dr, L, k, ctx, e):
     ACCENT, WHITE = ctx.ACCENT, ctx.WHITE
     txt = L["text"]
     w = dr.textlength(txt, font=eng.BODY)
-    x = (W - w) / 2
+    # v1.4 composition layer: left-align anchors text + outline box at the
+    # shared inset (box clamp against the frame edge stays as-is).
+    x = eng.x_anchor(ctx, w) if ctx.align == "left" else (W - w) / 2
     y = H * LY["cta_frac"] - slide
     pad = LY["cta_pad"]
     # clamp the outline box to the frame so a long CTA can never
@@ -253,8 +275,9 @@ def draw_kicker(eng, dr, L, k, ctx, e):
     # v1.36 (Onyx draft): "rule: false" drops the accent rule for a bare
     # letterspaced-caps line (drafts may restyle; shipped kickers keep it).
     if L.get("rule", True):
-        dr.rectangle(((W - rule_w) / 2, y - LY["kicker_rule_gap"],
-                      (W + rule_w) / 2, y - LY["kicker_rule_gap"] + LY["kicker_rule_h"]),
+        rx = eng.x_anchor(ctx, rule_w) if ctx.align == "left" else (W - rule_w) / 2
+        dr.rectangle((rx, y - LY["kicker_rule_gap"],
+                      rx + rule_w, y - LY["kicker_rule_gap"] + LY["kicker_rule_h"]),
                      fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
     # letterspaced small caps, staggered rise (same overshoot curve as word_pop);
     # optional per-word "colors" (v1.36 draft tint), default ACCENT everywhere.
@@ -264,7 +287,8 @@ def draw_kicker(eng, dr, L, k, ctx, e):
     wsp = dr.textlength(" ", font=eng.SMALL)
     ws = [dr.textlength(x, font=eng.SMALL) for x in words]
     total = sum(ws) + wsp * (len(words) - 1) + trk * sum(len(x) for x in words)
-    x = (W - total) / 2
+    # v1.4 composition layer: left-align anchors line + rule at the shared inset
+    x = eng.x_anchor(ctx, total) if ctx.align == "left" else (W - total) / 2
     for i, word in enumerate(words):
         wt = clamp01((ep - i * 0.15) / 0.45)
         if wt <= 0:
@@ -306,7 +330,10 @@ def draw_burst(eng, dr, L, k, ctx, e):
     names = L.get("colors")
     if names:
         col = ctx.PAL.get(names[0], ACCENT)
-    dr.text(((W - w) / 2, H * LY["burst_frac"] - slide), txt, font=fnt,
+    # v1.4 composition layer: left-align anchors the stomp word at the shared
+    # inset (scale punch unchanged).
+    bx = eng.x_anchor(ctx, w) if ctx.align == "left" else (W - w) / 2
+    dr.text((bx, H * LY["burst_frac"] - slide), txt, font=fnt,
             fill=(col[0], col[1], col[2], a))
 
 
@@ -433,6 +460,11 @@ def draw_split(eng, dr, L, k, ctx, e):
     rw = dr.textlength(right, font=fnt) if right else 0.0
     gap = eng.L["h1"] * 0.22
     total = lw + rw + gap
+    # v1.4 composition layer: split geometry is a CENTER MEET by design —
+    # the two halves slide inward and collide at the frame center, so there
+    # is no left-inset anchor that keeps the move meaningful (ChatGPT
+    # directive 3: don't force alignment where the geometry doesn't support
+    # it). align:"left" on split falls back to the centered meet.
     x = (W - total) / 2
     sp = ease_o(prog)   # settle on the shared gated clock; metrics done_at = at+POP_RAMP
     off = (1 - sp) * W * 0.35
@@ -463,7 +495,10 @@ def draw_slam(eng, dr, L, k, ctx, e):
     if a_gate is not None:
         a = min(a, a_gate)
     col = _kin_cols(L, ctx, WHITE)[0]
-    dr.text(((W - w) / 2, H * LY["burst_frac"] - slide), txt, font=fnt, fill=col + (a,))
+    # v1.4 composition layer: left-align anchors the rest-size run at the
+    # shared inset (the overscan start still bleeds past the frame by design).
+    x = eng.x_anchor(ctx, w) if ctx.align == "left" else (W - w) / 2
+    dr.text((x, H * LY["burst_frac"] - slide), txt, font=fnt, fill=col + (a,))
 
 
 def draw_trackin(eng, dr, L, k, ctx, e):
@@ -485,7 +520,13 @@ def draw_trackin(eng, dr, L, k, ctx, e):
     wsp = dr.textlength(" ", font=fnt)
     ws = [dr.textlength(w, font=fnt) for w in words]
     total = sum(ws) + wsp * (len(words) - 1) + trk * sum(len(w) for w in words)
-    x = (W - total) / 2
+    # v1.4 composition layer: left-align anchors the lockup at the shared
+    # inset; the wrap gate is width-aware via ctx.avail_w (the WIDE tracking
+    # state at t=0 must still fit — checks.py measures it too).
+    if ctx.align == "left":
+        x = LY["left_inset"]
+    else:
+        x = (W - total) / 2
     y = H * LY["accent_frac"] - slide
     for i, w in enumerate(words):
         col = cols[i % len(cols)]
@@ -511,7 +552,8 @@ def draw_flashpop(eng, dr, L, k, ctx, e):
     wsp = dr.textlength(" ", font=fnt)
     ws = [dr.textlength(w, font=fnt) for w in words]
     total = sum(ws) + wsp * (len(words) - 1)
-    x = (W - total) / 2
+    # v1.4 composition layer: left-align anchors the word run at the shared inset
+    x = eng.x_anchor(ctx, total) if ctx.align == "left" else (W - total) / 2
     y = H * LY["accent_frac"] - slide
     cols = _kin_cols(L, ctx, WHITE)
     for i, w in enumerate(words):
@@ -545,7 +587,8 @@ def draw_maskline(eng, dr, L, k, ctx, e):
     wsp = dr.textlength(" ", font=fnt)
     ws = [dr.textlength(w, font=fnt) for w in words]
     total = sum(ws) + wsp * (len(words) - 1)
-    x0 = (W - total) / 2
+    # v1.4 composition layer: left-align anchors the masked word run at the inset
+    x0 = eng.x_anchor(ctx, total) if ctx.align == "left" else (W - total) / 2
     y = H * LY["caplines_frac"] - slide
     cols = _kin_cols(L, ctx, WHITE)
     asc = int(eng.L["body"] * 1.05)   # mask window height above the baseline row
@@ -586,11 +629,13 @@ def draw_big_number(eng, dr, L, k, ctx, e):
 
 
 def _wrap_panel(eng, dr, lines, fnt, ctx):
-    """fit_panel_lines routed through the per-caption cache (C3b)."""
-    out = []
-    for l in lines:
-        out.extend(_wrap(eng, dr, l.split(" "), fnt, eng.L["panel_text_limit"], ctx=ctx))
-    return out
+    """fit_panel_lines routed through the per-caption cache (C3b).
+    v1.4 composition layer: a left-aligned panel/cap run wraps to the shared-
+    inset column (ctx.avail_w), so align:left reads as a left-aligned
+    paragraph inside the frame-spanning plate. The checker budgets these lines
+    against W-160 (plate inner width) — strictly looser than the wrap limit,
+    so wrapped lines can never clip."""
+    return eng.fit_panel_lines(dr, lines, fnt, avail_w=ctx.avail_w)
 
 
 def draw_cap_lines(eng, dr, L, k, ctx, e):
@@ -608,7 +653,8 @@ def draw_cap_lines(eng, dr, L, k, ctx, e):
     step = M.capline_step(len(lines))   # normalized so the last line ALWAYS draws (audit #1)
     for j, line in enumerate(lines):
         eng.word_pop(dr, H * LY["caplines_frac"] + j * LY["capline_h"] - slide, eng.BODY, line, WHITE,
-                     wp - j * step, tracking=3, alpha_cap=a_gate)
+                     wp - j * step, tracking=3, alpha_cap=a_gate,
+                     xa=(LY["left_inset"] - 6) if ctx.align == "left" else None)
 
 
 def draw_terminal(eng, dr, L, k, ctx, e):

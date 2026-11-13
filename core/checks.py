@@ -16,6 +16,7 @@ import os
 from PIL import Image, ImageDraw, ImageFont
 
 from .engine import FONTS_DIR, Engine, clamp01
+from .layout import merge_layout
 from . import metrics as M
 
 
@@ -43,10 +44,16 @@ def check_project(engine):
                 flags.append({"shot": i, "kind": "empty_slot", "severity": "error",
                               "message": "shot %d has no image (slot empty or file missing)" % i})
 
+        # v1.4 composition layer: per-shot layout overrides merged over the
+        # preset defaults — checker budgets against the SAME geometry the
+        # renderer draws with (renderer/checker agree by construction).
+        LY = merge_layout(engine.L, s.get("layout"))
         for L in s.get("captions", []):
             k = L["kind"]
             at = float(L.get("at", 0.2))
-            m = M.measure(engine, L, k, t, at)   # same numbers as the draw path
+            left = L.get("align") == "left"
+            avail_w = (engine.W - 2 * LY["left_inset"]) if left else None
+            m = M.measure(engine, L, k, t, at, avail_w=avail_w)   # same numbers as the draw path
 
             # --- flag 1: text overflow (PIL measured) ---
             def over(txt, fnt, limit=safe_w, label=None):
@@ -59,7 +66,10 @@ def check_project(engine):
             if k in ("panel_top", "panel_mid"):
                 # measure the WRAPPED result from metrics: the engine auto-wraps
                 # long lines, so only genuinely unbreakable input (one monster
-                # word) should ever flag overflow here
+                # word) should ever flag overflow here. The plate spans the
+                # frame at panel_x regardless of align; left-aligned text sits
+                # inside it, so budget = plate width (panel_text_limit already
+                # equals W - 2*panel_x*... derived in layout.py — stay there).
                 for wl in m["lines"]:
                     over(wl, engine.H1, limit=LIM["panel_text_limit"])
             elif k == "title_block":
@@ -91,7 +101,7 @@ def check_project(engine):
                          (engine.BODY if k in ("cta", "handle") else engine.SMALL), limit=lim)
             elif k == "cap_lines":
                 for wl in m["lines"]:
-                    over(wl, engine.BODY, limit=LIM["panel_text_limit"])
+                    over(wl, engine.BODY, limit=(avail_w or LIM["panel_text_limit"]))
             elif k == "chips":
                 if m["total"] > LIM["chips_total_limit"]:
                     flags.append({"shot": i, "kind": "overflow", "severity": "error",

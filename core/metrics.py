@@ -92,15 +92,17 @@ def _probe_dr():
     return ImageDraw.Draw(Image.new("RGB", (8, 8)))
 
 
-def measure(eng, L, k, shot_t, at_raw):
+def measure(eng, L, k, shot_t, at_raw, avail_w=None):
     """Per-kind measurements. Returns dict; keys vary by kind:
     lines/n, done_at (settle time), widths/total, rows_done/typing_done,
-    tsize/trk, longest_word. Values equal what the draw path computes."""
+    tsize/trk, longest_word. Values equal what the draw path computes.
+    v1.4 composition layer: `avail_w` = horizontal budget for a left-aligned
+    run (shared-inset column); None = shipped center behavior everywhere."""
     at = preamble_at(k, at_raw)
     m = {"at_eff": at}
 
     if k in ("panel_top", "panel_mid"):
-        lines = eng.fit_panel_lines(_probe_dr(), L["lines"], eng.H1)
+        lines = eng.fit_panel_lines(_probe_dr(), L["lines"], eng.H1, avail_w=avail_w)
         n = len(lines)
         nw = [len(l.split(" ")) for l in lines]
         span = max(nw) * WORD_STEP + WORD_RAMP
@@ -118,7 +120,7 @@ def measure(eng, L, k, shot_t, at_raw):
         m.update(lines=lines, n=n, span=span, done_at=done_at)
 
     elif k == "cap_lines":
-        cl = eng.fit_panel_lines(_probe_dr(), L["lines"], eng.BODY)
+        cl = eng.fit_panel_lines(_probe_dr(), L["lines"], eng.BODY, avail_w=avail_w)
         # v1.31: draw path wraps too (audit #3 — checker measured wrapped
         # lines while the renderer drew RAW, so off-canvas text went unflagged).
         # line j appear = wp - j*capline_step(n); inside word_pop its last word

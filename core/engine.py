@@ -24,6 +24,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 
 from .layout import build_layout, clamp_font_sizes
+from . import layout as LAYOUT
 from .camutil import cam_name
 from .audio import VO_SPEED_RANGE  # v1.4 C2: one source of truth for speed bounds
 from .generators import (GEN_PRESETS, render as gen_render,
@@ -396,18 +397,27 @@ class Engine:
         return ks
 
     # ------------------------------------------------------------- text helpers
-    def draw_center_text(self, dr, y, txt, fnt, fill, tracking=0):
+    def x_anchor(self, ctx, w):
+        """v1.4 composition layer: horizontal start x for a run of width `w`.
+        Center (the shipped default) -> centered; align 'left' -> the ONE
+        shared safe inset LY['left_inset']. Returning None from callers that
+        take xa keeps their center math byte-identical."""
+        if ctx.align == "left":
+            return ctx.LY["left_inset"]
+        return (self.W - w) / 2
+
+    def draw_center_text(self, dr, y, txt, fnt, fill, tracking=0, xa=None):
         W = self.W
         if tracking:
             ws = [dr.textlength(c, font=fnt) for c in txt]
             total = sum(ws) + tracking * (len(txt) - 1)
-            x = (W - total) / 2
+            x = (W - total) / 2 if xa is None else xa
             for c, w in zip(txt, ws):
                 dr.text((x, y), c, font=fnt, fill=fill)
                 x += w + tracking
         else:
             w = dr.textlength(txt, font=fnt)
-            dr.text(((W - w) / 2, y), txt, font=fnt, fill=fill)
+            dr.text(((W - w) / 2 if xa is None else xa, y), txt, font=fnt, fill=fill)
 
     def _measure_tracked(self, dr, txt, fnt, tracking):
         return sum(dr.textlength(c, font=fnt) for c in txt) + tracking * max(0, len(txt) - 1)
@@ -483,10 +493,12 @@ class Engine:
         self._metrics_cache[ck] = lines
         return list(lines)   # copy: callers may mutate the returned list, never the cache
 
-    def fit_panel_lines(self, dr, lines, fnt):
+    def fit_panel_lines(self, dr, lines, fnt, avail_w=None):
         """Wrap raw panel/cap lines to the text safe width (W-160) so long user
-        input can never clip at the frame edge. Returns wrapped line list."""
-        limit = self.L["panel_text_limit"]
+        input can never clip at the frame edge. Returns wrapped line list.
+        v1.4 composition layer: `avail_w` overrides the limit for a
+        left-aligned run (shared-inset column); None = shipped behavior."""
+        limit = self.L["panel_text_limit"] if avail_w is None else avail_w
         out = []
         for l in lines:
             out.extend(self.wrap_words(dr, l.split(" "), fnt, limit))
@@ -499,18 +511,22 @@ class Engine:
         return self.wrap_words(dr, text.split(" "), fnt, limit, tracking=tracking)
 
     def draw_title_lines(self, dr, y_center, lines, fnt, fill, tracking, line_h,
-                         rise=0.0):
+                         rise=0.0, xa=None):
         """C7: `rise` = back-out overshoot offset (px) shared by the whole
-        title block — glyphs, underline and sub plate lift as ONE element."""
+        title block — glyphs, underline and sub plate lift as ONE element.
+        v1.4 composition layer: `xa` overrides the line start x (left-align);
+        None keeps every shipped title byte-identical."""
         ys = [y_center - (len(lines) - 1) * line_h / 2 + j * line_h for j in range(len(lines))]
         for y, l in zip(ys, lines):
-            self.draw_center_text(dr, y - rise, l, fnt, fill, tracking=tracking)
+            self.draw_center_text(dr, y - rise, l, fnt, fill, tracking=tracking, xa=xa)
         return ys
 
-    def word_pop(self, dr, y, fnt, txt, color, appear, tracking=0, dy=30, alpha_cap=None):
+    def word_pop(self, dr, y, fnt, txt, color, appear, tracking=0, dy=30, alpha_cap=None,
+                 xa=None):
         """Whole-word staggered pop with overshoot. appear is this call's clock.
         alpha_cap: hard ceiling on glyph alpha (outgoing layer inside a
-        transition window must fade even though its pop clock is frozen)."""
+        transition window must fade even though its pop clock is frozen).
+        v1.4 composition layer: `xa` = left start x (left-align); None centers."""
         if appear <= 0:
             return
         W = self.W
@@ -518,7 +534,7 @@ class Engine:
         wsp = dr.textlength(" ", font=fnt)
         ws = [dr.textlength(w, font=fnt) for w in words]
         total = sum(ws) + wsp * (len(words) - 1) + tracking * sum(len(w) for w in words)
-        x = (W - total) / 2
+        x = (W - total) / 2 if xa is None else xa
         for i, w in enumerate(words):
             wt = clamp01((appear - i * 0.18) / 0.36)
             if wt <= 0:
@@ -539,15 +555,17 @@ class Engine:
                 x += ws[i]
             x += wsp + tracking
 
-    def line_wipe(self, dr, y, fnt, txt, color, prog, tracking=0, alpha_cap=None):
+    def line_wipe(self, dr, y, fnt, txt, color, prog, tracking=0, alpha_cap=None,
+                  xa=None):
         """v1.4 (kinetic drafts): horizontal mask-wipe reveal — the glyphs sit
         still and a vertical edge sweeps left->right across them (the market
-        "wipe-on" move). prog 0..1 opens the mask; no motion on the text."""
+        "wipe-on" move). prog 0..1 opens the mask; no motion on the text.
+        v1.4 composition layer: `xa` = left start x (left-align); None centers."""
         if prog <= 0:
             return
         W = self.W
         w = self._measure_tracked(dr, txt, fnt, tracking)
-        x0 = (W - w) / 2
+        x0 = (W - w) / 2 if xa is None else xa
         reveal = int(w * min(1.0, prog))
         if reveal <= 0:
             return
@@ -570,7 +588,7 @@ class Engine:
         self._canvas.paste(tmp, (int(x0), int(y)), tmp)
 
     def word_pump(self, dr, y, mkfont, txt, colors, appear, tracking=0,
-                  base_size=0, kick=None, alpha_cap=None):
+                  base_size=0, kick=None, alpha_cap=None, xa=None):
         """v1.36 (Onyx draft): per-word SCALE PUNCH — each word pops in at
         ~2x size and overshoots down to rest (the market "pump" move), vs
         word_pop's translate rise. `colors` = list of RGBA per word (cycled).
@@ -584,7 +602,7 @@ class Engine:
         wsp = dr.textlength(" ", font=mkfont(base_size))
         ws = [dr.textlength(w, font=mkfont(base_size)) for w in words]
         total = sum(ws) + wsp * (len(words) - 1) + tracking * sum(len(w) for w in words)
-        x = (self.W - total) / 2
+        x = (self.W - total) / 2 if xa is None else xa
         for i, w in enumerate(words):
             wt = max(0.0, min(1.0, (appear - i * M.PUMP_STEP) / M.PUMP_RAMP))
             if wt <= 0:
@@ -723,7 +741,11 @@ class Engine:
         # pixel-identical (no golden churn).
         PAL = {name: hex2rgb(h) for name, h in self.preset.get("colors", {}).items()}
         P = self.preset
-        LY = self.L
+        # v1.4 composition layer: per-shot "layout": {...} overrides merged
+        # over the preset fracs (core/layout.merge_layout). No overrides ->
+        # merge returns the SHARED self.L, so shipped projects keep byte-
+        # identical behavior and zero extra dict copies.
+        LY = LAYOUT.merge_layout(self.L, s.get("layout"))
         TRK = self.TRK
 
         for ci, L in enumerate(s.get("captions", [])):
@@ -782,7 +804,13 @@ class Engine:
                 lt=lt, at=at, g=g, shot_t=float(s["t"]),
                 prog=prog, a=a, slide=slide,
                 a_gate=a_gate, transition_out=transition_out,
-                cap_idx=(i, ci))   # C3b: stable per-caption slot for fit/wrap caches
+                cap_idx=(i, ci),   # C3b: stable per-caption slot for fit/wrap caches
+                # v1.4 composition layer: caption-level "align": "left" shifts
+                # the anchor from center to LY["left_inset"]; absent/"center"
+                # is the byte-identical shipped path. avail_w = horizontal
+                # budget a left-aligned run gets (wrap-aware widths derive it).
+                align=L.get("align", "center"),
+                avail_w=W - 2 * LY["left_inset"])
             _cf(self, dr, L, k, ctx, (clamp01, ease_o, ease_ow))
         # film grain (per-frame seeded; disabled in presets with grain_points=0)
         gp = int(P.get("grain_points", 90))

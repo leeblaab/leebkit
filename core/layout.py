@@ -122,7 +122,40 @@ def build_layout(W, H, sizes, landscape=None):
     L["slide_dy"] = max(10, int(round(36 * S)))   # caption slide-in rise
     from . import metrics as _M   # C7: title pop-in rise shares the metrics clock source
     L["title_rise"] = max(8, int(round(_M.TITLE_RISE_PX * S)))
+    # v1.4 composition layer: ONE shared safe inset for left-aligned captions
+    # (ChatGPT directive: consistent horizontal margin, not per-kind magic).
+    L["left_inset"] = sc(80)
     return L
+
+
+# v1.4 composition layer: per-shot layout overrides merged over the preset
+# fracs. Whitelist = anchor fracs + wrap limits ONLY; font sizes and motion
+# constants are NOT overridable from project JSON (a shot can never smuggle a
+# scale change past the checks). Unknown keys are dropped with a loud warning.
+LAYOUT_OVERRIDE_FRAC_PREFIX = ("_frac",)          # any *_frac key is mergeable
+LAYOUT_OVERRIDE_LIMITS = frozenset({
+    "title_limit", "panel_text_limit", "safe_w", "cta_limit",
+    "small_chip_limit", "chips_total_limit", "term_line_limit",
+})
+
+
+def merge_layout(L, ov):
+    """Return a per-shot copy of the engine layout dict with `ov` merged over
+    it. Only *_frac anchors and whitelisted wrap limits are accepted; every
+    other key is ignored (warning) so the base layout stays intact. Passing
+    None/empty returns `L` itself — the shared dict — so projects without
+    overrides keep byte-identical behavior AND zero extra copies."""
+    if not ov:
+        return L
+    M = dict(L)
+    for k, v in ov.items():
+        if (k.endswith(LAYOUT_OVERRIDE_FRAC_PREFIX) or k == "left_inset"
+                or k in LAYOUT_OVERRIDE_LIMITS):
+            M[k] = float(v)
+        else:
+            print("[layout] WARNING: ignoring unsupported layout override %r=%r "
+                  "(only *_frac anchors and wrap limits are mergeable)" % (k, v))
+    return M
 
 
 def clamp_font_sizes(L, measure):
