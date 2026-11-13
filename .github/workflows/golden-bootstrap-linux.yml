@@ -1,0 +1,28 @@
+name: golden bootstrap (linux)
+
+# One-off, manual-only. Generates tests/golden/hashes-linux.json ON the
+# platform it belongs to — Pillow rasterizes fonts slightly differently per OS,
+# so a Windows-made linux baseline can never match the ubuntu gate (proven by
+# probe run 43405407729). Download the artifact from this run's Summary page
+# and commit it as tests/golden/hashes-linux.json.
+on:
+  workflow_dispatch:
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Regenerate linux baseline (full corpus)
+        run: python scripts/golden_frames.py --os-name linux --update
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hashes-linux-full
+          path: tests/golden/hashes-linux.json
