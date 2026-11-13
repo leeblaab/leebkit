@@ -22,7 +22,5 @@ jobs:
         run: pip install -r requirements.txt
       - name: Smoke test (headless render + ffprobe gate; check count printed by the script)
         run: python scripts/smoke_test.py
-      - name: TEMP probe — sampled promo hashes vs baseline
-        run: python scripts/_gate_probe_tmp.py
       - name: Golden frames (sampled subset; full corpus runs on the Windows gate)
         run: python scripts/golden_frames.py --sample 10
