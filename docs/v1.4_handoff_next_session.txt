@@ -1,163 +1,47 @@
 Continue LEEBKIT v1.4 at C:\Products\reelkit — load the `reelkit-project` skill FIRST (it holds all standing rules, gates and locked decisions), then read docs/v1.4_plan.md in the repo.
 
-STATE: master @ 422f642 = C4 shipped locally (mixed + generator-only projects end-to-end). NOT pushed — Yasser has not given the word to push. C1 a017b40 + C2 125a5d9 + C3 3c0aa3d + C4 422f642 all green. NEXT = Yasser live-tests C4 in the UI, then C4b.
+STATE (verified 2026-11-13): HEAD = 5f22eb5. Local chain since v1.31 (23476e9) is ~17 commits, ALL UNPUSHED — Yasser's word still gates push/tag. Working tree CLEAN (only scratch/voltage_frames/ untracked). Gates at HEAD: SMOKE PASS 45, GOLDEN PASS 1314 (hashes.json untouched), unit tests all green. GitHub = leeblaab/leebkit; repo-local git identity LEEBLAAB <banyadam18@gmail.com> (host global config is nillianstore — WRONG, always verify before committing).
 
-C3 landed shape (grounded):
-- core/generators.py (new): GEN_PRESETS with the six locked names (midnight_drift, grid_pulse, paper_grain, ember_flow, deep_current, signal_field); palette = 4 designed hex per preset (D2 — never reads project color preset; presets/ dir colors cross-checked disjoint by test). render(name,W,H,offset,amp=1.0) -> PIL RGB. ONE shared driver (drv = offset*2pi*0.10; pattern layers MULT_PATTERN=0.6x, vignette stationary, grain MULT_GRAIN=1.0); amp multiplies DISPLACEMENT only (Subtle=0.4 in engine). Grain = fixed-seed power-of-two noise tile + MOVING crop (offsets wrapped into [0, tile-frame) so the window never straddles the wrap seam) — never fresh noise per frame. _LAYER_CACHE keyed (preset,W,H) + _GRID_CACHE hold base gradient, pattern field, grain tile, vignette; animated energy accumulates in ONE float16 scalar layer merged into RGB once (D6 perf).
-- engine.py: fill="gen:<name>" branch in render_layer — generator runs at BASE size bw,bh = max(64,BW/8),max(64,BH/8) then rides the SAME crop+LANCZOS path as image bases (zoom track self.track(g), CAM pan, ease_io) and sets base=img so the dim overlay applies identically. validate_project rejects unknown gen:<name> at load; legacy fill=grid untouched.
-- tests/test_generators.py: 18 checks ALL PASS (written RED-first — ImportError against unfixed code). Covers determinism, driver continuity (near=3 far=8), grain coherence (near=0 far=10), palette freeze + disjoint-from-project-presets, layer-cache identity, validate whitelist, engine gen render + dim-over-gen.
-- Golden: tests/golden/gen_corpus.json (6 shots x 1.0s fill=gen:<each>) added to scripts/golden_frames.py -> 3 new keys gens_leebdark_{1080x1920,1080x1080,1920x1080}. Baseline regenerated: GOLDEN PASS 1314 frames (was 1260; the pre-existing 1260 never drifted through any C3 change — that IS the backward-compat proof).
-- D6 bench evidence (scratch/c3_bench2.py, gitignored): at the engine base size the worst preset costs 4.1 ms/frame @FHD-out and 7.2 ms/frame @2K-out — far under the Ken Burns LANCZOS ceiling. Full-res direct calls are ~0.3-0.8 s/frame which is WHY the engine renders at BW/8; do not "fix" that by raising base size.
-- E2E proof: scratch/c3_e2e_proj.json + render_cli -> 144 frames 1080x1920 6.0s ffprobe OK (gen shots with camera pushin/pandown, dim, subtle amp, captions). Caption payload gotcha for e2e fixtures: panel_mid needs "lines":[...] not "text", cta needs "text"; cameras are pandiag/pandown/panup/pushin/pushin2/pushout only.
+WHAT LANDED SINCE THE OLD HANDOFF (chain 039f86f..5f22eb5) — the composition layer ChatGPT approved:
+- 5b534d8 v1.4 COMPOSITION LAYER (the big one, all three approved items):
+  * core/layout.py: merge_layout(L, ov) — per-shot "layout":{...} overrides merged over preset layout defaults; whitelist = any *_frac key + left_inset; sane clamp limits; unknown keys warn+drop. L["left_inset"]=sc(80) is the ONE shared safe inset (no per-caption inset fields).
+  * core/engine.py: render_layer merges per-shot layout into LY; FrameCtx carries align/avail_w; x_anchor(ctx,w) helper; xa=None param on draw_center_text/draw_title_lines/word_pop/line_wipe/word_pump (xa=None => byte-identical old center path); fit_panel_lines(dr,lines,fnt,avail_w=None) width-aware wrap.
+  * core/captions.py: align:"left"|"center" wired into title_block (lines+underline), kicker (rule+line), burst, slam, trackin, cta, flashpop, maskline, typewriter, small (text column pinned to inset, plate hugs), panel/cap_lines (wrap to avail_w). split = DOCUMENTED EXCEPTION: center-meet geometry cannot left-anchor; keeps preset anchor.
+  * Backward-compat PROOF: parity probe rendered git-HEAD worktree vs edited build over a 13s all-kinds draft -> 390/390 frames byte-identical when no layout/align present. Golden PASS 1314 with hashes UNMODIFIED. No template designs touched.
+- 5f22eb5 follow-up: core/metrics.py measure() + core/checks.py now thread the MERGED per-shot LY into measurement — checker and renderer agree by construction (a narrowed title_limit wraps identically in both). test_metrics_math FakeEng got the avail_w kwarg.
+- Engine contract facts (verified, keep these exact):
+  * kind->anchor: kicker_frac->kicker; burst/slam->burst_frac; small->small_frac; cta->cta_frac; split/trackin/wipe/flashpop/maskline->accent_frac; title_frac moves ONLY title_block.
+  * text keys: slam/trackin/split/burst/kicker/cta/small use "text"; panel/cap_lines use "lines"; typewriter uses "full".
+  * caption color = "colors":["<palette name>"] — hex "color" is NOT supported. Palette names per preset (volt: bg,white,accent,dim,panel,pink,lime).
+  * validate_project: top-level key is "target" (NOT target_duration) and must equal sum of shot t EXACTLY; schema=1; portrait tiers only; fill "gen:<preset>" whitelist = deep_current, ember_flow, grid_pulse, midnight_drift, paper_grain, signal_field.
+- drafts/voltage.json: corrected VOLTAGE draft per the contract above (check_project 0 flags).
+- drafts/voltage_test.json + output/voltage_test.mp4: Yasser's 20s test build — REAL photo backgrounds from media/ (fill "media/<name>" resolves relative to repo root), piper voice lines (voice:"none" + per-shot vo_lines -> CLI synthesizes via core/tts.py synthesize_line; app does it via /api/vo_lines), music {"bed":"synthwave"} (scan_music finds music/synthwave.mp3), cameras pushin/pandiag/pushout, wipe transitions, ffprobe-verified 600f/20.000s h264+aac. Yasser said "i will test the video, dont worry" — verdict PENDING, do not re-render or tune until he speaks.
+- KNOWN ENGINE QUIRK (pre-existing, NOT from this change, flagged to Yasser): title_block fit_title word-wraps by measured width so an explicit "\n" inside a line is NOT honored as a hard break when the joined text still fits ("VOLTAGE\nRISING" rendered one line). Fix = small targeted change in fit_title ONLY if Yasser asks.
 
-C4 landed shape (grounded):
-- app.py: /api/meta now returns generators:[{id,label}] from G.GEN_PRESETS (UI never hardcodes preset names).
-- ui/index.html: per-shot Background source Image/Generator toggle (data-src), gen preset select (data-gen) + Motion Normal/Subtle select (data-motion, only shown for gen shots), "+ Generator shot" button (#btn-addgen -> addGenShot() pushes {fill:'gen:<id>',motion:'normal',...}), ◍ glyph thumb replaces the img for gen shots. input handler: data-gen sets fill + renderShots(), data-motion sets motion WITHOUT re-render (focus-safe).
-- scripts/smoke_test.py 7g block: mixed gen project check_project clean + storyboard_strip renders + anim-preview frame shape -> smoke now 40 checks. tests/test_c4_mixed.py added (check-clean, determinism fresh+same-instance, subtle-vs-normal differ, storyboard on gen, UI/meta wiring).
-- C4 changed ZERO pixels: golden GOLDEN PASS 1314 frames with hashes.json UNMODIFIED (git status clean on tests/golden). CLI renders ffprobe-gated: scratch/c4_mixed_proj.json (3 gen + 2 image + 1 subtle/chips) -> h264 320x480 24fps 144 frames 6.0s; scratch/c4_genonly_proj.json -> 72 frames 3.0s.
-- Equivalence proof: render_layer(i, idx/fps, int((idx/fps)*fps)) byte-identical to compose_frame(idx) for single-shot no-transition projects (anim-preview path). Encoded-PNG byte compare across encodes is NOT a determinism gate (ffmpeg nondeterminism); engine-level per-chunk sha256 over fresh Engines is the valid one.
-- Fixture gotchas: chips finish clock at+(n-1)*step+ramp -> 3 chip items in a 2.5s shot flags timing error, use 2; --out dir must pre-exist (housekeeping deletes output/_qa).
+HARD RULES (unchanged): never touch his live uvicorn on 127.0.0.1:8735 or submit test renders through that port — CLI/in-process/ffprobe only; throwaway uvicorn for UI repros = port 8799 ONLY, kill it after; "do delegation" means DO NOT delegate; one commit per step, each gate-green; nothing pushed or tagged without Yasser's explicit word ("no need to rush", good docs prep wanted); v1.4 ships as ONE release at C7 — tiers locked 720p/FHD/2K, no 4K; never debug/inspect frames of HIS live-test videos (renders you make yourself are yours to inspect).
 
-NEXT TASK: C4d grain-quality fix SHIPPED (c030e23) — Yasser's live test flagged gen backgrounds as "noisy low-res texture"; root cause was grain baked into the BW/8 base and magnified ~8x by the Ken-Burns upscale. Engine now composites the fixed-seed grain tile at OUTPUT resolution after crop+LANCZOS (render_base + composite_grain, uint8 fast path, _GRAIN_CACHE). Golden 54 gens_leebdark_* frames drifted deliberately -> hashes.json regen, GOLDEN PASS 1314. TODO before any push: regen Linux baseline (golden_frames.py --os-name linux --update or bootstrap workflow) — flag to Yasser. Then C4b templates gallery + CC0 beds, C5 GIF/WebP, C6 AI-workflow README, C7 optional easing polish.
+GATE COMMANDS: PYTHONPATH=. .venv/Scripts/python.exe tests/test_<x>.py (no pytest); scripts/smoke_test.py (45 checks incl. node --check of edited inline JS); .venv/Scripts/python.exe scripts/golden_frames.py; CLI render gate = .venv/Scripts/python.exe render_cli.py <proj.json> --out output/<name>.mp4 then ffprobe the MP4 (frames dir is auto-deleted after encode). Golden regen only when pixels intentionally drift: --os-name linux --update for hashes-linux.json.
 
-HARD RULES: never touch his live uvicorn on 127.0.0.1:8735 or submit test renders through that port (CLI/in-process/ffprobe only); "do delegation" means DO NOT delegate; one commit per plan step, each gate-green; nothing pushed or tagged without Yasser's explicit word; v1.4 ships as ONE release at C7 — tiers locked 720p/FHD/2K, no 4K. After C3: C4 mixed/generator-only e2e, C4b templates gallery + CC0 beds, C5 GIF/WebP, C6 AI-workflow README, C7 optional easing polish.
+--- NEW WORK ORDER (2026-11-13, Yasser's words; he is testing output/voltage_test.mp4 now) ---
 
---- UPDATE Nov 11 (live-test observation round, local chain cb553a8..de73245) ---
-Three observations from Yasser's live test, ALL FIXED locally, nothing pushed:
+BUG 1 — music preview cannot be stopped: in the UI, once a music bed preview starts it plays forever; there is no stop control. Locate the preview wiring (app.py /api/music_preview + _music_preview_sync, ui/index.html play buttons) and add a real toggle/stop (single active preview at a time; clicking again or starting another stops the first). UI-only fix expected; golden must stay PASS unmodified.
 
-obs #1 SHIPPED (cb553a8): animation gallery tiles stuck on "rendering" for
-neonlight. Root cause: C1 portrait-tier whitelist rejected the internal 540x960
-gallery render size -> generate_gallery raised in Engine.__init__, _gallery_task
-swallowed it with bare except. Fix: gallery renders at tier-legal 720x1280 then
-LANCZOS-down to the same 270x480 tile; _gallery_task now logs via logging.getLogger("reelkit"). tests/test_anim_gallery.py wired into smoke (was 41 checks).
+BUG 2 — start.bat race: double-clicking start.bat opens Chrome BEFORE uvicorn binds -> "Page not found"; F5 then loads it. Root cause is structural in start.bat (verified this session): `start "" http://127.0.0.1:8735` fires, THEN uvicorn starts synchronously on the next line (cold import = 1-3s). Fix pattern: launch uvicorn FIRST as a background process, poll the port until it answers (cmd-only retry loop — powershell Test-NetConnection or python one-liner; no new deps), THEN open the browser. Keep the existing venv self-heal blocks intact. Verify by running start.bat against a throwaway port/clone — do NOT kill his :8735 to test.
 
-obs #2 SHIPPED (5f4f43a): generator shots had no visible way to choose/preview
-the look. app.py: /api/meta ships `palette` per generator; GET /api/gen_previews
-renders one 2-frame looping webp (360x640, Engine path at 720x1280, captioned)
-per GEN_PRESET, cached under output/_genprevs/ (_prune_cache genprev_ prefix).
-ui: ensureGenThumbs() lazy loader; shot-card thumb IS the loop for gen shots;
-new .genpick strip = 6 clickable look buttons (animated thumb, palette-gradient
-fallback cold) -> data-genpick sets fill='gen:<id>'. Verified in-process (6 thumbs
-1.4s, 360x640 2-frame webp); node --check via smoke green.
+BUG 3 — Load project dropdown: show the 5 most-recent projects + an explicit "Load from folder..." entry. projects/*.json is gitignored user data; recency = file mtime. Wire through app.py (projects list sorted by mtime desc, cap at 5) + ui dropdown; "Load from folder" can reuse the existing upload/file-pick flow (POST /api/upload pattern).
 
-obs #3 SHIPPED (de73245): music library expansion = C4b beds half of the plan.
-Plan constraint (CC0-only external) -> three NEW procedural numpy beds, zero
-license risk: low_drive (92bpm dark), sparkle (130bpm upbeat), ambient_glow
-(beatless VO-friendly pad). Loudness-trimmed INTO the existing band before
-normalization (mean ~-19..-20 dBFS; watch peak<=0.95 gate — trim goes BEFORE
-peak normalize). scan_music labels added; meta/music_preview/normalize pick up
-BEDS automatically, zero other wiring. tests/test_music_beds.py in smoke -> 42
-checks. GOLDEN PASS 1314 (audio-only change, pixels untouched). docs/v1.4_c4b_music_plan.md.
+TASK — rebuild presets/templates to VOLT quality: Yasser is HAPPY with the VOLT test video ("we will need to re build the other presets - templates as well"). The old skeletons in templates/ (tpl_countdown/product_drop/quote_card/stat_hit + tpl_stomp; verified on disk) are gen-background skeletons from BEFORE the composition layer. Rebuild them using what shipped: per-shot layout overrides, align:"left", the kinetic kinds (kicker/burst/slam/trackin/split/wipe/flashpop/maskline/typewriter/cap_lines/small), volt/signal/chrome palettes, correct anchors/text-keys/colors contract above. Use drafts/voltage.json as the reference-quality example. Drafts live in drafts/ OUT of the gallery gate until Yasser signs off — same rule applies: draft first, his verdict before anything moves into templates/.
 
-NEXT: C4b templates gallery half (templates land ON generator backgrounds —
-storyboard/templates gallery over GEN_PRESETS; CC0 external beds stay parked
-unless provenance verifiable), then C5 GIF/WebP share export, C6 AI-workflow
-README section, C7 optional easing polish. Linux hashes-linux.json regen STILL
-pending before any push (bootstrap workflow). Chain: a017b40(C1) 125a5d9(C2)
-3c0aa3d(C3) fb9a500 422f642(C4) bd669c9 c030e23(C4d) 15324dc 6ce1dfd(C4e)
-cb553a8(obs1) 5f4f43a(obs2) de73245(obs3).
+RELEASE PREP (unchanged order, ONLY after Yasser's verdicts): regen Linux golden hashes-linux.json (bootstrap workflow on GitHub Actions = proven path) BEFORE any push; final gates at HEAD (smoke + golden both platforms + CLI/ffprobe); version bump + GOOD release notes ("good docs prep this time for this massive release" — mention composition layer, kinetic kinds, volt/signal/chrome, genpick fix, music beds, templates); push + tag v1.4 ONLY on his explicit word.
 
-HARD RULES unchanged: never touch live uvicorn :8735 / no test renders through
-that port; "do delegation" = DO NOT delegate; one commit per step, gates green;
-no push/tag without Yasser's word; ONE v1.4 release at C7; tiers 720p/FHD/2K.
+Chain tail (exact): ...039f86f(C4e template->image) 29c7d30(docs) 5b534d8(composition layer) 5f22eb5(checker merged-layout parity) = HEAD. The C1..C7 + obs1-3 + genpick + C4b history below remains accurate; nothing in it was invalidated this session except the HEAD position and the parked-tuning note (VOLT verdict now pending on the test video).
 
---- UPDATE Nov 11 (C5 shipped, local chain 4e25abb..aac6198) ---
-C5 share export GIF/WebP SHIPPED (aac6198), nothing pushed:
-- core/share_caps.py (new): GIF_MAX_W=640 / GIF_MAX_S=6.0 / GIF_FPS=12 =
-  Yasser's ruling ("GIF is a share teaser, not the master"); WEBP_MAX_W=960 /
-  WEBP_MAX_S=8.0 (my design). Caps are ONE source of truth for CLI+app+tests.
-- render_cli.py: --gif/--webp encode from the EXISTING frame dir via ffmpeg
-  palettegen/paletteuse split into two passes; select=lte(n,K)*not(mod(n,S))
-  + setpts=N/out_fps/TB (the /TB is load-bearing — bare N/12 collapsed 36->2
-  frames; probe-verified). WebP via PIL (quality 80, method 4); ffprobe cannot
-  report animated-webp dims/frames — PIL seek-loop is the webp prober.
-  ffmpeg 8 gotcha: subprocess -vf passes verbatim, escape arg-internal commas
-  as \, and chain filters with bare commas; palettegen option colons \:.
-- queue.py: Job.share_fmt rides submit(); encode_share runs AFTER the mp4
-  duration gate, BEFORE frames rmtree (same frame dir, no re-render).
-- app.py /api/render pops share_fmt (422 unless gif/webp); /api/outputs lists
-  teasers grouped under their master mp4 (teaser never shows without its mp4);
-  outputs_clear hides .gif/.webp too. ui: #share-fmt select beside Render MP4,
-  teaser links in the output row. P never carries share_fmt into saved JSON.
-- tests/test_share_formats.py (13 checks) wired into smoke -> SMOKE PASS 43
-  checks (node --check of edited inline JS included). GOLDEN PASS 1314 with
-  hashes.json UNMODIFIED — C5 changes zero mp4 pixels (plan rule honored;
-  the fresh-session prompt's "C5 is a pixel commit" line was WRONG, plan.md
-  says golden stays PASS unmodified for C5).
-- In-process queue leg verified: submit(share_fmt='gif') -> done + gif
-  320x480@12fps/36f beside the mp4. NEVER via port 8735.
-- SCRATCH PITFALL (bit hard once): a standalone script that calls Queue() must
-  wrap everything in `if __name__ == "__main__":` — Windows spawn re-imports
-  __main__ per pool child, each child re-submits the job -> infinite render
-  storm (~70 junk mp4s in output/, cleaned; scratch/c5queue_leg.py removed).
+--- HISTORICAL (from previous handoffs, verified still accurate) ---
+C1 a017b40 transition layer | C2 125a5d9 presets as design systems | C3 3c0aa3d+fb9a500 six gen presets (midnight_drift, grid_pulse, paper_grain, ember_flow, deep_current, signal_field; base-size BW/8 render + grain composited at OUTPUT res per c030e23 C4d fix — never raise the generator base size) | C4 422f642 mixed gen+image e2e | C4d c030e23 grain-quality fix | C4e 6ce1dfd kinetic gallery pass + 01899fa/eec0670 extra caption kinds + OFL fonts (assets/fonts: Anton, BebasNeue, Oswald, Sora, Syne + pre-existing ArchivoBlack, Inter-var, JetBrainsMono) + volt/signal/chrome presets | obs fixes cb553a8 (gallery tier crash), 5f4f43a (genpick thumbs /api/gen_previews), de73245 (3 procedural beds low_drive/sparkle/ambient_glow) | d627909 CC0 external beds (music/ has 3 mp3s; provenance method in docs) + loudness match in build_audio (sample-count guard c83e84b: resize bed to TOTAL or concat crashes 1 sample off) | C5 aac6198 GIF/WebP share teasers (core/share_caps.py caps = one source of truth; GIF 640w/6s/12fps, WebP 960w/8s) | C6 dbb3d1b README AI-workflow section | C7 19f200b title easing parity (TITLE_PLATE_K/TITLE_RISE_PX in metrics.py; golden re-baselined then — that drift was intentional) | 4591330 genpick closest() fix | 9ffaacf C4b templates gallery (core/templates.py manifest-from-files, /api/templates, Templates panel).
+Fixture gotchas: panel/cap_lines need "lines", slam/trackin/split/burst/kicker/cta/small need "text"; cameras pandiag/pandown/panup/pushin/pushin2/pushout only; word-stagger gate = max 4 words per RAW panel line (<=3 for margin); chips timing span check; render_cli --out is a FILE path; standalone scripts calling Queue() need `if __name__=="__main__":` guard (Windows spawn re-import storm).
 
-## C6 + C7 DONE (2026-11-11, this session)
-- C6 dbb3d1b: README 'Use LEEBKIT with ChatGPT/Claude' section — pure docs,
-  contract verified against validate_project/DISPATCH/BEDS whitelists.
-- C7 19f200b (pixel-intentional): title pop-in overshoot easing per external
-  review. Ground truth found by probes: word_pop/big_number ALREADY had
-  ease_ow overshoot; title_block's real defect was ELEMENT-CLOCK SPREAD —
-  underline grew on raw prog, sub plate ran a private prog*1.3 (settled ~4f
-  early). Fix: TITLE_PLATE_K=1.3 + TITLE_RISE_PX=24 in core/metrics.py
-  (single source; layout.build_layers scales title_rise via S), draw_title_block
-  computes ep=clamp01(prog*K) once -> ease_ow rise shared by glyphs+underline+
-  sub plate, underline width on ease_o(ep); metrics.measure(title_block) now
-  exposes done_at = at + POP_RAMP/TITLE_PLATE_K and checks.py gates it like
-  panels/chips (t-0.1 margin). tests/test_title_easing.py (5 checks) wired
-  into smoke -> SMOKE PASS 44. GOLDEN re-baselined: exactly 12 hashes changed
-  = shot0/shot8 x 6 kinds corpora (the only title_block shots) — scope proof.
-- PITFALL (probe lesson): the corpus hash diff looks like '12 corpora affected'
-  because the SAME kinds_corpus renders under 2 presets x 3 FORMATS; grep the
-  diff hunk headers for corpus names before panicking.
-
-NEXT: v1.4 RELEASE prep (the single 'massive hit' release at C7 per Yasser):
-regen Linux golden (hashes-linux.json; bootstrap workflow on GitHub Actions is
-the proven path), then tag/push ONLY on Yasser's explicit word. C4b templates-
-gallery half still parked ('templates later in v1.4'). Chain: a017b40(C1)
-125a5d9(C2) 3c0aa3d+fb9a500(C3) 422f642+bd669c9(C4) c030e23+15324dc(C4d)
-6ce1dfd(C4e) cb553a8 5f4f43a de73245(obs) 4e25abb 53d7897(docs) aac6198(C5)
-dbb3d1b(C6) 19f200b(C7).
-
---- UPDATE Nov 11 (genpick fix + Yasser release decisions; local chain dbb3d1b..4591330) ---
-GENPICK FIX SHIPPED (4591330, ui-only, golden UNTOUCHED): live-app obs "only can
-select the 1st generator preset". Root cause: global click handler tested
-e.target.dataset.genpick directly — picker buttons contain child img/span.gpal +
-span.gnm, so clicks on label/thumb missed the branch; only bare-button-padding
-clicks worked. Fix: const gp=e.target.closest('[data-genpick]') before the other
-branches. Verified live on throwaway uvicorn :8799 (trusted CDP clicks on btn3
-label -> gen:ember_flow, btn5 -> gen:signal_field, .on ring follows). His live
-:8735 never touched. Gates after fix: SMOKE PASS 44, GOLDEN PASS 1314.
-- PITFALL (browser repro): CDP Input.dispatchMouseEvent + page reloads leave
-  instrumentation listeners/fake fill setters alive -> misleading repros; and
-  identical repeated repro calls = looping, Yasser killed the session twice.
-  Read the code first; one clean-state trusted-click check is enough.
-- PREVIEW SLOWNESS (his obs "motion preview very slow"): NOT fixed by decision.
-  Warm /api/gen_previews ~0.6s; cold build = 6 Engine composites (~1.4s+). The
-  2-frame/1300ms webp reads as flicker, not motion. Yasser: "will test everything
-  once we finish V1.4 completely" — revisit at final live-test if still bad.
-
-YASSER'S RELEASE DECISIONS (2026-11-11, authoritative):
-A) C4b templates gallery LANDS in v1.4 (templates/ dir + curated set + gallery
-   tab + one-template CLI render ffprobe gate; CC0 beds only with verified
-   provenance, else procedural beds stand).
-B) No live-test cycle until v1.4 is code-complete — he tests everything once,
-   after C4b + release prep land. Preview slowness judged at that point.
-C) Session housekeeping approved (this handoff append + docs commit).
-D) Push as ONE big v1.4 release when EVERYTHING (incl. C4b) is done — his word
-   still gates push/tag.
-
-NEXT SESSION ORDER:
-1) C4b templates gallery half = the ONLY remaining code work for v1.4.
-2) Regen Linux golden hashes-linux.json (bootstrap workflow on GitHub Actions,
-   proven path) — required before any push.
-3) Final gate at HEAD: smoke 44 + golden both platforms + CLI/ffprobe.
-4) Version bump / release notes (mention genpick fix; state preview status).
-5) Push + tag v1.4 ONLY on Yasser's explicit word.
-Chain tail: ...aac6198(C5) dbb3d1b(C6) 19f200b(C7) 38903e0(docs) 4591330(genpick fix).
-
---- UPDATE Nov 11 (C4b templates gallery SHIPPED; chain ...7969904..9ffaacf) ---
-C4b TEMPLATES GALLERY SHIPPED (9ffaacf, LEEBLAAB identity verified) — the LAST
-code work for v1.4 is now DONE. Nothing pushed (Yasser's word still gates).
+--- OLD HANDOFF CHAIN RECORD (preserved for traceability) ---
+Chain: a017b40(C1) 125a5d9(C2) 3c0aa3d+fb9a500(C3) 422f642+bd669c9(C4) c030e23+15324dc(C4d) 6ce1dfd(C4e) cb553a8 5f4f43a de73245(obs1-3) 4e25abb 53d7897 aac6198(C5) dbb3d1b(C6) 19f200b(C7) 38903e0 4591330(genpick) 88f9be3 7969904 9ffaacf(C4b) 74d004b be4cc7b d627909 2823bfe 6eecc3d d3dc776 01899fa 692bde3 3771f89 eec0670 c83e84b 039f86f 29c7d30 5b534d8 5f22eb5(HEAD).
 - core/templates.py: list_templates()/load_template(); basename-only traversal
   guard; manifest built FROM the template files (hand-written manifest drifts).
 - templates/ (COMMITTED product content — projects/*.json stays gitignored):
