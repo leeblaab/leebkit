@@ -6,6 +6,10 @@ test is the contract: every shipped template must pass the full check_project
 install renders with no images), and load through the traversal-safe loader.
 """
 import os
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
 
 from core.checks import check_project
 from core.engine import Engine

@@ -10,10 +10,16 @@ metrics.measure exposes done_at so checks gate title settle like panels/chips
 do. This test locks that parity BEFORE any pixels change.
 """
 import json
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+
 from core.engine import Engine
 from core import metrics as M
 
-proj = json.load(open("tests/golden/kinds_corpus.json"))
+proj = json.load(open(os.path.join(ROOT, "tests", "golden", "kinds_corpus.json")))
 eng = Engine(proj)
 fails = []
 
