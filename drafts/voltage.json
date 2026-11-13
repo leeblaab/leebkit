@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "name": "voltage",
+  "label": "VOLTAGE — four-scene 15s (left-aligned composition test)",
+  "preset": "volt",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 15.0,
+  "fps": 30,
+  "voice": "none",
+  "music": {"bed": "synthwave"},
+  "shots": [
+    {
+      "fill": "gen:grid_pulse",
+      "t": 4.0,
+      "transition": "cut",
+      "layout": {"title_frac": 0.36, "title_limit": 760},
+      "captions": [
+        {"kind": "kicker", "at": 0.25, "text": "SYSTEM ONLINE", "rule": false,
+         "align": "left", "colors": ["accent"]},
+        {"kind": "title_block", "at": 0.6, "text": "VOLTAGE\nRISING",
+         "align": "left", "colors": ["white"]}
+      ]
+    },
+    {
+      "fill": "gen:signal_field",
+      "t": 4.0,
+      "transition": "cut",
+      "layout": {"accent_frac": 0.58},
+      "captions": [
+        {"kind": "cap_lines", "at": 0.3, "align": "left",
+         "lines": ["MEASURE THE SURGE", "HOLD THE LINE"], "colors": ["white"]},
+        {"kind": "small", "at": 1.6, "align": "left",
+         "text": "480V / 60HZ", "colors": ["dim"]}
+      ]
+    },
+    {
+      "fill": "gen:ember_flow",
+      "t": 4.0,
+      "transition": "cut",
+      "layout": {"burst_frac": 0.5, "accent_frac": 0.62},
+      "captions": [
+        {"kind": "slam", "at": 0.35, "text": "POWER SURGE",
+         "colors": ["white"]},
+        {"kind": "trackin", "at": 1.8, "text": "LOCKED IN", "colors": ["lime"]}
+      ]
+    },
+    {
+      "fill": "gen:midnight_drift",
+      "t": 3.0,
+      "transition": "cut",
+      "layout": {"accent_frac": 0.52, "cta_frac": 0.64},
+      "captions": [
+        {"kind": "split", "at": 0.35, "text": "FULL POWER", "colors": ["white", "lime"]},
+        {"kind": "cta", "at": 1.4, "text": "LEEBKIT.COM", "colors": ["accent"]}
+      ]
+    }
+  ]
+}

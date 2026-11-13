@@ -92,12 +92,15 @@ def _probe_dr():
     return ImageDraw.Draw(Image.new("RGB", (8, 8)))
 
 
-def measure(eng, L, k, shot_t, at_raw, avail_w=None):
+def measure(eng, L, k, shot_t, at_raw, avail_w=None, LY=None):
     """Per-kind measurements. Returns dict; keys vary by kind:
     lines/n, done_at (settle time), widths/total, rows_done/typing_done,
     tsize/trk, longest_word. Values equal what the draw path computes.
     v1.4 composition layer: `avail_w` = horizontal budget for a left-aligned
-    run (shared-inset column); None = shipped center behavior everywhere."""
+    run (shared-inset column); None = shipped center behavior everywhere.
+    `LY` = merged per-shot layout dict (checker passes it; default falls back
+    to the preset layout so the renderer path is unchanged)."""
+    LY = LY if LY is not None else eng.L
     at = preamble_at(k, at_raw)
     m = {"at_eff": at}
 
@@ -149,8 +152,11 @@ def measure(eng, L, k, shot_t, at_raw, avail_w=None):
         m.update(widths=widths, total=total, done_at=done_at)
 
     elif k == "title_block":
+        # v1.4 composition layer: measure with the SAME merged per-shot layout
+        # the renderer draws with (a narrowed title_limit wraps the title onto
+        # more lines; checker must agree by construction).
         lines, tsize, trk = eng.fit_title(_probe_dr(), L.get("text", ""),
-                                          eng.L["logo"], eng.L["title_limit"])
+                                          LY["logo"], LY["title_limit"])
         m.update(lines=lines, tsize=tsize, trk=trk)
         # C7: title elements (underline, sub plate) settle on the shared
         # TITLE_PLATE_K gain clock — done_at feeds the timing gate below.

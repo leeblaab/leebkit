@@ -53,7 +53,7 @@ def check_project(engine):
             at = float(L.get("at", 0.2))
             left = L.get("align") == "left"
             avail_w = (engine.W - 2 * LY["left_inset"]) if left else None
-            m = M.measure(engine, L, k, t, at, avail_w=avail_w)   # same numbers as the draw path
+            m = M.measure(engine, L, k, t, at, avail_w=avail_w, LY=LY)   # same numbers as the draw path
 
             # --- flag 1: text overflow (PIL measured) ---
             def over(txt, fnt, limit=safe_w, label=None):

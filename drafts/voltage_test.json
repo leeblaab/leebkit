@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "name": "voltage_test2",
+  "label": "VOLTAGE test — real images + voice + animations (20s)",
+  "preset": "volt",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 20.0,
+  "fps": 30,
+  "voice": "en_US-lessac-medium",
+  "vo_lines": [
+    {"shot": 0, "offset": 0.4, "text": "System online. Voltage rising."},
+    {"shot": 1, "offset": 0.4, "text": "Measure the surge. Hold the line."},
+    {"shot": 2, "offset": 0.4, "text": "Power surge. Locked in."},
+    {"shot": 3, "offset": 0.4, "text": "Full power, everywhere you post."},
+    {"shot": 4, "offset": 0.4, "text": "Leebkit. Get it on GitHub."}
+  ],
+  "music": {"bed": "synthwave"},
+  "shots": [
+    {
+      "image": "img_00014.png",
+      "t": 4.0,
+      "transition": "cut",
+      "cam": "pushin",
+      "dim": 0.55,
+      "layout": {"title_frac": 0.36},
+      "captions": [
+        {"kind": "kicker", "at": 0.25, "text": "SYSTEM ONLINE", "rule": false,
+         "align": "left", "colors": ["accent"]},
+        {"kind": "title_block", "at": 0.6, "text": "VOLTAGE\nRISING",
+         "align": "left", "colors": ["white"]}
+      ]
+    },
+    {
+      "image": "img_00027.png",
+      "t": 4.0,
+      "transition": "wipe_left",
+      "cam": "pushin2",
+      "dim": 0.5,
+      "layout": {"accent_frac": 0.58},
+      "captions": [
+        {"kind": "cap_lines", "at": 0.3, "align": "left",
+         "lines": ["MEASURE THE SURGE", "HOLD THE LINE"], "colors": ["white"]},
+        {"kind": "small", "at": 1.6, "align": "left",
+         "text": "480V / 60HZ", "colors": ["dim"]}
+      ]
+    },
+    {
+      "image": "img_00035.png",
+      "t": 4.0,
+      "transition": "cut",
+      "cam": "pandiag",
+      "dim": 0.5,
+      "layout": {"burst_frac": 0.5, "accent_frac": 0.62},
+      "captions": [
+        {"kind": "slam", "at": 0.35, "text": "POWER SURGE", "colors": ["white"]},
+        {"kind": "trackin", "at": 1.8, "text": "LOCKED IN", "colors": ["lime"]}
+      ]
+    },
+    {
+      "image": "img_00039.png",
+      "t": 4.0,
+      "transition": "wipe_left",
+      "cam": "pushin",
+      "dim": 0.5,
+      "layout": {"accent_frac": 0.52, "cta_frac": 0.64},
+      "captions": [
+        {"kind": "split", "at": 0.35, "text": "FULL POWER", "colors": ["white", "lime"]},
+        {"kind": "cta", "at": 1.4, "text": "LEEBKIT.COM", "colors": ["accent"]}
+      ]
+    },
+    {
+      "image": "img_00027.png",
+      "t": 4.0,
+      "transition": "cut",
+      "cam": "pushout",
+      "dim": 0.6,
+      "captions": [
+        {"kind": "burst", "at": 0.4, "text": "LEEBKIT.", "colors": ["lime"]},
+        {"kind": "kicker", "at": 1.8, "text": "FREE ON GITHUB", "rule": false,
+         "align": "left", "colors": ["white"]}
+      ]
+    }
+  ]
+}
