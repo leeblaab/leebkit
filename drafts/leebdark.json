@@ -88,6 +88,9 @@
       "fill": "solid",
       "t": 3.4,
       "transition": "cut",
+      "layout": {
+        "small_frac": 0.68
+      },
       "captions": [
         {
           "kind": "typewriter",

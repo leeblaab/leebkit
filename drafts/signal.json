@@ -9,17 +9,35 @@
   "target": 20.6,
   "fps": 30,
   "voice": "none",
-  "music": {"bed": "synthwave"},
+  "music": {
+    "bed": "synthwave"
+  },
   "shots": [
     {
       "fill": "solid",
       "t": 2.8,
       "transition": "cut",
       "captions": [
-        {"kind": "kicker", "at": 0.15, "text": "BROADCAST GRADE KINETICS", "rule": false,
-         "colors": ["amber", "white"]},
-        {"kind": "title_block", "at": 0.45, "text": "CLEAR SIGNAL\nZERO NOISE",
-         "colors": ["white", "amber", "white"]}
+        {
+          "kind": "kicker",
+          "at": 0.15,
+          "text": "BROADCAST GRADE KINETICS",
+          "rule": false,
+          "colors": [
+            "amber",
+            "white"
+          ]
+        },
+        {
+          "kind": "title_block",
+          "at": 0.45,
+          "text": "CLEAR SIGNAL\nZERO NOISE",
+          "colors": [
+            "white",
+            "amber",
+            "white"
+          ]
+        }
       ],
       "vo": "Clear signal. Zero noise."
     },
@@ -28,7 +46,15 @@
       "t": 3.4,
       "transition": "cut",
       "captions": [
-        {"kind": "split", "at": 0.35, "text": "MEET IN THE MIDDLE", "colors": ["amber", "white"]}
+        {
+          "kind": "split",
+          "at": 0.35,
+          "text": "MEET IN THE MIDDLE",
+          "colors": [
+            "amber",
+            "white"
+          ]
+        }
       ],
       "vo": "Meet in the middle."
     },
@@ -37,7 +63,14 @@
       "t": 3.2,
       "transition": "cut",
       "captions": [
-        {"kind": "trackin", "at": 0.35, "text": "LOCKED IN", "colors": ["amber"]}
+        {
+          "kind": "trackin",
+          "at": 0.35,
+          "text": "LOCKED IN",
+          "colors": [
+            "amber"
+          ]
+        }
       ],
       "vo": "Locked in."
     },
@@ -45,9 +78,19 @@
       "fill": "solid",
       "t": 3.6,
       "transition": "cut",
+      "layout": {
+        "caplines_frac": 0.415
+      },
       "captions": [
-        {"kind": "maskline", "at": 0.35, "text": "every word lands on its own beat",
-         "colors": ["white", "amber"]}
+        {
+          "kind": "maskline",
+          "at": 0.35,
+          "text": "every word lands on its own beat",
+          "colors": [
+            "white",
+            "amber"
+          ]
+        }
       ],
       "vo": "Every word lands on its own beat."
     },
@@ -56,7 +99,14 @@
       "t": 2.8,
       "transition": "cut",
       "captions": [
-        {"kind": "wipe", "at": 0.35, "text": "ON AIR NOW", "colors": ["amber"]}
+        {
+          "kind": "wipe",
+          "at": 0.35,
+          "text": "ON AIR NOW",
+          "colors": [
+            "amber"
+          ]
+        }
       ],
       "vo": "On air now."
     },
@@ -65,8 +115,23 @@
       "t": 4.8,
       "transition": "cut",
       "captions": [
-        {"kind": "burst", "at": 0.4, "text": "SIGNAL.", "colors": ["amber"]},
-        {"kind": "kicker", "at": 2.4, "text": "LEEBKIT KINETIC SET", "rule": false, "colors": ["white"]}
+        {
+          "kind": "burst",
+          "at": 0.4,
+          "text": "SIGNAL.",
+          "colors": [
+            "amber"
+          ]
+        },
+        {
+          "kind": "kicker",
+          "at": 2.4,
+          "text": "LEEBKIT KINETIC SET",
+          "rule": false,
+          "colors": [
+            "white"
+          ]
+        }
       ],
       "vo": "Signal."
     }

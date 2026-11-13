@@ -63,6 +63,9 @@
       "fill": "solid",
       "t": 3.2,
       "transition": "fade",
+      "layout": {
+        "safe_w": 960
+      },
       "cam": "pandiag",
       "captions": [
         {
@@ -124,6 +127,9 @@
       "fill": "solid",
       "t": 4.6,
       "transition": "fade",
+      "layout": {
+        "caplines_frac": 0.415
+      },
       "cam": "panup",
       "captions": [
         {

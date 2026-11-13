@@ -9,17 +9,36 @@
   "target": 19.6,
   "fps": 30,
   "voice": "none",
-  "music": {"bed": "low_drive"},
+  "music": {
+    "bed": "low_drive"
+  },
   "shots": [
     {
       "fill": "solid",
       "t": 2.6,
       "transition": "cut",
       "captions": [
-        {"kind": "kicker", "at": 0.15, "text": "KINETIC TYPE ENGINE", "rule": false,
-         "colors": ["accent", "pink", "white"]},
-        {"kind": "title_block", "at": 0.45, "text": "MOTION IS A LANGUAGE",
-         "colors": ["white", "pink", "white"]}
+        {
+          "kind": "kicker",
+          "at": 0.15,
+          "text": "KINETIC TYPE ENGINE",
+          "rule": false,
+          "colors": [
+            "accent",
+            "pink",
+            "white"
+          ]
+        },
+        {
+          "kind": "title_block",
+          "at": 0.45,
+          "text": "MOTION IS A LANGUAGE",
+          "colors": [
+            "white",
+            "pink",
+            "white"
+          ]
+        }
       ],
       "vo": "Motion is a language."
     },
@@ -28,9 +47,17 @@
       "t": 3.6,
       "transition": "cut",
       "captions": [
-        {"kind": "typewriter", "at": 0.25,
-         "text": "Every letter lands with a click.",
-         "colors": ["white", "pink", "white", "accent"]}
+        {
+          "kind": "typewriter",
+          "at": 0.25,
+          "text": "Every letter lands with a click.",
+          "colors": [
+            "white",
+            "pink",
+            "white",
+            "accent"
+          ]
+        }
       ],
       "vo": "Every letter lands with a click."
     },
@@ -39,8 +66,18 @@
       "t": 3.0,
       "transition": "cut",
       "captions": [
-        {"kind": "pump", "at": 0.25, "text": "WORDS PUMP ONE BY ONE",
-         "colors": ["white", "pink", "white", "accent", "white"]}
+        {
+          "kind": "pump",
+          "at": 0.25,
+          "text": "WORDS PUMP ONE BY ONE",
+          "colors": [
+            "white",
+            "pink",
+            "white",
+            "accent",
+            "white"
+          ]
+        }
       ],
       "vo": "Words pump one by one."
     },
@@ -49,8 +86,20 @@
       "t": 2.6,
       "transition": "cut",
       "captions": [
-        {"kind": "kicker", "at": 0.15, "text": "COLOR IS RHYTHM", "rule": false},
-        {"kind": "burst", "at": 0.4, "text": "PINK."}
+        {
+          "kind": "kicker",
+          "at": 0.15,
+          "text": "COLOR IS RHYTHM",
+          "rule": false
+        },
+        {
+          "kind": "burst",
+          "at": 0.4,
+          "text": "PINK.",
+          "colors": [
+            "pink"
+          ]
+        }
       ],
       "vo": "Color is rhythm. Pink."
     },
@@ -59,8 +108,15 @@
       "t": 3.2,
       "transition": "cut",
       "captions": [
-        {"kind": "typewriter", "at": 0.25, "text": "watch the caret blink.",
-         "colors": ["white", "accent"]}
+        {
+          "kind": "typewriter",
+          "at": 0.25,
+          "text": "watch the caret blink.",
+          "colors": [
+            "white",
+            "accent"
+          ]
+        }
       ],
       "vo": "Watch the caret blink."
     },
@@ -69,9 +125,20 @@
       "t": 2.6,
       "transition": "cut",
       "captions": [
-        {"kind": "kicker", "at": 0.15, "text": "BUILT BY LEEBLAAB"},
-        {"kind": "title_block", "at": 0.45, "text": "SHIP IT.",
-         "colors": ["white", "pink"]}
+        {
+          "kind": "kicker",
+          "at": 0.15,
+          "text": "BUILT BY LEEBLAAB"
+        },
+        {
+          "kind": "title_block",
+          "at": 0.45,
+          "text": "SHIP IT.",
+          "colors": [
+            "white",
+            "pink"
+          ]
+        }
       ],
       "vo": "Built by Leeb-laab. Ship it."
     },
@@ -80,8 +147,17 @@
       "t": 2.0,
       "transition": "cut",
       "captions": [
-        {"kind": "title_block", "at": 0.2, "text": "LEEBKIT", "sub": "YOUR PROMPT GOES HERE"},
-        {"kind": "handle", "at": 1.1, "text": "@yourhandle"}
+        {
+          "kind": "title_block",
+          "at": 0.2,
+          "text": "LEEBKIT",
+          "sub": "YOUR PROMPT GOES HERE"
+        },
+        {
+          "kind": "handle",
+          "at": 1.1,
+          "text": "@yourhandle"
+        }
       ],
       "vo": "Leebkit."
     }
