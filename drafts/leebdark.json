@@ -1,0 +1,153 @@
+{
+  "schema": 1,
+  "name": "tpl_leebdark",
+  "label": "LEEBDARK — house punch: cyan on near-black, heavy grain, terminal stage. Slam + pushin cameras, hard cuts.",
+  "preset": "leebdark",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 21.4,
+  "fps": 30,
+  "voice": "none",
+  "music": {
+    "bed": "low_drive"
+  },
+  "shots": [
+    {
+      "fill": "solid",
+      "t": 3.0,
+      "transition": "cut",
+      "cam": "pushin",
+      "captions": [
+        {
+          "kind": "kicker",
+          "at": 0.15,
+          "text": "BUILT IN THE DARK",
+          "rule": false,
+          "colors": [
+            "accent",
+            "white"
+          ]
+        },
+        {
+          "kind": "title_block",
+          "at": 0.45,
+          "text": "LEEBLAAB\nHOUSE STYLE",
+          "colors": [
+            "white",
+            "accent",
+            "white"
+          ]
+        }
+      ],
+      "vo": "Built in the dark. Signed in the light."
+    },
+    {
+      "fill": "solid",
+      "t": 3.2,
+      "transition": "cut",
+      "captions": [
+        {
+          "kind": "slam",
+          "at": 0.25,
+          "text": "ZERO NOISE.",
+          "colors": [
+            "white"
+          ]
+        },
+        {
+          "kind": "slam",
+          "at": 1.7,
+          "text": "ALL SIGNAL.",
+          "colors": [
+            "accent"
+          ]
+        }
+      ],
+      "vo": "Zero noise. All signal."
+    },
+    {
+      "fill": "solid",
+      "t": 3.6,
+      "transition": "cut",
+      "cam": "pushin2",
+      "captions": [
+        {
+          "kind": "trackin",
+          "at": 0.25,
+          "text": "FRAME BY FRAME",
+          "colors": [
+            "white",
+            "accent"
+          ]
+        }
+      ],
+      "vo": "Every frame earns its place."
+    },
+    {
+      "fill": "solid",
+      "t": 3.4,
+      "transition": "cut",
+      "captions": [
+        {
+          "kind": "typewriter",
+          "at": 0.25,
+          "text": "> ship_fast.exe",
+          "colors": [
+            "accent"
+          ]
+        },
+        {
+          "kind": "small",
+          "at": 2.1,
+          "text": "CRAFT OVER SPEED. SPEED ANYWAY.",
+          "colors": [
+            "dim"
+          ]
+        }
+      ],
+      "vo": "Ship fast. Craft over speed — speed anyway."
+    },
+    {
+      "fill": "solid",
+      "t": 3.4,
+      "transition": "cut",
+      "cam": "pandiag",
+      "captions": [
+        {
+          "kind": "wipe",
+          "at": 0.25,
+          "text": "DARK STAGE, BRIGHT IDEAS",
+          "colors": [
+            "white",
+            "accent"
+          ]
+        }
+      ],
+      "vo": "Dark stage. Bright ideas."
+    },
+    {
+      "fill": "solid",
+      "t": 4.8,
+      "transition": "cut",
+      "cam": "pushin",
+      "captions": [
+        {
+          "kind": "maskline",
+          "at": 0.3,
+          "text": "made by leeblaab",
+          "colors": [
+            "accent",
+            "white"
+          ]
+        },
+        {
+          "kind": "handle",
+          "at": 2.6,
+          "text": "@leeblaab"
+        }
+      ],
+      "vo": "Made by LEEBLAAB."
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "schema": 1,
+  "name": "tpl_neonlight",
+  "label": "NEONLIGHT — light-panel glide: soft teal on graphite panels, zero grain, smooth cameras (pushout/pandiag), gentle wipes and fades. The anti-slam preset.",
+  "preset": "neonlight",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 21.0,
+  "fps": 30,
+  "voice": "none",
+  "music": {
+    "bed": "sparkle"
+  },
+  "shots": [
+    {
+      "fill": "solid",
+      "t": 3.0,
+      "transition": "fade",
+      "cam": "pushout",
+      "captions": [
+        {
+          "kind": "kicker",
+          "at": 0.2,
+          "text": "LIGHT MODE ON",
+          "rule": true,
+          "colors": [
+            "accent",
+            "white"
+          ]
+        },
+        {
+          "kind": "title_block",
+          "at": 0.5,
+          "text": "CLEAR. CALM. CONVERTING.",
+          "colors": [
+            "white",
+            "accent",
+            "white"
+          ]
+        }
+      ],
+      "vo": "Clear. Calm. Converting."
+    },
+    {
+      "fill": "solid",
+      "t": 3.4,
+      "transition": "fade",
+      "captions": [
+        {
+          "kind": "trackin",
+          "at": 0.3,
+          "text": "BREATHE EASY",
+          "colors": [
+            "white",
+            "accent"
+          ]
+        }
+      ],
+      "vo": "Breathe easy. Read fast."
+    },
+    {
+      "fill": "solid",
+      "t": 3.2,
+      "transition": "fade",
+      "cam": "pandiag",
+      "captions": [
+        {
+          "kind": "wipe",
+          "at": 0.3,
+          "text": "SOFT EDGES, SHARP MESSAGE",
+          "colors": [
+            "white",
+            "accent"
+          ]
+        }
+      ],
+      "vo": "Soft edges. Sharp message."
+    },
+    {
+      "fill": "solid",
+      "t": 3.6,
+      "transition": "fade",
+      "cam": "pushout",
+      "captions": [
+        {
+          "kind": "split",
+          "at": 0.3,
+          "text": "LESS NOISE MORE LIGHT",
+          "colors": [
+            "white",
+            "accent"
+          ],
+          "sub": "MORE LIGHT"
+        }
+      ],
+      "vo": "Less noise. More light."
+    },
+    {
+      "fill": "solid",
+      "t": 3.2,
+      "transition": "fade",
+      "captions": [
+        {
+          "kind": "pump",
+          "at": 0.3,
+          "text": "+40%",
+          "colors": [
+            "accent"
+          ]
+        },
+        {
+          "kind": "small",
+          "at": 1.8,
+          "text": "CLARITY COMPOUNDS.",
+          "colors": [
+            "dim"
+          ]
+        }
+      ],
+      "vo": "Plus forty percent. Clarity compounds."
+    },
+    {
+      "fill": "solid",
+      "t": 4.6,
+      "transition": "fade",
+      "cam": "panup",
+      "captions": [
+        {
+          "kind": "maskline",
+          "at": 0.3,
+          "text": "step into the light",
+          "colors": [
+            "accent",
+            "white"
+          ]
+        },
+        {
+          "kind": "handle",
+          "at": 2.5,
+          "text": "@leeblaab"
+        }
+      ],
+      "vo": "Step into the light."
+    }
+  ]
+}
