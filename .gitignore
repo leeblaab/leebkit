@@ -23,3 +23,6 @@ tools/
 
 # CI-only venv (smoke workflows) — explicit, never rely on .venv/ prefix matching
 .venv_ci/
+
+# private working notes — never publish (audits, marketing drafts, session handoffs)
+docs/_local/
