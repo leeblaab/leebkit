@@ -318,6 +318,13 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_music_beds.py")],
 ok("music beds test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.41 C1 (audit #1 B1): voice_speed must reach the FINAL mix — the build_audio
+# VO loop used to re-synthesize lines WITHOUT the project speed.
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_voice_speed_mix.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("voice speed final-mix test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # v1.4 C5: GIF/WebP share teasers must encode and respect the caps in
 # core/share_caps.py (GIF 640px/6s/12fps — Yasser ruling).
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_share_formats.py")],

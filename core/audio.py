@@ -519,8 +519,10 @@ def shot_timeline(proj):
 
 
 def vo_plan(proj, voice_id, scratch):
-    """Resolve project vo_lines -> (start, dur, text) placements. VO start is
-    absolute; shot/offset resolve against the shot timeline."""
+    """Resolve project vo_lines -> (start, dur, text, wav_path) placements. VO
+    start is absolute; shot/offset resolve against the shot timeline. v1.41 C1:
+    also returns the synthesized wav path so build_audio's mix loop never
+    re-synthesizes without the project speed (audit #1 B1)."""
     starts, _ = shot_timeline(proj)
     vspeed = float(proj.get("voice_speed", 1.0))  # v1.4 C2
     plan = []
@@ -531,8 +533,8 @@ def vo_plan(proj, voice_id, scratch):
             st = starts[int(L["shot"])] + float(L.get("offset", 0.0))
         else:
             st = float(L["at"])
-        dur, _ = vo_duration(L["text"], voice_id, scratch, speed=vspeed)
-        plan.append((st, dur, L["text"]))
+        dur, wav = vo_duration(L["text"], voice_id, scratch, speed=vspeed)
+        plan.append((st, dur, L["text"], wav))
     return plan
 
 
@@ -640,9 +642,9 @@ def build_audio(proj, media_dir=None, scratch=None, music_override=None):
     ducks = []
     if voice and voice != "none" and proj.get("vo_lines"):
         plan = vo_plan(proj, voice, scratch)
-        for st, d, text in plan:
+        for st, d, text, wav in plan:
             i0 = int(st * SR_OUT)
-            data, sr = read_wav_mono(vo_duration(text, voice, scratch)[1])
+            data, sr = read_wav_mono(wav)  # v1.41 C1: the sped wav from the plan
             data = resample(data, sr, SR_OUT)
             n = len(data)
             if i0 + n > TOTAL:
