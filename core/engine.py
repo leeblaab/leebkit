@@ -844,15 +844,23 @@ class Engine:
         # kills the NEXT boundary's wipe/fade (verified by pixel-ownership probes).
         cut_mode = kind in ("cut", "none")
         XF = self.XF if not cut_mode else 0.0
-        frame = self.render_layer(i, lt, idx, cut_mode=cut_mode)
-        if i < len(self.shots) - 1 and XF > 0 and lt > float(s["t"]) - XF:
+        # v1.41 C6 (audit #1 P1): inside the transition window the outgoing
+        # layer must be built ONCE — with transition_out set (captions fade
+        # across the window). HEAD built it twice per window frame (:847 plain
+        # + :855 transition_out) and threw the first result away: ~12 wasted
+        # full-layer renders per fade boundary. Pixel output is unchanged;
+        # render_layer(i, lt, idx, ...) is deterministic for fixed args.
+        in_xf = (i < len(self.shots) - 1 and XF > 0
+                 and lt > float(s["t"]) - XF)
+        frame = self.render_layer(i, lt, idx, cut_mode=cut_mode,
+                                  transition_out=(XF if in_xf else None))
+        if in_xf:
             p = (lt - (float(s["t"]) - XF)) / XF
             pe = ease_io(p)
             kind = self.shots[i + 1].get("transition") or self.shots[i + 1].get("trans") or "fade"
-            # outgoing layer must be GONE by the time the wipe/blend lands:
-            # fade its captions across the XF window (transition_out) so the
-            # two shots' text never sit on screen together
-            frame = self.render_layer(i, lt, idx, cut_mode=cut_mode, transition_out=XF)
+            # (C6: the outgoing layer was already built ONCE above, with
+            # transition_out=XF — captions fade across the window so the two
+            # shots' text never sit on screen together.)
             # ov-overlap fix: incoming layer runs its OWN clock through the wipe
             OV = float(self.shots[i + 1].get("ov", 0.25))
             nx = self.render_layer(i + 1, max(0.0, p * OV), idx + 90000)

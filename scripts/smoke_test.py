@@ -345,6 +345,13 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_music_bed_confine.py")
 ok("music bed confinement test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.41 C6 (audit #1 P1): transition window builds the outgoing layer ONCE
+# (pixel-identical frames — golden_frames guards the whole render).
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_transition_single_render.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("transition single-render test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # v1.4 C5: GIF/WebP share teasers must encode and respect the caps in
 # core/share_caps.py (GIF 640px/6s/12fps — Yasser ruling).
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_share_formats.py")],
