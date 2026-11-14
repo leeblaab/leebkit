@@ -168,8 +168,10 @@ future-tier ideas.
 ## Requirements
 
 - Windows 10/11 (the `.bat` launchers; the Python core itself is cross-platform).
-- **Python 3.11–3.13** on PATH — not 3.14 yet (its `wave` module breaks Piper's CLI output;
-  `start.bat` uses whatever `python` resolves to and rebuilds a stale venv automatically).
+- **Python 3.11–3.14** — the app itself runs on all of them; **Piper voiceover needs
+  3.11–3.13** (3.14's `wave` module breaks Piper's CLI output). `setup_vo.bat` finds a
+  compatible interpreter automatically; `start.bat` uses whatever `python` resolves to
+  and rebuilds a stale venv automatically.
 - **ffmpeg + ffprobe** on PATH.
 - Optional (voiceover): run `setup_vo.bat` once — fetches Piper voices from
   rhasspy/piper-voices with SHA256 verification, plus a Python 3.11 interpreter if missing.

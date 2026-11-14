@@ -351,6 +351,14 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_png_compress_level.py"
 ok("PNG compress_level test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.41 C8 (audit #1 S6b/S6c/B4a/B4b/B4c/B3): upload filename guard, audio
+# sniff short-head guard, logger brand, style_preview picks echo, meta marker,
+# README python-version note.
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_small_guards.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("small guards test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # v1.41 C6 (audit #1 P1): transition window builds the outgoing layer ONCE
 # (pixel-identical frames — golden_frames guards the whole render).
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_transition_single_render.py")],

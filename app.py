@@ -10,7 +10,7 @@ import logging
 
 from PIL import Image
 
-log = logging.getLogger("reelkit")
+log = logging.getLogger("leebkit")   # B4a (v1.41): brand name; nothing greps the old one
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
@@ -26,6 +26,11 @@ from core.checks import storyboard_strip, check_project
 from core.queue import QUEUE, QueueFull, ROOT
 
 app = FastAPI(title="LEEBKIT by LEEBLAAB")
+
+# B4c (v1.41): start.bat probes /api/meta before opening the browser — this
+# sentinel lets the probe tell OUR app apart from a foreign service already
+# holding port 8735 (netstat LISTENING alone can't). UI ignores unknown keys.
+APP_MARKER = "leebkit"
 
 # v1.41 C2 (audit #1 S1): loopback bind alone is not a trust boundary — a
 # DNS-rebinding page in the user's own browser reaches 127.0.0.1 with a foreign
@@ -96,7 +101,8 @@ def meta():
               "procedural": (m if isinstance(m, str) else m["id"]) in A.BEDS}
              for m in (A.scan_music() or ["synthwave", "pulse"])
              for m in [dict(m) if isinstance(m, dict) else {"id": m}]]
-    return {"presets": presets, "music": music, "voices": A.list_voices(),
+    return {"app": APP_MARKER,   # B4c: start.bat identity probe (UI ignores it)
+            "presets": presets, "music": music, "voices": A.list_voices(),
             # v1.36 obs #2: ship each generator preset's designed palette so the
             # UI picker can show colour chips — the user could not tell what a
             # gen shot would look like before rendering it.
@@ -132,9 +138,13 @@ def _sniff_image(head):
 
 @app.post("/api/upload")
 async def upload(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+    # S6b (v1.41): filename is Optional — a part without one must 400, not 500
+    name = file.filename or ""
+    if not name.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
         raise HTTPException(400, "image only (png/jpg/webp)")
-    safe = "".join(c for c in file.filename if c.isalnum() or c in "._-")
+    safe = "".join(c for c in name if c.isalnum() or c in "._-")
+    if not safe:
+        raise HTTPException(400, "bad file name")
     dest = os.path.join(UPLOAD_DIR, safe)
     n = 1
     base, ext = os.path.splitext(safe)
@@ -174,7 +184,9 @@ async def upload(file: UploadFile = File(...)):
 def _sniff_audio(head):
     """Magic-byte check for the four accepted music formats (mirrors the
     _sniff_image hardening on /api/upload)."""
-    if head[:3] == b"ID3" or (head and head[0] == 0xFF and (head[1] & 0xE0) == 0xE0):
+    # S6c (v1.41): the raw-frame branch reads head[1] — a 1-byte head must not
+    # IndexError; len>=2 keeps short garbage out instead of crashing.
+    if head[:3] == b"ID3" or (len(head) >= 2 and head[0] == 0xFF and (head[1] & 0xE0) == 0xE0):
         return True                                   # mp3 (tagged / raw frame)
     if head[:4] == b"RIFF" and head[8:12] == b"WAVE":
         return True                                   # wav
@@ -191,9 +203,11 @@ async def music_upload(file: UploadFile = File(...)):
     picker. Same hardening as /api/upload: safe name, size cap, content
     sniffing; lands in core.audio.MUSIC_DIR so scan_music picks it up and the
     /music mount can audition it."""
-    if not file.filename.lower().endswith((".mp3", ".wav", ".m4a", ".ogg")):
+    # S6b (v1.41): filename is Optional — a part without one must 400, not 500
+    name = file.filename or ""
+    if not name.lower().endswith((".mp3", ".wav", ".m4a", ".ogg")):
         raise HTTPException(400, "audio only (mp3/wav/m4a/ogg)")
-    safe = "".join(c for c in file.filename if c.isalnum() or c in "._-")
+    safe = "".join(c for c in name if c.isalnum() or c in "._-")
     if not safe or safe.startswith("."):
         raise HTTPException(400, "bad file name")
     os.makedirs(A.MUSIC_DIR, exist_ok=True)
@@ -387,7 +401,7 @@ def _style_preview_sync(preset: str):
         with open(out_path, "wb") as f:
             f.write(buf.getvalue())
     return {"url": "/output/_styleprev/style_%s.webp" % h,
-            "frames": [45, 135, 300], "size": "540x960"}
+            "frames": list(picks), "size": "540x960"}   # B4b (v1.41): echo the real picks
 
 
 @app.get("/api/style_preview/{preset}")

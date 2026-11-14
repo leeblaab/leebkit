@@ -58,6 +58,14 @@ if %_tries% geq 30 (
 )
 goto :waitport
 :portup
+rem B4c (v1.41): port LISTENING is not enough - probe /api/meta for OUR
+rem identity sentinel so a foreign service squatting 8735 gets a warning,
+rem not a browser pointed at someone else's server.
+.venv\Scripts\python.exe -c "import sys,urllib.request as u;d=u.urlopen('http://127.0.0.1:8735/api/meta',timeout=3).read();sys.exit(0 if b'leebkit' in d else 1)" 2>nul && goto :ours
+echo [LEEBKIT] WARNING: something is already listening on 127.0.0.1:8735 but it is not LEEBKIT - browser NOT opened.
+echo [LEEBKIT] close whatever holds that port (or the old 'LEEBKIT server' window) and run start.bat again.
+pause & exit /b 1
+:ours
 start "" http://127.0.0.1:8735
 echo [LEEBKIT] browser opened after %_tries%s - server runs in the 'LEEBKIT server' window (close it to stop).
 pause
