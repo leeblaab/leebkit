@@ -15,6 +15,7 @@ log = logging.getLogger("reelkit")
 from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 import time as _time
 
@@ -25,6 +26,24 @@ from core.checks import storyboard_strip, check_project
 from core.queue import QUEUE, QueueFull, ROOT
 
 app = FastAPI(title="LEEBKIT by LEEBLAAB")
+
+# v1.41 C2 (audit #1 S1): loopback bind alone is not a trust boundary — a
+# DNS-rebinding page in the user's own browser reaches 127.0.0.1 with a foreign
+# Host header. Allow only the names we are actually served under; anything else
+# (rebound domain, raw foreign IP) gets 400 before any route runs.
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"],  # testserver: starlette TestClient only
+)
+
+# same audit point on the WS handshake: a foreign browser Origin means the
+# socket belongs to some other site's page, not our UI (same-origin requests
+# send OUR origin; non-browser clients send none). Port-agnostic compare: the
+# server binds 8735 via uvicorn flags but nothing here knows that for sure.
+def _origin_ok(origin):
+    host = origin.split("://", 1)[-1].split("/", 1)[0]
+    h = host.rsplit(":", 1)[0] if (":" in host and not host.endswith("]")) else host
+    return h in ("127.0.0.1", "localhost", "[::1]")
 
 UPLOAD_DIR = os.path.join(ROOT, "media", "uploads")
 PROJECTS_DIR = os.path.join(ROOT, "projects")
@@ -620,6 +639,12 @@ def outputs_clear():
 
 @app.websocket("/ws/progress")
 async def progress(ws: WebSocket):
+    # v1.41 C2 (audit #1 S1): refuse the handshake BEFORE accepting when a
+    # browser Origin is present and foreign (DNS-rebinding page talking to us).
+    origin = ws.headers.get("origin")
+    if origin and not _origin_ok(origin):
+        await ws.close(code=1008)  # policy violation
+        return
     await ws.accept()
     import asyncio
     try:

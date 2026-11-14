@@ -325,6 +325,13 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_voice_speed_mix.py")],
 ok("voice speed final-mix test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.41 C2 (audit #1 S1): Host allowlist + WS Origin gate — loopback bind alone
+# is not a trust boundary (DNS rebinding).
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_trust_boundary.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("trust boundary test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # v1.4 C5: GIF/WebP share teasers must encode and respect the caps in
 # core/share_caps.py (GIF 640px/6s/12fps — Yasser ruling).
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_share_formats.py")],
