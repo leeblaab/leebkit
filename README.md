@@ -97,7 +97,6 @@ same project JSON you'd get from `samples/promo_v12.json`:
   render ends with an ffprobe both-streams duration gate, so a mux desync fails loudly.
 - **CLI renderer** — `render_cli.py` runs the same engine headless, with parallel frame
   jobs (`--jobs N`) and `--draft` / `--no-audio` modes.
-- **Incremental render** — unchanged shots are not re-rendered.
 - **Path confinement + input hardening** — project-supplied image paths can never escape
   `media/` (absolute and `..` paths rejected); uploads capped at 32MB with magic-byte sniff;
   a missing shot image aborts the render with a clear error instead of black frames.
