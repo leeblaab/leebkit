@@ -30,8 +30,10 @@ def _worker_chunk(args):
     a, b, frames_dir = args
     for idx in range(a, b):
         # PNG, not JPEG: lossy-then-lossy (q92 -> crf 18) visibly softens grain
-        # and text edges (audit #4). PNG is lossless and encodes just as fast here.
-        _ENG.compose_frame(idx).save(os.path.join(frames_dir, "f_%04d.png" % idx))
+        # and text edges (audit #4). compress_level=1 (v1.41 C7 / audit #1 P2):
+        # intermediates are deleted after encode — max deflate is wasted CPU.
+        _ENG.compose_frame(idx).save(
+            os.path.join(frames_dir, "f_%04d.png" % idx), compress_level=1)
     return b - a
 
 

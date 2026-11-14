@@ -345,6 +345,12 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_music_bed_confine.py")
 ok("music bed confinement test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.41 C7 (audit #1 P2): PNG intermediates save at compress_level=1.
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_png_compress_level.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("PNG compress_level test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # v1.41 C6 (audit #1 P1): transition window builds the outgoing layer ONCE
 # (pixel-identical frames — golden_frames guards the whole render).
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_transition_single_render.py")],

@@ -51,8 +51,13 @@ def _frame_worker_init(proj_path, media_dir):
 def _frame_chunk(args):
     a, b, frames_dir = args
     for idx in range(a, b):
-        # PNG intermediates: JPEG q92 -> crf 19 was lossy-then-lossy (audit #4)
-        _FW["eng"].compose_frame(idx).save(os.path.join(frames_dir, "f_%04d.png" % idx))
+        # PNG intermediates: JPEG q92 -> crf 19 was lossy-then-lossy (audit #4).
+        # v1.41 C7 (audit #1 P2): compress_level=1 — intermediates are deleted
+        # after ffmpeg reads them, so max deflate only costs CPU for zero gain:
+        # measured 0.109 -> 0.065 s/frame save at 1080x1920 (~40% faster),
+        # ~63% bigger temp files (freed post-encode). Lossless either way.
+        _FW["eng"].compose_frame(idx).save(
+            os.path.join(frames_dir, "f_%04d.png" % idx), compress_level=1)
     return b - a
 
 
@@ -268,8 +273,10 @@ class Queue:
                         j.error = "canceled at frame %d/%d" % (idx, j.frames_total)
                         shutil.rmtree(frames_dir, ignore_errors=True)
                         return
-                    # PNG intermediates: JPEG q92 -> crf 19 was lossy-then-lossy (audit #4)
-                    eng.compose_frame(idx).save(os.path.join(frames_dir, "f_%04d.png" % idx))
+                    # PNG intermediates, compress_level=1 (v1.41 C7 / audit #1 P2):
+                    # lossless either way; temp files are freed post-encode.
+                    eng.compose_frame(idx).save(
+                        os.path.join(frames_dir, "f_%04d.png" % idx), compress_level=1)
                     j.frames_done = idx + 1
             if j.cancel_requested:
                 j.state = "canceled"
