@@ -538,6 +538,28 @@ def vo_plan(proj, voice_id, scratch):
     return plan
 
 
+def _resolve_bed(fn):
+    """v1.41 C4 (audit #1 S5): confine EVERY music bed to the shipped music/
+    folder — v1.31 only guarded relative beds, so an absolute path in project
+    JSON read any file on disk. The UI's file picker hands over absolutes that
+    point INTO music/, so basename-map absolutes into music/ (same basename =
+    same shipped track) and reject anything that doesn't resolve inside it."""
+    fn = str(fn or "")
+    if not fn:
+        raise ValueError("music bed is empty")
+    base = os.path.basename(fn)
+    path = os.path.join(MUSIC_DIR, base)
+    _b = os.path.realpath(MUSIC_DIR)
+    _p = os.path.realpath(path)
+    if not (_p == _b or _p.startswith(_b + os.sep)):
+        raise ValueError("music bed %r escapes the music/ folder" % fn)
+    # v1.4 C4b hard gate: every music/-resolved bed must actually exist —
+    # a mapped name with no shipped track fails loud, never silent.
+    if not os.path.isfile(_p):
+        raise ValueError("music bed %r not found in the music/ folder" % fn)
+    return path
+
+
 def _normalize_music(cfg):
     """One shape for the music config, whatever wrote it (audit #2). The UI
     historically wrote {"file": "x.mp3"} with no mode -> build_audio then fell
@@ -601,14 +623,7 @@ def build_audio(proj, media_dir=None, scratch=None, music_override=None):
         music = np.zeros(TOTAL)
     elif mode == "file":
         fn = str(music_cfg.get("bed", "")).replace("file:", "")
-        path = fn if os.path.isabs(fn) else os.path.join(MUSIC_DIR, fn)
-        # audit (v1.31): confine RELATIVE beds to the music/ folder — project
-        # JSON is user-authored and a "../secrets" bed used to read anywhere.
-        # Absolute paths stay allowed: the UI's own file picker hands them over.
-        _b = os.path.realpath(MUSIC_DIR)
-        _p = os.path.realpath(path)
-        if not os.path.isabs(fn) and not (_p == _b or _p.startswith(_b + os.sep)):
-            raise ValueError("music bed %r escapes the music/ folder" % fn)
+        path = _resolve_bed(fn)
         d = load_music_file(path)
         # v1.4 CC0 beds: external tracks arrive at whatever loudness they were
         # mastered at (commercial masters sit ~-9 dBFS mean vs our procedural
