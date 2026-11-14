@@ -299,9 +299,9 @@ function renderShots(){
     <div class="grip">⠿<br><span style="font-size:11px">${String(i+1).padStart(2,'0')}</span></div>
     <div class="thumbwrap">${s.fill&&String(s.fill).startsWith('gen:')
       ? (GEN_THUMBS&&GEN_THUMBS[String(s.fill).slice(4)])
-        ? `<img src="${GEN_THUMBS[String(s.fill).slice(4)]}" alt="" title="${esc((META.generators||[]).find(g=>('gen:'+g.id)===s.fill)?.label||s.fill)}" style="width:100%;height:100%;object-fit:cover">`
+        ? `<img src="${esc(GEN_THUMBS[String(s.fill).slice(4)])}" alt="" title="${esc((META.generators||[]).find(g=>('gen:'+g.id)===s.fill)?.label||s.fill)}" style="width:100%;height:100%;object-fit:cover">`
         : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px" title="${esc((META.generators||[]).find(g=>('gen:'+g.id)===s.fill)?.label||s.fill)}">◍</div>`
-      : `<img src="/media/${String(s.image).replace(/^media\//,'')}">`}
+      : `<img src="/media/${esc(String(s.image).replace(/^media\//,''))}">`}
       <div class="rm" data-rm="${i}" title="Remove this shot">×</div></div>
     <div class="fields">
       <label>Background source</label>
@@ -314,7 +314,7 @@ function renderShots(){
         <select data-motion="${i}" style="min-width:0;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:7px 9px;font-size:13px"><option value="normal" ${s.motion!=='subtle'?'selected':''}>Motion: Normal</option><option value="subtle" ${s.motion==='subtle'?'selected':''}>Motion: Subtle</option></select>
       </div>
       <label style="font-size:11px">Look — click to switch (preview loops)</label>
-      <div class="genpick" data-gp="${i}">${(META.generators||[]).map(g=>`<button data-genpick="${g.id}" title="${esc(g.label)}${GEN_THUMBS&&GEN_THUMBS[g.id]?' — click the card thumbnail to see it move':''}" class="${'gen:'+g.id===s.fill?'on':''}">${GEN_THUMBS&&GEN_THUMBS[g.id]?`<img src="${GEN_THUMBS[g.id]}" alt="">`:`<span class="gpal" style="background:linear-gradient(135deg,${esc((g.palette||[]).join(','))})"></span>`}<span class="gnm">${esc(g.label)}</span></button>`).join('')}</div>`:''}
+      <div class="genpick" data-gp="${i}">${(META.generators||[]).map(g=>`<button data-genpick="${g.id}" title="${esc(g.label)}${GEN_THUMBS&&GEN_THUMBS[g.id]?' — click the card thumbnail to see it move':''}" class="${'gen:'+g.id===s.fill?'on':''}">${GEN_THUMBS&&GEN_THUMBS[g.id]?`<img src="${esc(GEN_THUMBS[g.id])}" alt="">`:`<span class="gpal" style="background:linear-gradient(135deg,${esc((g.palette||[]).join(','))})"></span>`}<span class="gnm">${esc(g.label)}</span></button>`).join('')}</div>`:''}
       ${s.captions.length?`<label>Caption boxes (edit inline; add more from the Animations panel)</label>${s.captions.map((c,j)=>`<label style="margin-top:6px">${c.kind} #${j+1}</label>${capEditor(i,j)}`).join('')}`:`<label>Caption lines (top panel — quick start)</label>
       <textarea data-cap="${i}" placeholder="BUILT BY&#10;PROMPT ENGINEERING"></textarea>`}
       <label>Voice-over for this shot</label>
@@ -349,7 +349,10 @@ function updateTotals(){
   $('#totals').innerHTML=`${sum.toFixed(1)}s <span>/</span> <i style="font-style:normal;color:var(--dim)">${P.target.toFixed(1)}s</i>`;
   $('#shotcount').textContent=P.shots.length+' shots'+(sum>P.target?' — OVER TARGET':'');
 }
-const esc=s=>(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+// v1.41 C3 (audit #1 S2): full five-char escape; & FIRST so entities written
+// by the other replaces never double-escape. Project-authored strings reach
+// innerHTML templates everywhere — two chars are not enough.
+const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
 // delegated events
 document.addEventListener('input',e=>{
@@ -586,7 +589,7 @@ function paintGallery(){
   // "animations pane shows only text boxes").
   $('#animgrid').innerHTML=cat.items.map(it=>{
     if(!it.ready)return `<div class="acard" style="cursor:default"><div style="aspect-ratio:9/16;display:flex;align-items:center;justify-content:center;color:var(--dim);font-family:var(--mono);font-size:11px">rendering…</div><div class="alabel">${esc(it.label)}</div></div>`;
-    return `<div class="acard" data-anim="${it.id}" data-kind="${it.kind}"><img src="${it.url}" alt="${esc(it.label)}" loading="lazy"><div class="alabel">${esc(it.label)}</div></div>`;
+    return `<div class="acard" data-anim="${it.id}" data-kind="${it.kind}"><img src="${esc(it.url)}" alt="${esc(it.label)}" loading="lazy"><div class="alabel">${esc(it.label)}</div></div>`;
   }).join('');
   paintApplied();
   // while any tile is still rendering, re-poll until the whole set lands
@@ -679,7 +682,7 @@ async function animPreview(i,j,btn){
     proj._peek=Math.min(shot.t-0.05,at+0.16);       // freeze mid-animation
     const r=await fetch('/api/anim_preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(proj)});
     const d=await r.json();if(!r.ok)throw Error(d.detail||r.status);
-    $('#stripwrap').innerHTML=`<div class="pstate" style="margin:0 0 4px">preview — ${shot.captions[0].kind} on shot ${i+1} at ${proj._peek.toFixed(2)}s (mid-animation)</div><img src="${d.img}?t=${Date.now()}">`;
+    $('#stripwrap').innerHTML=`<div class="pstate" style="margin:0 0 4px">preview — ${shot.captions[0].kind} on shot ${i+1} at ${proj._peek.toFixed(2)}s (mid-animation)</div><img src="${esc(d.img)}?t=${Date.now()}">`;
     toast('animation preview shown below');
   }catch(err){toast('preview: '+err.message)}
   finally{if(btn){btn.disabled=false;btn.textContent='▶'}}
@@ -766,8 +769,8 @@ $('#btn-preview').onclick=async()=>{
   _pvBusy=true;const btn=$('#btn-preview'),old=btn.textContent;btn.disabled=true;btn.innerHTML='Checking…';
   syncVoLines();$('#flags').innerHTML='<span class="noflags">checking layout, timing, slots & VO…</span>';
   try{const j=await api('/api/preview',P);
-    $('#flags').innerHTML=j.flags.length?j.flags.map(f=>`<div class="flag ${f.severity}">${esc(f.message)}</div>`).join(''):'<span class="noflags">✓ no flags — all clear</span>';
-    $('#stripwrap').innerHTML=`<img src="${j.strip}?t=${Date.now()}">`;
+    $('#flags').innerHTML=j.flags.length?j.flags.map(f=>`<div class="flag ${esc(f.severity)}">${esc(f.message)}</div>`).join(''):'<span class="noflags">✓ no flags — all clear</span>';
+    $('#stripwrap').innerHTML=`<img src="${esc(j.strip)}?t=${Date.now()}">`;
     j.flags.forEach(f=>{const c=$(`.card[data-i="${f.shot}"]`);if(c)c.classList.add('flagged')});
   }catch(e){$('#flags').innerHTML=`<div class="flag">storyboard: ${esc(e.message)} — save the project, then try again</div>`}
   finally{_pvBusy=false;btn.disabled=false;btn.innerHTML='Storyboard<span style="color:var(--acc)"> ⚑</span>'}
@@ -821,7 +824,7 @@ $('#btn-cancel-job').onclick=async e=>{
 };
 
 async function refreshOutputs(){const j=await api('/api/outputs');
-  $('#outputs').innerHTML=j.outputs.length?j.outputs.map(o=>`<div class="outrow"><a href="${o.url}" target="_blank">${o.file}</a><span style="color:var(--dim)">${(o.size/1048576).toFixed(1)} MB${(o.share||[]).map(s=>` · <a href="${s.url}" target="_blank" title="share teaser (caps enforced server-side)">${s.file.split('.').pop()}</a>`).join('')}</span></div>`).join(''):'<span class="noflags">none yet</span>'}
+  $('#outputs').innerHTML=j.outputs.length?j.outputs.map(o=>`<div class="outrow"><a href="${esc(o.url)}" target="_blank">${esc(o.file)}</a><span style="color:var(--dim)">${(o.size/1048576).toFixed(1)} MB${(o.share||[]).map(s=>` · <a href="${esc(s.url)}" target="_blank" title="share teaser (caps enforced server-side)">${esc(s.file.split('.').pop())}</a>`).join('')}</span></div>`).join(''):'<span class="noflags">none yet</span>'}
 
 boot().then(()=>{setTarget(P.target,true);fpsHint()});renderShots();connectWS();
 // hydrate Project rail from P (saved projects may carry a non-default format)
