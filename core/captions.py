@@ -47,6 +47,9 @@ FrameCtx = namedtuple("FrameCtx", [
     "cap_idx",             # (shot_idx, caption_idx): C3b per-caption slot for fit/wrap caches
     "align",               # v1.4 composition layer: "center" (default) | "left"
     "avail_w",             # horizontal budget for a left-aligned run (wrap-aware widths)
+    "beat",                # v1.42 item 3: beat phase 0..1 at the bed BPM, or None
+                           # (no procedural clock / bpm override). Pure function of
+                           # frame index; items 8/10 read it, others ignore it.
 ])
 
 

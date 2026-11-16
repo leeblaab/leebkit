@@ -27,6 +27,7 @@ from .layout import build_layout, clamp_font_sizes
 from . import layout as LAYOUT
 from .camutil import cam_name
 from .audio import VO_SPEED_RANGE  # v1.4 C2: one source of truth for speed bounds
+from . import audio as AUDIO      # v1.42 item 3: BED_BPM single-source tempo table
 from .generators import (GEN_PRESETS, render as gen_render,
                          render_base as gen_base,
                          composite_grain as gen_grain)  # v1.4 C3 / C4d
@@ -201,6 +202,30 @@ class Engine:
         S = P["sizes"]
         self.XF = float(P.get("xf", 0.5))
         self.OVER = float(P.get("overscan", 1.35))
+
+        # ---- v1.42 item 3: beat clock (picture <-> music shared tempo) ----
+        # BPM truth lives in audio.BED_BPM (procedural beds) + the optional
+        # project `bpm` override. mode none/sidechain/file without an explicit
+        # bpm -> None: no clock, FrameCtx.beat stays None everywhere (items 8/10
+        # fall back to seed time). Pure function of frame index => deterministic.
+        self.BPM = None
+        _ov = self.proj.get("bpm")
+        if _ov is not None:
+            try:
+                _ov = float(_ov)
+            except (TypeError, ValueError):
+                raise ValueError("project bpm must be a number (got %r)" % (_ov,))
+            if not (30.0 <= _ov <= 240.0):
+                raise ValueError("project bpm must be 30-240 (got %.1f)" % _ov)
+            self.BPM = _ov
+        else:
+            _mcfg = self.proj.get("music") or {}
+            _bed = _mcfg.get("bed") or _mcfg.get("file") or ""
+            if str(_bed).startswith("file:"):
+                _bed = str(_bed)[len("file:"):]
+            if _bed and _bed != "none" and not str(_bed).lower().endswith(
+                    (".mp3", ".wav", ".m4a", ".ogg")):
+                self.BPM = AUDIO.BED_BPM.get(str(_bed))
 
         # ---- aspect-aware layout metrics (v1.2: 9:16 / 1:1 / 16:9) ----
         self.L = build_layout(self.W, self.H, S, P.get("landscape"))
@@ -698,6 +723,14 @@ class Engine:
         return black
 
     # ------------------------------------------------------------- layer kinds
+    def beat_phase(self, g):
+        """v1.42 item 3: beat phase 0..1 at global time `g` (pure function of
+        the frame index — sample renders == full renders by construction).
+        None when no procedural bed / bpm override resolved a tempo."""
+        if not self.BPM:
+            return None
+        return (g * self.BPM / 60.0) % 1.0
+
     def render_layer(self, i, lt, idx, cut_mode=False, transition_out=None):
         """Render shot i at local time lt (frame seed idx). Returns RGB image."""
         W, H = self.W, self.H
@@ -849,7 +882,8 @@ class Engine:
                 # is the byte-identical shipped path. avail_w = horizontal
                 # budget a left-aligned run gets (wrap-aware widths derive it).
                 align=L.get("align", "center"),
-                avail_w=W - 2 * LY["left_inset"])
+                avail_w=W - 2 * LY["left_inset"],
+                beat=self.beat_phase(g))
             _cf(self, dr, L, k, ctx, (clamp01, ease_o, ease_ow))
         # film grain (per-frame seeded; disabled in presets with grain_points=0)
         gp = int(P.get("grain_points", 90))
