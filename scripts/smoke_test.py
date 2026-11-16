@@ -424,6 +424,13 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_rule_track.py")],
 ok("rule_draw / track_collapse test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.42 item 10: eq_bars ambient strip (beat/seed sine stack + VO RMS envelope;
+# terminal-like — no done_at gate; bars stand on the bottom safe margin).
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_eq_bars.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("eq_bars test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)

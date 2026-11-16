@@ -216,6 +216,31 @@ def main():  # CLI boundary: engine errors become exit codes here, nowhere else
     media_dir = args.media or os.path.join(ROOT, "media")
 
     n = int(round(proj["target"] * proj.get("fps", 30)))
+
+    # v1.42 C5: eq_bars bars ride the real audio bed. The mix only exists
+    # after build_audio, so when a project has an eq_bars caption AND voice
+    # audio, assemble audio FIRST, wire the mono mix into the engine via
+    # Engine.set_vo_bed(), then render frames on that SAME single-process
+    # engine (the ONLY re-render pass in the pipeline; worker pools each
+    # build their own Engine and would never see the bed, so jobs=1 here).
+    # Projects without eq_bars keep the exact v1.41 order: frames -> encode
+    # -> audio -> mux (byte-identical default path).
+    from core import audio as A
+    wav = None
+    _eqb = any(c.get("kind") == "eq_bars"
+               for s in proj["shots"] for c in s.get("captions", []))
+    _voaudio = (not args.no_audio and proj.get("voice") not in (None, "none")
+                and proj.get("vo_lines"))
+    if _eqb and _voaudio:
+        global _ENG
+        from core.engine import Engine as _E
+        _ENG = _E(proj, media_dir=media_dir)
+        wav = A.build_audio(
+            proj, media_dir=media_dir,
+            scratch=os.path.join(out_dir, "_audio_%s" % name),
+            on_mix=lambda m: _ENG.set_vo_bed(m))
+        args.jobs = 1    # the bed lives on this process's engine only
+
     print("rendering %d frames (%d jobs)..." % (n, args.jobs), flush=True)
     dt = render_frames(proj_path, media_dir, frames_dir, n, jobs=args.jobs,
                        progress=lambda d, t: print("  %d/%d" % (d, t), flush=True) if d % 150 == 0 else None)
@@ -226,8 +251,8 @@ def main():  # CLI boundary: engine errors become exit codes here, nowhere else
                  preset_v="veryfast" if args.draft else "slow")
 
     if not args.no_audio:
-        from core import audio as A
-        wav = A.build_audio(proj, media_dir=media_dir, scratch=os.path.join(out_dir, "_audio_%s" % name))
+        if wav is None:
+            wav = A.build_audio(proj, media_dir=media_dir, scratch=os.path.join(out_dir, "_audio_%s" % name))
         tmp = out_mp4 + ".muxed.mp4"
         cmd = ["ffmpeg", "-y", "-i", out_mp4, "-i", wav, "-c:v", "copy", "-c:a", "aac",
                "-b:a", "192k", "-shortest", tmp]

@@ -153,6 +153,41 @@ TRACK_COLLAPSE_PX = 18   # px extra tracking at entrance start (plan-locked)
 GLITCH_MIN_OFF = 4       # px, floor of the channel offset while ramping
 GLITCH_MAX_OFF = 12      # px, ceiling at entrance start
 
+# --- v1.42 item 10 (C5): eq_bars — ambient equalizer strip -----------------
+EQ_DEFAULT_N = 5          # bar count when omitted (plan: default 5)
+EQ_MAX_N = 7              # hard cap (plan: <=7)
+EQ_DEFAULT_W = 0.32       # bar width as a fraction of its slot
+EQ_MIN_W, EQ_MAX_W = 0.05, 1.0   # sane fraction band (validate gates 0.05..1.5 msg)
+EQ_H_FRAC = 0.16          # tallest bar as a fraction of canvas height
+EQ_BEAT_CYCLES = 2.0      # per-bar sine cycles per beat (amplitude modulator)
+EQ_VO_WIN = 0.05          # VO envelope: RMS window (s); precomputed ONCE/shot
+
+
+def eq_bar_height(eng, L, idx, lt, g, vo_env, frame=None):
+    """Height (px, >0) of bar slot `idx` at local time `lt` / global time `g`:
+    an abs-sine stack seeded per bar slot, amplitude-modulated by the bed's
+    beat clock (seed-time fallback when no tempo), plus the shot's VO RMS
+    envelope sampled at the GLOBAL FRAME INDEX (`frame`; falls back to idx
+    only if the caller passes none — it never indexes the env by bar slot).
+    Pure function of (frame index, project JSON) -> sample == full renders."""
+    n = int(L.get("n", EQ_DEFAULT_N))
+    wfrac = float(L.get("w", EQ_DEFAULT_W))
+    slot = eng.L["safe_w"] / n
+    bar_w = max(4, int(wfrac * slot))
+    hmax = int(EQ_H_FRAC * eng.H)
+    ph = eng.beat_phase(g)
+    if ph is None:
+        ph = eng.fx_phase(idx)
+    t = lt * EQ_BEAT_CYCLES * 2.0 * math.pi + idx * 1.7
+    osc = abs(math.sin(t)) * (0.55 + 0.45 * abs(math.sin(ph * 2.0 * math.pi)))
+    h = 0.18 + 0.82 * osc
+    if vo_env is not None:
+        f = idx if frame is None else int(frame)
+        if 0 <= f < len(vo_env):
+            h += 0.6 * vo_env[f]
+    return bar_w, max(6, min(hmax, int(h * hmax)))
+
+
 
 def track_collapse_px(prog):
     """Extra per-char tracking (px) for one frame: +18 -> 0 over the ramp.
@@ -476,6 +511,18 @@ def measure(eng, L, k, shot_t, at_raw, avail_w=None, LY=None):
         if not (0.05 <= wfrac <= 1.0):
             m["error"] = "rule_draw w must be a fraction 0.05..1.0 (got %r)" % L.get("w")
         m.update(done_at=done_at, rule_w=int(wfrac * (m.get("avail_w") or 999)))
+
+    elif k == "eq_bars":
+        # v1.42 item 10 (C5): ambient equalizer strip — ALWAYS animating, so
+        # like terminal/chips there is NO settle clock (the generic word-pop
+        # fallback below must not fire: no text/lines keys here anyway, and
+        # the kind list excludes it). Shape gates mirror validate_project.
+        n = int(L.get("n", EQ_DEFAULT_N))
+        wfrac = float(L.get("w", EQ_DEFAULT_W))
+        if not (1 <= n <= EQ_MAX_N):
+            m["error"] = "eq_bars n must be 1..%d (got %r)" % (EQ_MAX_N, L.get("n"))
+        elif not (EQ_MIN_W < wfrac < 1.5):
+            m["error"] = "eq_bars w must be a fraction 0.05..<1.5 (got %r)" % L.get("w")
 
     elif k == "flashpop":
         nw = len(L.get("text", "").split(" "))

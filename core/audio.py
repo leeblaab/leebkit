@@ -599,7 +599,8 @@ def _normalize_music(cfg):
     return {"mode": "procedural", "bed": str(bed)}
 
 
-def build_audio(proj, media_dir=None, scratch=None, music_override=None):
+def build_audio(proj, media_dir=None, scratch=None, music_override=None,
+                on_mix=None):
     """Full audio bed -> 48kHz stereo WAV path. Hard-asserts TOTAL length."""
     music_cfg = _normalize_music(music_override or proj.get("music"))
     voice = proj.get("voice", "none")
@@ -714,6 +715,13 @@ def build_audio(proj, media_dir=None, scratch=None, music_override=None):
     mix = mix / peak * 0.93 if peak > 0 else mix
 
     assert len(mix) == TOTAL, "bed length %d != TOTAL %d" % (len(mix), TOTAL)
+    # v1.42 C5: hand the mono mix to any live Engine so eq_bars can ride real
+    # bed loudness (Engine.set_vo_bed); render_cli re-renders with it wired in.
+    if on_mix is not None:
+        try:
+            on_mix(mix.tolist())
+        except Exception:
+            pass    # envelope hook must never fail the audio build
     stereo = np.repeat(mix[:, None], 2, axis=1)
     pcm = (np.clip(stereo, -1, 1) * 32767).astype("<i2")
     out_wav = os.path.join(scratch, "bed.wav")

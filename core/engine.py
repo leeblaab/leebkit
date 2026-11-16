@@ -225,6 +225,27 @@ def validate_project(proj):
             if fx is not None and fx not in CAPTIONS.M.FX_NAMES:
                 raise ValueError("shot %d caption fx %r unknown (choices: %s)"
                                  % (i, fx, ", ".join(CAPTIONS.M.FX_NAMES)))
+            # v1.42 item 10 (C5): eq_bars shape gates (n/width fractions;
+            # timing is N/A — the strip never settles, checks has no branch).
+            if c["kind"] == "eq_bars":
+                _M = CAPTIONS.M
+                try:
+                    _n = int(c.get("n", _M.EQ_DEFAULT_N))
+                except (TypeError, ValueError):
+                    raise ValueError("shot %d eq_bars n must be an int (got %r)"
+                                     % (i, c.get("n")))
+                if not (1 <= _n <= _M.EQ_MAX_N):
+                    raise ValueError("shot %d eq_bars n must be 1..%d (got %d)"
+                                     % (i, _M.EQ_MAX_N, _n))
+                try:
+                    _w = float(c.get("w", _M.EQ_DEFAULT_W))
+                except (TypeError, ValueError):
+                    raise ValueError("shot %d eq_bars w must be a number (got %r)"
+                                     % (i, c.get("w")))
+                if not (_M.EQ_MIN_W < _w < 1.5):
+                    raise ValueError("shot %d eq_bars w must be a fraction "
+                                     "%.2f..1.5 (got %.2f)"
+                                     % (i, _M.EQ_MIN_W, _w))
             if "at" in c:
                 a = float(c["at"])
                 if not (0.0 <= a <= float(s.get("t", 0))):
@@ -838,6 +859,78 @@ class Engine:
         beat_phase: pure f(idx), sample == full)."""
         return ((idx * 7 + 3) % 6) / 6.0
 
+    def vo_envelope(self, i):
+        """v1.42 item 10 (C5): per-frame loudness envelope for shot i (list
+        indexed by GLOBAL frame index, values 0..1), or None when the project
+        has no voice/vo_lines. Precomputed ONCE per shot and cached.
+
+        v1.42 C5 audit fix: the envelope rides the AUDIO BED, not the piper
+        wavs. VO wavs live in a PER-RENDER scratch dir that build_audio picks
+        by output name (render_cli), so they are NOT on disk when frames
+        render first -- and synthesizing inside compose_frame would fire piper
+        per shot (stall + side effect). Instead render_cli calls set_vo_bed()
+        with build_audio's final mono mix BEFORE encoding, so eq_bars bars
+        ride the real VO+ducked-bed loudness. Without that call (in-process/
+        UI renders) bars stay beat-only: deterministic, zero side effects,
+        sample == full either way."""
+        # NOTE: set_vo_bed() clears the cache WITHOUT creating it, so this
+        # guard must init BOTH _vo_env and _acc_total together — a split
+        # guard once crashed with AttributeError on the first bed-wired call.
+        # v1.42 C5 audit fix (Windows/py3.14): `hasattr(self, "_vo_env")` as a
+        # guard proved UNRELIABLE here — set_vo_bed() stores _vo_env={} and the
+        # very next vo_envelope call still evaluated the hasattr branch as if
+        # fresh while _acc_total (stored in the same block) was missing at
+        # line 895. Line traces + dis confirmed the guard block simply did not
+        # execute despite matching source. Guard on the value directly instead:
+        # falsy cache -> (re)build both the dict and the timeline total.
+        if not getattr(self, "_vo_env", None):
+            self._vo_env = {}
+            # total timeline seconds, computed once for envelope sizing
+            self._acc_total = sum(float(s["t"]) for s in self.shots)
+        if i in self._vo_env:
+            return self._vo_env[i]
+        P = self.proj
+        voice = P.get("voice") or "none"
+        env = None
+        bed = getattr(self, "_vo_bed", None)
+        # NOTE: the envelope keys off voice+vo_lines only — NOT on whether the
+        # shot carries an eq_bars caption. The engine builds ONE frame at a
+        # time and vo_envelope is called from inside draw_eq_bars; conditioning
+        # on the caption here would return None exactly when bars ask for it.
+        if voice != "none" and P.get("vo_lines") and bed is not None:
+            win = CAPTIONS.M.EQ_VO_WIN
+            nframes = int(round(self._acc_total * self.FPS)) + 2
+            env = [0.0] * nframes
+            # window the bed at EQ_VO_WIN windows across the whole timeline
+            nwin = max(1, int(round(self._acc_total / win)))
+            winlen = max(1, len(bed) // nwin)
+            rms = []
+            for p in range(0, len(bed), winlen):
+                seg = bed[p:p + winlen]
+                if not seg:
+                    break
+                acc = 0.0
+                for v in seg:
+                    acc += v * v
+                rms.append((acc / len(seg)) ** 0.5)
+            peak = max(rms) if rms else 0.0
+            if peak > 1e-9:
+                # window value -> first frame of that window; frames between
+                # windows read the nearest window (deterministic fill)
+                for k in range(nframes):
+                    j = int(k / (win * self.FPS))
+                    if 0 <= j < len(rms):
+                        env[k] = min(1.0, rms[j] / peak)
+        self._vo_env[i] = env
+        return env
+
+    def set_vo_bed(self, samples):
+        """v1.42 C5: hand the engine build_audio's final mono mix (list of
+        float -1..1) so vo_envelope() reads REAL bed loudness instead of a
+        beat-only approximation. Called by render_cli after audio assembly,
+        before encoding; pure data, no I/O."""
+        self._vo_bed = samples
+        self._vo_env = {}
     def glitch_overlay(self, base, off):
         """v1.42 item 8: RGB-split fringe for one frame — the whole canvas
         shifted +/-off px through a RED and a CYAN mask (two tinted paste

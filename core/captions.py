@@ -311,6 +311,38 @@ def draw_rule_draw(eng, dr, L, k, ctx, e):
                  fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
 
 
+def draw_eq_bars(eng, dr, L, k, ctx, e):
+    """v1.42 item 10 (C5): ambient equalizer strip standing on the bottom safe
+    margin. N bars (default 5, <=7) spread across the safe width; heights =
+    abs-sine stack seeded per bar slot, amplitude-modulated by the bed's beat
+    clock (fx_phase seed fallback when no tempo), plus the shot's precomputed
+    VO RMS envelope when the project has voice + vo_lines. Always animating:
+    rides the generic POP_RAMP gate for entrance only, never settles."""
+    clamp01, ease_o, _ = e
+    H, W, LY, ACCENT, prog, a = ctx.H, ctx.W, ctx.LY, ctx.ACCENT, ctx.prog, ctx.a
+    n = int(L.get("n", M.EQ_DEFAULT_N))
+    # envelope is cached per shot on the Engine (computed ONCE); None when no
+    # voice/vo_lines -> pure beat/seed stack.
+    env = eng.vo_envelope(ctx.cap_idx[0])
+    slot = LY["safe_w"] / n
+    x0 = (W - LY["safe_w"]) / 2
+    base_y = H - LY["bottom_inset"]
+    rise = ease_o(clamp01(prog))          # entrance: bars grow from the floor
+    for bi in range(n):
+        # NOTE: eq_bar_height's `idx` is the BAR SLOT (sine seed offset), and
+        # the envelope must be sampled at the GLOBAL FRAME INDEX (ctx.g ->
+        # frame). Passing bi into the envelope read bars 0..4 of every frame.
+        bar_w, h = M.eq_bar_height(eng, L, bi, ctx.lt, ctx.g, env, ctx.g)
+        h = int(h * rise)
+        if h <= 0:
+            continue
+        bx = x0 + bi * slot + (slot - bar_w) / 2
+        # per-bar slight hue lift keeps the strip readable at small sizes
+        ca = int(a * (0.75 + 0.25 * ((bi * 3) % 2)))
+        dr.rectangle((bx, base_y - h, bx + bar_w, base_y),
+                     fill=(ACCENT[0], ACCENT[1], ACCENT[2], ca))
+
+
 def draw_panel(eng, dr, L, k, ctx, e):
     clamp01, ease_o, ease_ow = e
     H, W, LY, P = ctx.H, ctx.W, ctx.LY, ctx.P
@@ -1059,6 +1091,7 @@ DISPATCH = {
     "slam_v2": draw_slam_v2,        # v1.42 item 7: slam + squash-stretch + trail
     "trackin": draw_trackin,        # v1.4: tracking-expand lockup
     "rule_draw": draw_rule_draw,    # v1.42 item 9: accent rule draws L->R
+    "eq_bars": draw_eq_bars,        # v1.42 item 10: ambient EQ strip (beat/VO)
     "flashpop": draw_flashpop,      # v1.4: word stagger w/ alpha flash
     "maskline": draw_maskline,      # v1.4: words rise out of a baseline mask
     "big_number": draw_big_number,
