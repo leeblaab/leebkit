@@ -89,8 +89,8 @@
    "shot8@0.60": "98e71c94fc1f3b16",
    "shot8@0.92": "098b12a7cb3960c2",
    "shot9@0.25": "383b76c8b70c20b1",
-   "shot9@0.60": "dcab6f383e07b442",
-   "shot9@0.92": "ada548effc3b9611"
+   "shot9@0.60": "dca9830af24fd2fe",
+   "shot9@0.92": "f289f00c8b339bf9"
   },
   "kinds_leebdark_1080x1920": {
    "shot0@0.25": "c967ae9978ae60e3",
@@ -121,8 +121,8 @@
    "shot8@0.60": "e2c987b119a130af",
    "shot8@0.92": "36302323114e7417",
    "shot9@0.25": "2e56a3eeb9b5b419",
-   "shot9@0.60": "43029e1962b72c9c",
-   "shot9@0.92": "4b24f86b16e16bf2"
+   "shot9@0.60": "3b9786afab1f1b1f",
+   "shot9@0.92": "b6b18652e3cbc5be"
   },
   "kinds_leebdark_1920x1080": {
    "shot0@0.25": "c4e3652ee3253510",
@@ -153,8 +153,8 @@
    "shot8@0.60": "6a537a2e654e4433",
    "shot8@0.92": "31f26700be85f8b6",
    "shot9@0.25": "6bd1501cc6ff898f",
-   "shot9@0.60": "b91b4cc2366a03f4",
-   "shot9@0.92": "25ce1980092f0b06"
+   "shot9@0.60": "d63e7cc4f904a01d",
+   "shot9@0.92": "2368a5c803db7d80"
   },
   "kinds_neonlight_1080x1080": {
    "shot0@0.25": "57fdef264a557522",
@@ -185,8 +185,8 @@
    "shot8@0.60": "534551e9926b2c15",
    "shot8@0.92": "b5d98c6e5627c143",
    "shot9@0.25": "fa546310e469fdfd",
-   "shot9@0.60": "0c97eeaf55409f56",
-   "shot9@0.92": "dd90d94961e2db33"
+   "shot9@0.60": "27cd0021f041a62d",
+   "shot9@0.92": "7cc19771b0bd3efd"
   },
   "kinds_neonlight_1080x1920": {
    "shot0@0.25": "7c522f5419729ea0",
@@ -217,8 +217,8 @@
    "shot8@0.60": "eef5b2119c7cec6e",
    "shot8@0.92": "8e8c399ef3f6e23f",
    "shot9@0.25": "d81b23636585157e",
-   "shot9@0.60": "7ffb72897814d5d6",
-   "shot9@0.92": "7c2f194a8ef5b919"
+   "shot9@0.60": "6951e5f0f1739a8a",
+   "shot9@0.92": "8342b5fdf070763f"
   },
   "kinds_neonlight_1920x1080": {
    "shot0@0.25": "133e90d9e14d84b0",
@@ -249,8 +249,8 @@
    "shot8@0.60": "d131be1e4354e2fb",
    "shot8@0.92": "08f8f270e543b7e0",
    "shot9@0.25": "da86bf5d8f68bda2",
-   "shot9@0.60": "0a9ce5deb92f6c16",
-   "shot9@0.92": "ce235fe24a90476e"
+   "shot9@0.60": "43d431dc191b1ddf",
+   "shot9@0.92": "032cd67e41d1c370"
   },
   "promo_v12_1080x1080": {
    "f0000": "cc975de4e0e18976",

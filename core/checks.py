@@ -99,6 +99,13 @@ def check_project(engine):
                 flags.append({"shot": i, "kind": "ease", "severity": "error",
                               "message": "shot %d %s: %s" % (i, k, _ezf)})
 
+            # --- v1.42 item 8: FX eligibility (fx needs an entrance kind with
+            # a settle clock; renderer reads the SAME fx_flag rule) ---
+            _fxf = M.fx_flag(L, m.get("done_at"))
+            if _fxf:
+                flags.append({"shot": i, "kind": "fx", "severity": "error",
+                              "message": "shot %d %s: %s" % (i, k, _fxf)})
+
             # --- flag 1: text overflow (PIL measured) ---
             def over(txt, fnt, limit=safe_w, label=None):
                 w = fnt.getlength(txt)

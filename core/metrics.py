@@ -137,6 +137,43 @@ def ease_flag(L):
                 "choices: %s)" % (L.get("kind"), ", ".join(EASE_KINDS)))
     return None
 
+# v1.42 item 8: opt-in entrance FX ("fx": "glitch" = RGB-split channel
+# fringe). Rides the entrance ramp ONLY: offset amplitude scales with the
+# ramp's REMAINING energy (1-prog), so it settles to zero at done_at by
+# construction. Host kinds must have a settle clock (measure().done_at) that
+# the ramp window plugs into — checker flags fx on any other kind.
+FX_NAMES = ("glitch",)
+FX_KINDS = ("accent_word", "burst", "slam_v2")   # "big_word" family hosts
+GLITCH_MIN_OFF = 4       # px, floor of the channel offset while ramping
+GLITCH_MAX_OFF = 12      # px, ceiling at entrance start
+
+
+def glitch_offset(prog, phase):
+    """Signed R-channel offset (px) for one frame: a sin STEP of `phase`
+    (beat 0..1 or seed fallback), amplitude (4..12) scaled by the ramp's
+    remaining energy. Zero once the entrance settles (prog >= 1). Pure
+    function of (prog, phase) -> sample renders == full renders."""
+    if prog >= 1.0:
+        return 0.0
+    step = math.sin(phase * 2.0 * math.pi)
+    mag = GLITCH_MIN_OFF + (GLITCH_MAX_OFF - GLITCH_MIN_OFF) * abs(step)
+    return math.copysign(mag * (1.0 - prog), step if step != 0.0 else 1.0)
+
+
+def fx_flag(L, done_at):
+    """None if the caption's `fx` field is absent/valid-for-kind; else an
+    error string. Renderer and checker read this SAME eligibility rule."""
+    fx = L.get("fx")
+    if not fx:
+        return None
+    if L.get("kind") not in FX_KINDS:
+        return ("fx %r on kind %r unsupported (needs an entrance kind with a "
+                "settle clock; choices: %s)"
+                % (fx, L.get("kind"), ", ".join(FX_KINDS)))
+    if done_at is None:
+        return "fx %r but the line never settles inside the shot" % fx
+    return None
+
 # v1.42 item 5: opt-in idle motion ("idle": true) — breathe (scale sine) and
 # color_wave (per-word tint pulse). House rule: the line's ONE animated
 # property AFTER settle; entrance kinds untouched. Window = done_at -> exit

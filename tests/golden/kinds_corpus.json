@@ -168,6 +168,12 @@
      "kind": "slam_v2",
      "at": 1.3,
      "text": "STAMP"
+    },
+    {
+     "kind": "burst",
+     "at": 0.55,
+     "text": "FX SPLIT",
+     "fx": "glitch"
     }
    ]
   }

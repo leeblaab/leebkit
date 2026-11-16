@@ -408,6 +408,14 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_slam_v2.py")],
 ok("slam_v2 test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.42 item 8: opt-in fx="glitch" on accent_word/burst/slam_v2 — RGB-split
+# fringe inside the entrance ramp only; settled frames byte-identical; beat
+# clock with seed-time fallback; renderer==metrics formula parity.
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_fx_glitch.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("fx glitch test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)

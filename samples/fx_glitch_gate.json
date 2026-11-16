@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "name": "fx_glitch_gate",
+  "preset": "leebdark",
+  "target": 4.0,
+  "fps": 30,
+  "bpm": 120,
+  "shots": [
+    {"t": 4.0, "transition": "cut",
+     "captions": [
+       {"kind": "burst", "at": 0.6, "text": "FX SPLIT", "fx": "glitch"},
+       {"kind": "cta", "at": 2.2, "text": "LEEBKIT v1.42"}
+     ]}
+  ]
+}

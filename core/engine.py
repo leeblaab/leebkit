@@ -219,6 +219,12 @@ def validate_project(proj):
             if ez is not None and ez not in CAPTIONS.M.EASE_NAMES:
                 raise ValueError("shot %d caption ease %r unknown (choices: %s)"
                                  % (i, ez, ", ".join(CAPTIONS.M.EASE_NAMES)))
+            # v1.42 item 8: opt-in FX whitelist (kind eligibility + settle
+            # clock gated by checks via metrics.fx_flag — shape only here).
+            fx = c.get("fx")
+            if fx is not None and fx not in CAPTIONS.M.FX_NAMES:
+                raise ValueError("shot %d caption fx %r unknown (choices: %s)"
+                                 % (i, fx, ", ".join(CAPTIONS.M.FX_NAMES)))
             if "at" in c:
                 a = float(c["at"])
                 if not (0.0 <= a <= float(s.get("t", 0))):
@@ -826,6 +832,31 @@ class Engine:
             return None
         return (g * self.BPM / 60.0) % 1.0
 
+    def fx_phase(self, idx):
+        """v1.42 item 8: glitch's clock when the project has NO beat — a seed
+        time function of the frame index (same determinism contract as
+        beat_phase: pure f(idx), sample == full)."""
+        return ((idx * 7 + 3) % 6) / 6.0
+
+    def glitch_overlay(self, base, off):
+        """v1.42 item 8: RGB-split fringe for one frame — the whole canvas
+        shifted +/-off px through a RED and a CYAN mask (two tinted paste
+        layers, no gaussian, no per-pixel loops). `base` is the finished
+        layer image; returns a new image (callers assign it)."""
+        if off == 0:
+            return base
+        W, H = self.W, self.H
+        d = int(off)
+        out = base.copy()
+        for dx, _tint in ((d, None), (-d, None)):
+            m = Image.new("L", (W, H), 0)
+            md = ImageDraw.Draw(m)
+            md.polygon([(0, 0), (W // 3, 0), (W, H), (2 * W // 3, H)], fill=96)
+            sh = base.transform((W, H), Image.AFFINE, (1, 0, -dx, 0, 1, 0))
+            out.paste(sh, (0, 0), m)
+            del m, sh
+        return out
+
     def render_layer(self, i, lt, idx, cut_mode=False, transition_out=None):
         """Render shot i at local time lt (frame seed idx). Returns RGB image."""
         W, H = self.W, self.H
@@ -892,6 +923,7 @@ class Engine:
         # their offscreen strips onto this frame's canvas; captions.py reads
         # it via eng._canvas (set per frame before the caption loop).
         self._canvas = img
+        fx_done = False   # v1.42 item 8: glitch applies to the FIRST fx host only
         dim = float(s.get("dim", 0.4))
         if base is not None and dim > 0:
             black = self._dim_overlay(dim)
@@ -933,6 +965,17 @@ class Engine:
             if k in ("panel_top", "panel_mid"):
                 at -= CAPTIONS.M.PANEL_SHIFT
             prog = clamp01((lt - at) / POP_RAMP_GATE)
+            # v1.42 item 8: glitch offset for THIS caption — computed in the
+            # loop, APPLIED to the host layer image right after its draw call
+            # (the shared ImageDraw can't be retargeted on PIL 13; the shifted
+            # copies ride this layer only). Non-fx captions keep fx_off == 0:
+            # byte-identical default path.
+            if L.get("fx") == "glitch" and prog < 1.0:
+                _ph = self.beat_phase(g)
+                fx_off = CAPTIONS.M.glitch_offset(
+                    prog, _ph if _ph is not None else self.fx_phase(idx))
+            else:
+                fx_off = 0.0
             # v1.42 item 4: exit window clock (opt-in per-caption `exit`).
             # None unless the caption declares an exit kind; render_layer only
             # runs this for captions, never touches shipped paths.
@@ -1012,6 +1055,13 @@ class Engine:
                 exit_p=exit_p,
                 idle_s=idle_s, idle_tint=idle_tint)
             _cf(self, dr, L, k, ctx, (clamp01, ease_o, ease_ow))
+            # v1.42 item 8: glitch rides the HOST layer only — the shifted
+            # copies never touch later captions or other layers.
+            if fx_off and not fx_done:
+                img = self.glitch_overlay(img, fx_off)
+                dr = ImageDraw.Draw(img, "RGBA")   # grain below paints on top
+                self._canvas = img
+                fx_done = True
         # film grain (per-frame seeded; disabled in presets with grain_points=0)
         gp = int(P.get("grain_points", 90))
         if gp:
