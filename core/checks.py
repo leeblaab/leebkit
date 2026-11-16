@@ -79,6 +79,12 @@ def check_project(engine):
                 flags.append({"shot": i, "kind": "colors", "severity": "error",
                               "message": "shot %d %s: %s" % (i, k, m["colors_error"])})
 
+            # --- v1.42 item 4: exit-motion gate (settle BEFORE exit starts) ---
+            _xef = M.exit_flag(L, m.get("done_at"), t)
+            if _xef:
+                flags.append({"shot": i, "kind": "exit", "severity": "error",
+                              "message": "shot %d %s: %s" % (i, k, _xef)})
+
             # --- flag 1: text overflow (PIL measured) ---
             def over(txt, fnt, limit=safe_w, label=None):
                 w = fnt.getlength(txt)

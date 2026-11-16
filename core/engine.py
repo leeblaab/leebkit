@@ -168,6 +168,12 @@ def validate_project(proj):
             if c["kind"] not in CAPTIONS.DISPATCH:
                 raise ValueError("shot %d caption kind %r unknown (choices: %s)"
                                  % (i, c["kind"], ", ".join(sorted(CAPTIONS.DISPATCH))))
+            # v1.42 item 4: opt-in exit motion whitelist (timing itself is
+            # gated by checks via metrics.exit_flag — validate only shape).
+            ex = c.get("exit")
+            if ex is not None and ex not in CAPTIONS.M.EXIT_KINDS:
+                raise ValueError("shot %d caption exit %r unknown (choices: %s)"
+                                 % (i, ex, ", ".join(CAPTIONS.M.EXIT_KINDS)))
             if "at" in c:
                 a = float(c["at"])
                 if not (0.0 <= a <= float(s.get("t", 0))):
@@ -547,7 +553,7 @@ class Engine:
         return ys
 
     def word_pop(self, dr, y, fnt, txt, color, appear, tracking=0, dy=30, alpha_cap=None,
-                 xa=None):
+                 xa=None, dy_scale=1.0):
         """Whole-word staggered pop with overshoot. appear is this call's clock.
         alpha_cap: hard ceiling on glyph alpha (outgoing layer inside a
         transition window must fade even though its pop clock is frozen).
@@ -569,7 +575,9 @@ class Engine:
             a = int(255 * min(1.0, wt * 1.5))
             if alpha_cap is not None:
                 a = min(a, alpha_cap)
-            yy = y + (1 - e) * dy
+                if a <= 0:
+                    return      # exit fully faded (v1.42): stop drawing words
+            yy = y + (1 - e) * dy * dy_scale
             if tracking:
                 for c in w:
                     cw = dr.textlength(c, font=fnt)
@@ -581,7 +589,7 @@ class Engine:
             x += wsp + tracking
 
     def word_pop_multicol(self, dr, y, fnt, txt, colors, appear, tracking=0,
-                          dy=30, alpha_cap=None, xa=None):
+                          dy=30, alpha_cap=None, xa=None, dy_scale=1.0):
         """v1.42 item 1: word_pop with a per-word color CYCLE. Layout and the
         per-word stagger clock (WORD_STEP/WORD_RAMP) are identical to
         word_pop — only the fill changes, so metrics/checks parity holds."""
@@ -604,7 +612,9 @@ class Engine:
             a = int(255 * min(1.0, wt * 1.5))
             if alpha_cap is not None:
                 a = min(a, alpha_cap)
-            yy = y + (1 - e) * dy
+                if a <= 0:
+                    return      # exit fully faded (v1.42): stop drawing words
+            yy = y + (1 - e) * dy * dy_scale
             if tracking:
                 for c in w:
                     cw = dr.textlength(c, font=fnt)
@@ -838,6 +848,15 @@ class Engine:
             if k in ("panel_top", "panel_mid"):
                 at -= CAPTIONS.M.PANEL_SHIFT
             prog = clamp01((lt - at) / POP_RAMP_GATE)
+            # v1.42 item 4: exit window clock (opt-in per-caption `exit`).
+            # None unless the caption declares an exit kind; render_layer only
+            # runs this for captions, never touches shipped paths.
+            _exk = L.get("exit")
+            if _exk is not None:
+                exit_p = clamp01((lt - (float(s["t"]) - CAPTIONS.M.EXIT_RAMP))
+                                 / CAPTIONS.M.EXIT_RAMP)
+            else:
+                exit_p = None
             # outgoing-side kill switch: inside a transition window the incoming
             # layer runs its own early clock (OV) while this layer's lt keeps
             # running past the shot end — freeze each caption's animation clock
@@ -883,7 +902,8 @@ class Engine:
                 # budget a left-aligned run gets (wrap-aware widths derive it).
                 align=L.get("align", "center"),
                 avail_w=W - 2 * LY["left_inset"],
-                beat=self.beat_phase(g))
+                beat=self.beat_phase(g),
+                exit_p=exit_p)
             _cf(self, dr, L, k, ctx, (clamp01, ease_o, ease_ow))
         # film grain (per-frame seeded; disabled in presets with grain_points=0)
         gp = int(P.get("grain_points", 90))

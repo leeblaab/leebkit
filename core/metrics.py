@@ -104,6 +104,28 @@ EXIT_CLOCK = {"typewriter": TYPE_RAMP, "pump": PUMP_RAMP,
               "slam": SLAM_RAMP, "trackin": TRACK_RAMP}
 EXIT_DEFAULT = 0.32   # shipped gate for every other kind (goldens)
 
+# v1.42 item 4: per-caption opt-in exit motion ("exit": rise|wipe|scale).
+# The exit window starts at shot_t - EXIT_RAMP and runs to the cut; a caption
+# must be SETTLED before it starts moving out (checker flag kind 'exit').
+EXIT_RAMP = 0.25
+EXIT_KINDS = ("rise", "wipe", "scale")
+
+
+def exit_flag(L, done_at, shot_t):
+    """None if the caption's `exit` field is absent/valid-and-settled; else an
+    error string (unknown name, or the line never settles before its exit
+    starts). Renderer and checker read this SAME flag."""
+    ex = L.get("exit")
+    if ex is None:
+        return None
+    if ex not in EXIT_KINDS:
+        return "exit %r unknown (choices: %s)" % (ex, ", ".join(EXIT_KINDS))
+    if done_at is None or done_at + 0.1 > shot_t - EXIT_RAMP:
+        return ("exit '%s' starts at %.2fs but the line settles at %s"
+                % (ex, shot_t - EXIT_RAMP,
+                   "never inside the shot" if done_at is None else "%.2fs" % done_at))
+    return None
+
 
 def exit_gate(k):
     return EXIT_CLOCK.get(k, EXIT_DEFAULT)
@@ -267,5 +289,14 @@ def measure(eng, L, k, shot_t, at_raw, avail_w=None, LY=None):
         nw = len(L.get("text", "").split(" "))
         done_at = at + (nw - 1) * WORD_STEP + WORD_RAMP
         m.update(done_at=done_at, nwords=nw)
+
+    # v1.42 item 4: word_pop-based kinds (accent_word/cta/small/handle/kicker/
+    # title sub...) have no per-kind branch above; give them the generic pop
+    # settle so exit_flag has a done_at to gate against. WORD math matches
+    # engine.word_pop's stagger (0.18 step / 0.36 ramp = WORD_STEP/WORD_RAMP).
+    if "done_at" not in m and k not in ("terminal", "chips") \
+            and ("text" in L or "lines" in L):
+        nw = len((L.get("text") or " ".join(L.get("lines") or [])).split(" "))
+        m["done_at"] = at + max(0, nw - 1) * WORD_STEP + WORD_RAMP
 
     return m

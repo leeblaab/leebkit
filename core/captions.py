@@ -50,6 +50,11 @@ FrameCtx = namedtuple("FrameCtx", [
     "beat",                # v1.42 item 3: beat phase 0..1 at the bed BPM, or None
                            # (no procedural clock / bpm override). Pure function of
                            # frame index; items 8/10 read it, others ignore it.
+    "exit_p",              # v1.42 item 4: exit-motion progress 0..1 (opt-in
+                           # caption `exit`), or None. render_layer precomputes
+                           # frac((lt - (shot_t-EXIT_RAMP))/EXIT_RAMP); draw paths
+                           # apply the kind's OUT transform on top of the settled
+                           # entrance state (rise / wipe / scale).
 ])
 
 
@@ -170,6 +175,35 @@ def draw_title_block(eng, dr, L, k, ctx, e):
                                  (DIMC[0], DIMC[1], DIMC[2], a), tracking=TRK.get("sub", 14))
 
 
+def _ease_io(t):   # smoothstep in-out (mirrors engine.ease_io; captions must not
+    return t * t * (3 - 2 * t)   # import core.engine — keep it local
+
+
+def _exit_state(L, ctx, a_default):
+    """v1.42 item 4: shared exit transform for word-pop style kinds. Returns
+    (y_offset_px, alpha_cap_or_None). Only active when the caption opts in via
+    `exit` AND the precomputed clock (ctx.exit_p) is running — the entrance
+    path stays byte-identical when exit_p is None."""
+    ep = getattr(ctx, "exit_p", None)
+    if not ep:             # None (no exit field) or 0.0 -> shipped path
+        return 0.0, a_default
+    ex = L.get("exit")
+    if ex == "rise":       # RISE OUT: the settled line lifts + fades (the
+                           # name in the plan; NOT a reverse of the pop-in)
+        dy = -_ease_io(ep) * 46.0
+        cap = int(255 * (1.0 - _ease_io(ep)))
+    elif ex == "scale":    # shrink + fade
+        cap = int(255 * (1.0 - _ease_io(ep)))
+        dy = 0.0
+    else:                  # wipe: the mask sweep IS the motion; alpha untouched
+        return 0.0, a_default
+    if cap <= 0:           # fully exited: draw nothing
+        return dy, 0
+    if a_default is not None:
+        cap = min(cap, a_default)
+    return dy, cap
+
+
 def draw_accent_word(eng, dr, L, k, ctx, e):
     """v1.42 item 1: optional per-caption `colors` cycle the WORDS (the
     accent underline/rule keeps ACCENT — one animated property per line).
@@ -177,12 +211,33 @@ def draw_accent_word(eng, dr, L, k, ctx, e):
     H, LY, ACCENT, prog, slide = ctx.H, ctx.LY, ctx.ACCENT, ctx.prog, ctx.slide
     y = H * LY["accent_frac"] - slide
     cols = _kin_cols(L, ctx, ACCENT)
+    # v1.42 item 4: opt-in exit motion (rise/wipe/scale), None-when-absent.
+    dy, acap = _exit_state(L, ctx, ctx.a_gate)
+    y += dy
+    exk = L.get("exit")
+    dscale = 1.0
+    if exk == "scale" and getattr(ctx, "exit_p", 0):
+        # shrink: collapse the entrance stagger clock toward 0 so words run
+        # their pop math BACKWARDS (down + fade) — one shared curve family.
+        q = 1.0 - _ease_io(ctx.exit_p)
+        prog = min(prog, max(1e-6, q))
+        dscale = max(0.0, q)
+    if exk == "wipe" and getattr(ctx, "exit_p", 0):
+        # reverse mask sweep: glyphs sit still, the RIGHT edge closes in
+        # (line_wipe's reveal inverted). Entrance already finished (checker
+        # gates settle-before-exit), so draw at full prog with a shrinking
+        # reveal window instead of word-pop staggering.
+        eng.line_wipe(dr, y, eng.H1, L["text"], cols[0],
+                      1.0 - _ease_io(ctx.exit_p), tracking=2,
+                      alpha_cap=acap,
+                      xa=None if ctx.align != "left" else LY["left_inset"])
+        return
     if len(cols) == 1:
         eng.word_pop(dr, y, eng.H1, L["text"], cols[0],
-                     prog, tracking=2, alpha_cap=ctx.a_gate)
+                     prog, tracking=2, alpha_cap=acap, dy_scale=dscale)
     else:
         eng.word_pop_multicol(dr, y, eng.H1, L["text"], cols, prog,
-                              tracking=2, alpha_cap=ctx.a_gate)
+                              tracking=2, alpha_cap=acap, dy_scale=dscale)
 
 
 def draw_panel(eng, dr, L, k, ctx, e):
