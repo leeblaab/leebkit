@@ -55,6 +55,11 @@ def check_project(engine):
             avail_w = (engine.W - 2 * LY["left_inset"]) if left else None
             m = M.measure(engine, L, k, t, at, avail_w=avail_w, LY=LY)   # same numbers as the draw path
 
+            # --- v1.42: caption `colors` gate (list cap + palette names) ---
+            if m.get("colors_error"):
+                flags.append({"shot": i, "kind": "colors", "severity": "error",
+                              "message": "shot %d %s: %s" % (i, k, m["colors_error"])})
+
             # --- flag 1: text overflow (PIL measured) ---
             def over(txt, fnt, limit=safe_w, label=None):
                 w = fnt.getlength(txt)

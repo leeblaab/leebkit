@@ -92,6 +92,29 @@ def _probe_dr():
     return ImageDraw.Draw(Image.new("RGB", (8, 8)))
 
 
+COLORS_MAX = 4   # per-caption "colors" list cap (word-cycle kinds; v1.42 gate)
+
+
+def colors_flag(eng, L):
+    """v1.42: shared validation for a caption's optional `colors` palette-name
+    list -> error message or None. Renderer builds PAL from the SAME preset
+    dict this reads, so an unknown name never silently falls back at draw
+    time; >COLORS_MAX names can't cycle meaningfully on word kinds."""
+    names = L.get("colors")
+    if names is None:
+        return None
+    if not isinstance(names, list) or not names:
+        return "colors must be a non-empty list of palette names"
+    if len(names) > COLORS_MAX:
+        return "colors list has %d names (max %d)" % (len(names), COLORS_MAX)
+    pal = eng.preset.get("colors", {})
+    bad = [n for n in names if not isinstance(n, str) or n not in pal]
+    if bad:
+        return "colors %s not in preset palette (%s)" % (
+            ", ".join(map(str, bad)), ", ".join(sorted(pal)))
+    return None
+
+
 def measure(eng, L, k, shot_t, at_raw, avail_w=None, LY=None):
     """Per-kind measurements. Returns dict; keys vary by kind:
     lines/n, done_at (settle time), widths/total, rows_done/typing_done,
@@ -103,6 +126,11 @@ def measure(eng, L, k, shot_t, at_raw, avail_w=None, LY=None):
     LY = LY if LY is not None else eng.L
     at = preamble_at(k, at_raw)
     m = {"at_eff": at}
+    # v1.42: caption-level colors gate (renderer + checker agree by
+    # construction; kinds read PAL built from this same preset dict).
+    cf = colors_flag(eng, L)
+    if cf:
+        m["colors_error"] = cf
 
     if k in ("panel_top", "panel_mid"):
         lines = eng.fit_panel_lines(_probe_dr(), L["lines"], eng.H1, avail_w=avail_w)

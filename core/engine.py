@@ -555,6 +555,41 @@ class Engine:
                 x += ws[i]
             x += wsp + tracking
 
+    def word_pop_multicol(self, dr, y, fnt, txt, colors, appear, tracking=0,
+                          dy=30, alpha_cap=None, xa=None):
+        """v1.42 item 1: word_pop with a per-word color CYCLE. Layout and the
+        per-word stagger clock (WORD_STEP/WORD_RAMP) are identical to
+        word_pop — only the fill changes, so metrics/checks parity holds."""
+        from . import metrics as M
+        if appear <= 0:
+            return
+        W = self.W
+        words = txt.split(" ")
+        wsp = dr.textlength(" ", font=fnt)
+        ws = [dr.textlength(w, font=fnt) for w in words]
+        total = sum(ws) + wsp * (len(words) - 1) + tracking * sum(len(w) for w in words)
+        x = (W - total) / 2 if xa is None else xa
+        for i, w in enumerate(words):
+            wt = clamp01((appear - i * M.WORD_STEP) / M.WORD_RAMP)
+            col = colors[i % len(colors)]
+            if wt <= 0:
+                x += ws[i] + wsp + tracking * len(w)
+                continue
+            e = ease_ow(wt)
+            a = int(255 * min(1.0, wt * 1.5))
+            if alpha_cap is not None:
+                a = min(a, alpha_cap)
+            yy = y + (1 - e) * dy
+            if tracking:
+                for c in w:
+                    cw = dr.textlength(c, font=fnt)
+                    dr.text((x, yy), c, font=fnt, fill=(col[0], col[1], col[2], a))
+                    x += cw + tracking
+            else:
+                dr.text((x, yy), w, font=fnt, fill=(col[0], col[1], col[2], a))
+                x += ws[i]
+            x += wsp + tracking
+
     def line_wipe(self, dr, y, fnt, txt, color, prog, tracking=0, alpha_cap=None,
                   xa=None):
         """v1.4 (kinetic drafts): horizontal mask-wipe reveal — the glyphs sit

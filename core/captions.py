@@ -168,9 +168,18 @@ def draw_title_block(eng, dr, L, k, ctx, e):
 
 
 def draw_accent_word(eng, dr, L, k, ctx, e):
+    """v1.42 item 1: optional per-caption `colors` cycle the WORDS (the
+    accent underline/rule keeps ACCENT — one animated property per line).
+    No list -> preset ACCENT for every word, byte-identical to v1.41."""
     H, LY, ACCENT, prog, slide = ctx.H, ctx.LY, ctx.ACCENT, ctx.prog, ctx.slide
-    eng.word_pop(dr, H * LY["accent_frac"] - slide, eng.H1, L["text"], ACCENT,
-                 prog, tracking=2, alpha_cap=ctx.a_gate)
+    y = H * LY["accent_frac"] - slide
+    cols = _kin_cols(L, ctx, ACCENT)
+    if len(cols) == 1:
+        eng.word_pop(dr, y, eng.H1, L["text"], cols[0],
+                     prog, tracking=2, alpha_cap=ctx.a_gate)
+    else:
+        eng.word_pop_multicol(dr, y, eng.H1, L["text"], cols, prog,
+                              tracking=2, alpha_cap=ctx.a_gate)
 
 
 def draw_panel(eng, dr, L, k, ctx, e):
