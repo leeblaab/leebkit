@@ -27,7 +27,8 @@
     {
      "kind": "accent_word",
      "at": 0.3,
-     "text": "ACCELERATE"
+     "text": "ACCELERATE",
+     "fx": "track_collapse"
     },
     {
      "kind": "handle",
@@ -174,6 +175,11 @@
      "at": 0.55,
      "text": "FX SPLIT",
      "fx": "glitch"
+    },
+    {
+     "kind": "rule_draw",
+     "at": 0.1,
+     "w": 0.35
     }
    ]
   }

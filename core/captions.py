@@ -262,13 +262,53 @@ def draw_accent_word(eng, dr, L, k, ctx, e):
         return
     if len(cols) == 1:
         eng.word_pop(dr, y, eng.H1, L["text"], cols[0],
-                     prog, tracking=2, alpha_cap=acap, dy_scale=dscale,
+                     prog, tracking=2 + _track_collapse(L, ctx), alpha_cap=acap, dy_scale=dscale,
                      s=ctx.idle_s or 1.0, ez=ease_of(L, e))
     else:
         eng.word_pop_multicol(dr, y, eng.H1, L["text"],
                               _wave_cols(cols, ctx, ctx.idle_tint), prog,
-                              tracking=2, alpha_cap=acap, dy_scale=dscale,
+                              tracking=2 + _track_collapse(L, ctx), alpha_cap=acap, dy_scale=dscale,
                               s=ctx.idle_s or 1.0, ez=ease_of(L, e))
+
+
+def _track_collapse(L, ctx):
+    """v1.42 item 9: opt-in fx=track_collapse — extra per-char tracking that
+    starts +18px and collapses to 0 over TRACK_RAMP (trackin math inverted).
+    Convergent settle: px==0 past the ramp -> the plain kind's rest frame is
+    byte-identical. Pure function of prog -> sample == full.
+
+    IMPORTANT (parity with checks.py): the collapse rides the SHARED prog
+    gate and fully opens (px=0) exactly when prog hits 1 — lt = at +
+    POP_RAMP — the same convergent-settle slam_v2 uses. That is strictly
+    EARLIER than any host kind's done_at (WORD_RAMP/TRACK_RAMP >= POP_RAMP),
+    so whenever fx_flag says the line has settled, px is already 0 and the
+    rest frame equals the plain kind byte-for-byte."""
+    if L.get("fx") != "track_collapse":
+        return 0
+    return M.track_collapse_px(ctx.prog)
+
+
+def draw_rule_draw(eng, dr, L, k, ctx, e):
+    """v1.42 item 9: standalone accent rule that draws left->right over the
+    generic POP_RAMP window (single-beat family; done_at = at + POP_RAMP in
+    metrics). Width = L['w'] fraction of the safe width (or measured text
+    when 'text' is given); height/gap ride the kicker rule geometry so it
+    composes with letterspaced lines. Settles as a static rule."""
+    clamp01, ease_o, _ = e
+    H, W, LY, ACCENT, prog, slide, a = (ctx.H, ctx.W, ctx.LY, ctx.ACCENT,
+                                        ctx.prog, ctx.slide, ctx.a)
+    if L.get("text"):
+        w_full = dr.textlength(L["text"], font=eng.SMALL)
+    else:
+        w_full = int(float(L.get("w", 0.4)) * LY["safe_w"])
+    rule_w = int(w_full * ease_o(clamp01(prog)))
+    if rule_w <= 0:
+        return
+    y = H * LY.get("rule_frac", LY["kicker_frac"]) - slide
+    rx = eng.x_anchor(ctx, w_full) if ctx.align == "left" else (W - w_full) / 2
+    dr.rectangle((rx, y - LY["kicker_rule_gap"],
+                  rx + rule_w, y - LY["kicker_rule_gap"] + LY["kicker_rule_h"]),
+                 fill=(ACCENT[0], ACCENT[1], ACCENT[2], a))
 
 
 def draw_panel(eng, dr, L, k, ctx, e):
@@ -1018,6 +1058,7 @@ DISPATCH = {
     "slam": draw_slam,              # v1.4: scale-down stamp from oversize
     "slam_v2": draw_slam_v2,        # v1.42 item 7: slam + squash-stretch + trail
     "trackin": draw_trackin,        # v1.4: tracking-expand lockup
+    "rule_draw": draw_rule_draw,    # v1.42 item 9: accent rule draws L->R
     "flashpop": draw_flashpop,      # v1.4: word stagger w/ alpha flash
     "maskline": draw_maskline,      # v1.4: words rise out of a baseline mask
     "big_number": draw_big_number,

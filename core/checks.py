@@ -205,10 +205,14 @@ def check_project(engine):
                         flags.append({"shot": i, "kind": "overflow", "severity": "error",
                                       "message": "shot %d typewriter line %.0fpx > safe %.0fpx"
                                                  % (i, total, W - 80)})
-            elif k in ("wipe", "split", "slam", "slam_v2", "trackin"):
+            elif k in ("wipe", "split", "slam", "slam_v2", "trackin",
+                       "rule_draw"):
                 # v1.4 kinetic drafts: single-beat kinds — settle on their
                 # metrics clock AND width gate at the draw font (h1; slam's
                 # overscan start is measured like burst, conservatively).
+                # v1.42 item 9: rule_draw joins the family (done_at = at +
+                # POP_RAMP; its width is a fraction of safe_w by schema, so
+                # no text-overflow gate applies — w bounds gated in metrics).
                 if m["done_at"] > t - 0.1:
                     flags.append({"shot": i, "kind": "timing", "severity": "error",
                                   "message": "shot %d %s finishes at %.2fs > shot end %.2fs"

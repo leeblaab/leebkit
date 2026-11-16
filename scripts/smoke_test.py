@@ -416,6 +416,14 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_fx_glitch.py")],
 ok("fx glitch test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.42 item 9: rule_draw micro-kind (accent rule draws L->R over POP_RAMP)
+# + fx=track_collapse on accent_word/title_block (+18px -> 0, convergent
+# settle == plain kind's rest frame byte-identical).
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_rule_track.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("rule_draw / track_collapse test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)

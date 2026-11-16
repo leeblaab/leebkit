@@ -142,10 +142,23 @@ def ease_flag(L):
 # ramp's REMAINING energy (1-prog), so it settles to zero at done_at by
 # construction. Host kinds must have a settle clock (measure().done_at) that
 # the ramp window plugs into — checker flags fx on any other kind.
-FX_NAMES = ("glitch",)
+FX_NAMES = ("glitch", "track_collapse")
 FX_KINDS = ("accent_word", "burst", "slam_v2")   # "big_word" family hosts
+# v1.42 item 9: track_collapse — tracking starts +TRACK_COLLAPSE_PX and
+# collapses to 0 over TRACK_RAMP (trackin math INVERTED). Convergent settle:
+# trk=0 equals the plain kind's rest state byte-for-byte, so like slam_v2 it
+# only hosts on kinds whose done_at rides TRACK_RAMP.
+FX_TRACK_KINDS = ("accent_word", "title_block")
+TRACK_COLLAPSE_PX = 18   # px extra tracking at entrance start (plan-locked)
 GLITCH_MIN_OFF = 4       # px, floor of the channel offset while ramping
 GLITCH_MAX_OFF = 12      # px, ceiling at entrance start
+
+
+def track_collapse_px(prog):
+    """Extra per-char tracking (px) for one frame: +18 -> 0 over the ramp.
+    prog here is the kind's ramp-normalized progress against TRACK_RAMP;
+    pure function -> sample renders == full renders."""
+    return int(round(TRACK_COLLAPSE_PX * (1.0 - min(1.0, max(0.0, prog)))))
 
 
 def glitch_offset(prog, phase):
@@ -166,10 +179,11 @@ def fx_flag(L, done_at):
     fx = L.get("fx")
     if not fx:
         return None
-    if L.get("kind") not in FX_KINDS:
+    hosts = FX_TRACK_KINDS if fx == "track_collapse" else FX_KINDS
+    if L.get("kind") not in hosts:
         return ("fx %r on kind %r unsupported (needs an entrance kind with a "
                 "settle clock; choices: %s)"
-                % (fx, L.get("kind"), ", ".join(FX_KINDS)))
+                % (fx, L.get("kind"), ", ".join(hosts)))
     if done_at is None:
         return "fx %r but the line never settles inside the shot" % fx
     return None
@@ -452,6 +466,16 @@ def measure(eng, L, k, shot_t, at_raw, avail_w=None, LY=None):
         # tracking closes when tp hits 1 -> lt = at + TRACK_RAMP
         done_at = at + TRACK_RAMP
         m.update(done_at=done_at)
+
+    elif k == "rule_draw":
+        # v1.42 item 9: standalone accent rule, draws left->right over the
+        # generic POP_RAMP gate (single-beat family). Width is L["w"] as a
+        # fraction of safe_w, or the measured text width when text is given.
+        done_at = at + POP_RAMP
+        wfrac = float(L.get("w", 0.4))
+        if not (0.05 <= wfrac <= 1.0):
+            m["error"] = "rule_draw w must be a fraction 0.05..1.0 (got %r)" % L.get("w")
+        m.update(done_at=done_at, rule_w=int(wfrac * (m.get("avail_w") or 999)))
 
     elif k == "flashpop":
         nw = len(L.get("text", "").split(" "))
