@@ -401,6 +401,13 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_easings.py")],
 ok("easing library test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.42 item 7: slam_v2 scale-only entrance (squash-stretch + trail); settled
+# frame byte-identical to plain slam; shared slam settle clock.
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_slam_v2.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("slam_v2 test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)
