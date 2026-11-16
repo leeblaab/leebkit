@@ -26,3 +26,4 @@ tools/
 
 # private working notes — never publish (audits, marketing drafts, session handoffs)
 docs/_local/
+build/

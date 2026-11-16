@@ -1,3 +1,0 @@
-encode leg: PASS (encode nb_read_frames=24 expected=24)
-GOLDEN PASS (1314 frames match, encode nb_read_frames=24 expected=24)
-G=0
