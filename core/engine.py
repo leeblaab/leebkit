@@ -812,7 +812,11 @@ class Engine:
             # the window (Yasser: outgoing captions bled under the incoming
             # shot even in the shipped demo). Hard cuts never enter here.
             if transition_out:
-                prog = min(prog, clamp01((float(s["t"]) - at) / 0.32))
+                # v1.42 item 4: freeze at shot end with the kind's OWN settle
+                # ramp (metrics.exit_gate — same table the checker reads), not
+                # a hardcoded 0.32 that killed long-stagger kinds mid-entrance.
+                _eg = CAPTIONS.M.exit_gate(k)
+                prog = min(prog, clamp01((float(s["t"]) - at) / _eg))
                 fade = 1.0 - clamp01((lt - float(s["t"])) / max(transition_out, 1e-6))
                 if prog <= 0 or fade <= 0:
                     continue

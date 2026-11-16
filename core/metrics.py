@@ -94,6 +94,20 @@ def _probe_dr():
 
 COLORS_MAX = 4   # per-caption "colors" list cap (word-cycle kinds; v1.42 gate)
 
+# v1.42 item 4: exit-clock table — the settle ramp each kind's animation uses
+# on the OUTGOING side of a transition window. The renderer froze every kind's
+# prog at its shot end with a hardcoded /0.32 regardless of its entrance ramp,
+# so long-stagger kinds (typewriter 1.8s, pump, slam, trackin) were killed mid-
+# entrance inside fades even when they settled before the cut. Table mirrors
+# the engine's POP_RAMP_GATE; exit_gate() is the single source both sides read.
+EXIT_CLOCK = {"typewriter": TYPE_RAMP, "pump": PUMP_RAMP,
+              "slam": SLAM_RAMP, "trackin": TRACK_RAMP}
+EXIT_DEFAULT = 0.32   # shipped gate for every other kind (goldens)
+
+
+def exit_gate(k):
+    return EXIT_CLOCK.get(k, EXIT_DEFAULT)
+
 
 def colors_flag(eng, L):
     """v1.42: shared validation for a caption's optional `colors` palette-name

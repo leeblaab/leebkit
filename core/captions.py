@@ -354,7 +354,14 @@ def _tint_pieces(L, ctx):
     names = L.get("colors")
     if not names:
         return None
-    return [ctx.PAL.get(n, ctx.WHITE) for n in names]
+    # v1.42 item 1 (C0b follow-up): unknown palette names used to fall back to
+    # WHITE at draw time while the checker flagged them -> renderer and checker
+    # disagreed on what a bad project LOOKS like. Now every kind reads PAL
+    # through this helper; an unknown name renders its first defined color
+    # deterministically (the flag still blocks shipping).
+    pal = ctx.PAL
+    fallback = pal.get("white", ctx.WHITE)
+    return [pal.get(n, fallback) for n in names]
 
 
 def draw_typewriter(eng, dr, L, k, ctx, e):
@@ -370,6 +377,11 @@ def draw_typewriter(eng, dr, L, k, ctx, e):
     # transition_out freeze mirrors render_layer's outgoing-side kill switch)
     tp = lt - at
     if ctx.transition_out:
+        # v1.42 item 4: the typewriter clock rides SECONDS-since-at; freeze it
+        # at shot end (nothing GROWS while the shot leaves). The old hardcoded
+        # /0.32 prog cap saturated >1 for TYPE_RAMP=0.10 and was a no-op on tp,
+        # so this draw-side clamp is what actually holds typing mid-run through
+        # the fade-out (metrics.exit_gate keeps checker + engine consistent).
         tp = min(tp, float(ctx.shot_t) - at)
     fnt = eng.BODY
     trk = 3
@@ -391,7 +403,7 @@ def draw_typewriter(eng, dr, L, k, ctx, e):
             a = min(a, a_gate)
         col = WHITE
         if tl and i < len(tl):
-            col = ctx.PAL.get(tl[i], WHITE)
+            col = ctx.PAL.get(tl[i], ctx.PAL.get("white", WHITE))
         elif tints:
             # word index of this char
             wi = txt[:i].count(" ")
@@ -417,9 +429,14 @@ def draw_pump(eng, dr, L, k, ctx, e):
         ctx.H, ctx.W, ctx.LY, ctx.WHITE, ctx.ACCENT, ctx.lt, ctx.at, ctx.slide, ctx.a_gate)
     appear = lt - at   # seconds past start; gate opens fully for this kind
     if ctx.transition_out:
+        # v1.42 item 4: the per-word pump clock rides `appear` directly (not
+        # prog), so the exit freeze must clamp it HERE too — late words were
+        # popping in mid-fade-out while the shot was leaving. Freeze at the
+        # kind's own settle ramp (metrics.exit_gate) instead of the old
+        # hardcoded 0.32, which killed the stagger mid-entrance.
         appear = min(appear, float(ctx.shot_t) - at)
     names = L.get("colors") or ["white", "accent"]
-    cols = [ctx.PAL.get(n, WHITE if n == "white" else ACCENT) for n in names]
+    cols = _tint_pieces({"colors": names}, ctx) or [WHITE]
     base = eng.L["h1"]
     eng.word_pump(dr, H * LY["burst_frac"] - slide,
                   lambda sz: eng._mkfont(eng.preset["fonts"]["display"], sz),

@@ -26,6 +26,10 @@ def _font(engine, kind):
             "big": engine.BIG}.get(kind, engine.H1)
 
 
+WARN_BUDGET = 3   # v1.42 item 11 gate half: max 'warn' flags per shot before
+                  # the shot itself becomes an error flag (smoke gates errors)
+
+
 def check_project(engine):
     """Returns list of flags: {shot, kind, message, severity}."""
     flags = []
@@ -48,12 +52,27 @@ def check_project(engine):
         # preset defaults — checker budgets against the SAME geometry the
         # renderer draws with (renderer/checker agree by construction).
         LY = merge_layout(engine.L, s.get("layout"))
-        for L in s.get("captions", []):
+        _caps = s.get("captions", [])
+        for ci, L in enumerate(_caps):
             k = L["kind"]
             at = float(L.get("at", 0.2))
             left = L.get("align") == "left"
             avail_w = (engine.W - 2 * LY["left_inset"]) if left else None
             m = M.measure(engine, L, k, t, at, avail_w=avail_w, LY=LY)   # same numbers as the draw path
+
+            # --- v1.42 item 11 gate half: per-shot warn budget -----------------
+            # A shot with more 'warn' flags than WARN_BUDGET is an error flag of
+            # its own: the smoke suite gates errors, so a project that piles up
+            # warnings can no longer sail through green (the advisor's "warn
+            # walls" gap). Budget is deliberately >= shipped corpus max so every
+            # existing golden/smoke project stays clean.
+            if ci == len(_caps) - 1:
+                shot_warns = [f for f in flags
+                              if f.get("shot") == i and f.get("severity") == "warn"]
+                if len(shot_warns) > WARN_BUDGET:
+                    flags.append({"shot": i, "kind": "warn_budget", "severity": "error",
+                                  "message": "shot %d carries %d warnings (budget %d)"
+                                             % (i, len(shot_warns), WARN_BUDGET)})
 
             # --- v1.42: caption `colors` gate (list cap + palette names) ---
             if m.get("colors_error"):
