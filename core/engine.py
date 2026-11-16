@@ -920,7 +920,7 @@ class Engine:
             # the 0.32 gate byte-for-byte (no golden churn).
             POP_RAMP_GATE = CAPTIONS.M.TYPE_RAMP if k == "typewriter" else \
                             CAPTIONS.M.PUMP_RAMP if k == "pump" else \
-                            CAPTIONS.M.SLAM_RAMP if k == "slam" else \
+                            CAPTIONS.M.SLAM_RAMP if k in ("slam", "slam_v2") else \
                             CAPTIONS.M.TRACK_RAMP if k == "trackin" else 0.32
             # panel_* kinds are the shot's message itself (fill=solid frames):
             # run their clock 0.45s early so a black beat never holds with an

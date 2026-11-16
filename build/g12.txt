@@ -1,0 +1,20 @@
+encode leg: PASS (encode nb_read_frames=24 expected=24)
+DRIFT 18 frames, MISSING 0 keys:
+  changed: kinds_leebdark_1080x1920/shot4@0.60
+  changed: kinds_leebdark_1080x1920/shot4@0.92
+  changed: kinds_leebdark_1080x1920/shot9@0.92
+  changed: kinds_leebdark_1080x1080/shot4@0.60
+  changed: kinds_leebdark_1080x1080/shot4@0.92
+  changed: kinds_leebdark_1080x1080/shot9@0.92
+  changed: kinds_leebdark_1920x1080/shot4@0.60
+  changed: kinds_leebdark_1920x1080/shot4@0.92
+  changed: kinds_leebdark_1920x1080/shot9@0.92
+  changed: kinds_neonlight_1080x1920/shot4@0.60
+  changed: kinds_neonlight_1080x1920/shot4@0.92
+  changed: kinds_neonlight_1080x1920/shot9@0.92
+  changed: kinds_neonlight_1080x1080/shot4@0.60
+  changed: kinds_neonlight_1080x1080/shot4@0.92
+  changed: kinds_neonlight_1080x1080/shot9@0.92
+  changed: kinds_neonlight_1920x1080/shot4@0.60
+  changed: kinds_neonlight_1920x1080/shot4@0.92
+  changed: kinds_neonlight_1920x1080/shot9@0.92

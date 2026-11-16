@@ -682,6 +682,65 @@ def draw_slam(eng, dr, L, k, ctx, e):
     dr.text((x, H * LY["burst_frac"] - slide), txt, font=fnt, fill=col + (a,))
 
 
+def draw_slam_v2(eng, dr, L, k, ctx, e):
+    """v1.42 item 7 (benchmark-locked): scale-only slam_v2 on the existing
+    mkfont redraw path. The sprite-compositor alternative was benchmarked
+    (scripts/bench_sprite.py: full-frame AFFINE = +1737% frame cost — PIL
+    resamples the whole 1080x1920 canvas for one word box) and REJECTED per
+    the plan's <= +15% gate. What ships instead: slam entrance + squash-
+    stretch (scaleY 0.8 -> 1.1 -> 1 over SLAM_RAMP via per-axis font size —
+    still just a redraw, no bitmap resample) + motion trail (2 echo draws at
+    decaying alpha from lagged scales; pure function of t, deterministic).
+    Settles EXACTLY like slam (sp=1 -> scale 1 both axes, no echoes) so the
+    shared settle clock and goldens stay honest."""
+    clamp01 = e[0]
+    H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
+                                            ctx.prog, ctx.slide, ctx.a_gate)
+    sp = clamp01(prog / M.SLAM_RAMP * 0.32)   # same gate-normalized clock as slam
+    _ez = ease_of(L, e)                        # v1.42 item 6 easing rides it too
+    if _ez is not None:
+        sp = clamp01(_ez(sp))
+    txt = L["text"]
+    col = _kin_cols(L, ctx, WHITE)[0]
+
+    def sq(sp, v):
+        """piecewise-linear squash curve over control triple (mid at 0.5)."""
+        a, b, c = v
+        return (a + (b - a) * (sp / 0.5)) if sp < 0.5 else \
+               (b + (c - b) * ((sp - 0.5) / 0.5))
+
+    def stamp(sp, alpha):
+        # scale-only squash: Y carries 0.8 -> 1.1 -> 1, X counter-squashes
+        # (volume-preserving feel) — per-axis truetype size, no resampling.
+        # The slam OVERSCAN factor rides only inside the ramp (sp<1); at rest
+        # both axes are exactly 1.0 so the settled frame equals plain slam.
+        sy = sq(sp, M.SLAM_V2_SY)
+        sx = sq(sp, M.SLAM_V2_SX)
+        ov = M.SLAM_FROM if sp < 1.0 else 1.0
+        fnt = eng._mkfont(eng.preset["fonts"]["display"],
+                          max(1, int(eng.L["h1"] * ov * sy)))
+        w = dr.textlength(txt, font=fnt) * sx
+        x = eng.x_anchor(ctx, w) if ctx.align == "left" else (W - w) / 2
+        dr.text((x, H * LY["burst_frac"] - slide), txt, font=fnt,
+                fill=col + (alpha,))
+
+    # trail echoes: lagged scales at decaying alpha — deterministic f(t).
+    if sp < 1.0:
+        for lag, amp in ((0.36, M.SLAM_V2_TRAIL[1]), (0.18, M.SLAM_V2_TRAIL[0])):
+            sp_b = clamp01(sp - lag)
+            if sp_b <= 0:
+                continue
+            a_b = int(255 * min(1.0, prog * 3.0) * amp * (1.0 - lag))
+            if a_gate is not None:
+                a_b = min(a_b, a_gate)
+            stamp(sp_b, a_b)
+
+    a = int(255 * min(1.0, prog * 3.0))
+    if a_gate is not None:
+        a = min(a, a_gate)
+    stamp(sp, a)
+
+
 def draw_trackin(eng, dr, L, k, ctx, e):
     """v1.4 (kinetic drafts): tracking-expand — letters start wide apart and
     close ranks into the lockup while fading in."""
@@ -957,6 +1016,7 @@ DISPATCH = {
     "wipe": draw_wipe,              # v1.4 kinetic drafts: mask-wipe reveal
     "split": draw_split,            # v1.4: halves slide in from frame edges
     "slam": draw_slam,              # v1.4: scale-down stamp from oversize
+    "slam_v2": draw_slam_v2,        # v1.42 item 7: slam + squash-stretch + trail
     "trackin": draw_trackin,        # v1.4: tracking-expand lockup
     "flashpop": draw_flashpop,      # v1.4: word stagger w/ alpha flash
     "maskline": draw_maskline,      # v1.4: words rise out of a baseline mask

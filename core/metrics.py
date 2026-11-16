@@ -53,6 +53,11 @@ PUMP_RAMP = 0.30        # word pump: per-word progress ramp
 # --- v1.4 kinetic drafts: mask-wipe / split-slide / slam / track-in / flash --
 SLAM_RAMP = 0.26        # slam: scale-down-from-overscan settle ramp
 SLAM_FROM = 1.85        # slam: start scale (text "falls into" the frame)
+# v1.42 item 7: slam_v2 squash-stretch control points over SLAM_RAMP
+# (scaleY 0.8 -> 1.1 -> 1; piecewise-linear, lands exactly at 1 when sp=1).
+SLAM_V2_SY = (0.80, 1.10, 1.0)
+SLAM_V2_SX = (1.15, 0.94, 1.0)   # inverse-width squash (volume-preserving feel)
+SLAM_V2_TRAIL = (0.30, 0.15)     # echo alpha at sp-0.18 / sp-0.36 (pure f(t))
 SPLIT_RAMP = 0.34       # split: half-lines slide-to-center ramp
 TRACK_RAMP = 0.55       # trackin: tracking-expand settle ramp
 FLASH_STEP = 0.16       # flashpop: per-word stagger
@@ -103,7 +108,7 @@ COLORS_MAX = 4   # per-caption "colors" list cap (word-cycle kinds; v1.42 gate)
 # entrance inside fades even when they settled before the cut. Table mirrors
 # the engine's POP_RAMP_GATE; exit_gate() is the single source both sides read.
 EXIT_CLOCK = {"typewriter": TYPE_RAMP, "pump": PUMP_RAMP,
-              "slam": SLAM_RAMP, "trackin": TRACK_RAMP}
+              "slam": SLAM_RAMP, "slam_v2": SLAM_RAMP, "trackin": TRACK_RAMP}
 EXIT_DEFAULT = 0.32   # shipped gate for every other kind (goldens)
 
 # v1.42 item 4: per-caption opt-in exit motion ("exit": rise|wipe|scale).
@@ -398,9 +403,11 @@ def measure(eng, L, k, shot_t, at_raw, avail_w=None, LY=None):
         done_at = at + POP_RAMP
         m.update(done_at=done_at)
 
-    elif k == "slam":
+    elif k in ("slam", "slam_v2"):
         # scale settles when sp = clamp01(prog/SLAM_RAMP*POP_RAMP) hits 1,
-        # i.e. prog >= SLAM_RAMP/POP_RAMP -> lt = at + SLAM_RAMP
+        # i.e. prog >= SLAM_RAMP/POP_RAMP -> lt = at + SLAM_RAMP. slam_v2's
+        # squash-stretch rides the SAME clock (lands at sp=1), so the settle
+        # family is shared by construction.
         done_at = at + SLAM_RAMP
         m.update(done_at=done_at)
 

@@ -198,7 +198,7 @@ def check_project(engine):
                         flags.append({"shot": i, "kind": "overflow", "severity": "error",
                                       "message": "shot %d typewriter line %.0fpx > safe %.0fpx"
                                                  % (i, total, W - 80)})
-            elif k in ("wipe", "split", "slam", "trackin"):
+            elif k in ("wipe", "split", "slam", "slam_v2", "trackin"):
                 # v1.4 kinetic drafts: single-beat kinds — settle on their
                 # metrics clock AND width gate at the draw font (h1; slam's
                 # overscan start is measured like burst, conservatively).
