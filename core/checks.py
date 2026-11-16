@@ -85,6 +85,13 @@ def check_project(engine):
                 flags.append({"shot": i, "kind": "exit", "severity": "error",
                               "message": "shot %d %s: %s" % (i, k, _xef)})
 
+            # --- v1.42 item 5: idle-motion gate (eligible kind + settles with
+            # a real window inside the shot; renderer uses the SAME done_at) ---
+            _idf = M.idle_flag(L, m.get("done_at"), t)
+            if _idf:
+                flags.append({"shot": i, "kind": "idle", "severity": "error",
+                              "message": "shot %d %s: %s" % (i, k, _idf)})
+
             # --- flag 1: text overflow (PIL measured) ---
             def over(txt, fnt, limit=safe_w, label=None):
                 w = fnt.getlength(txt)

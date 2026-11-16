@@ -387,6 +387,13 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_templates.py")],
 ok("templates gallery test suite", r.returncode == 0,
    (r.stdout or "")[-300:] + (r.stderr or "")[-300:])
 
+# v1.42 item 5: idle motion (breathe + color_wave) — settled-window gate,
+# renderer/checker done_at parity, A/B pixel proof inside the idle window only.
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_idle_motion.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("idle motion test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)

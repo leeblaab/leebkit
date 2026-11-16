@@ -55,8 +55,15 @@ FrameCtx = namedtuple("FrameCtx", [
                            # frac((lt - (shot_t-EXIT_RAMP))/EXIT_RAMP); draw paths
                            # apply the kind's OUT transform on top of the settled
                            # entrance state (rise / wipe / scale).
+    "idle_s",              # v1.42 item 5: idle-breathe scale factor at this
+                           # frame, or None when the caption has no `idle` flag
+                           # OR sits outside its settled window (pre-settle /
+                           # exit window / transition-out layer). Draw paths do
+                           # `s = ctx.idle_s or 1.0` — None == byte-identical
+                           # shipped frame.
+    "idle_tint",           # v1.42 item 5: color_wave tint callable word_idx ->
+                           # (r,g,b) at this frame, or None (same gating).
 ])
-
 
 def _wrap(eng, dr, words, fnt, limit, tracking=0, ctx=None):
     """C3b: fit/wrap call routed through the Engine metrics cache. The result
@@ -234,10 +241,13 @@ def draw_accent_word(eng, dr, L, k, ctx, e):
         return
     if len(cols) == 1:
         eng.word_pop(dr, y, eng.H1, L["text"], cols[0],
-                     prog, tracking=2, alpha_cap=acap, dy_scale=dscale)
+                     prog, tracking=2, alpha_cap=acap, dy_scale=dscale,
+                     s=ctx.idle_s or 1.0)
     else:
-        eng.word_pop_multicol(dr, y, eng.H1, L["text"], cols, prog,
-                              tracking=2, alpha_cap=acap, dy_scale=dscale)
+        eng.word_pop_multicol(dr, y, eng.H1, L["text"],
+                              _wave_cols(cols, ctx, ctx.idle_tint), prog,
+                              tracking=2, alpha_cap=acap, dy_scale=dscale,
+                              s=ctx.idle_s or 1.0)
 
 
 def draw_panel(eng, dr, L, k, ctx, e):
@@ -266,13 +276,19 @@ def draw_panel(eng, dr, L, k, ctx, e):
         eng.word_pop(dr, py + LY["panel_pad_y"] + j * LY["line_h_panel"] - slide,
                      eng.H1, line, col,
                      wprog * (span / 0.55) - j * Sv, tracking=2, alpha_cap=a_gate,
-                     xa=(LY["left_inset"] - 6) if ctx.align == "left" else None)
+                     xa=(LY["left_inset"] - 6) if ctx.align == "left" else None,
+                     s=ctx.idle_s or 1.0)   # breathe the text run; box stays put
 
 
 def draw_small(eng, dr, L, k, ctx, e):
     clamp01, ease_o, ease_ow = e
     H, W, LY = ctx.H, ctx.W, ctx.LY
     WHITE, prog, slide, a = ctx.WHITE, ctx.prog, ctx.slide, ctx.a
+    # v1.42 item 5: breathe scales the TEXT run only (chip plate stays put —
+    # one animated property per line; scaling the plate too would read as a
+    # zoom, not a breath). Wave pulses the text fill toward white.
+    s = ctx.idle_s or 1.0
+    wcol = _wave_fill(WHITE, _wave_target(ctx, WHITE), ctx.idle_tint)
     # box rect was miscomputed: x+w+30 (not w+60 -> could invert and
     # crash rounded_rectangle), and long notes wrap inside a capped
     # chip instead of running off-frame
@@ -297,10 +313,10 @@ def draw_small(eng, dr, L, k, ctx, e):
         if left_aligned:
             lx = eng.x_anchor(ctx, dr.textlength(l, font=eng.SMALL))
             dr.text((lx, H * LY["small_frac"] + j * LY["small_line_h"] - slide), l,
-                    font=eng.SMALL, fill=(WHITE[0], WHITE[1], WHITE[2], a))
+                    font=eng.SMALL, fill=(wcol[0], wcol[1], wcol[2], a))
         else:
             eng.draw_center_text(dr, H * LY["small_frac"] + j * LY["small_line_h"] - slide, l, eng.SMALL,
-                                 (WHITE[0], WHITE[1], WHITE[2], a))
+                                 (wcol[0], wcol[1], wcol[2], a), s=s)
 
 
 def draw_cta(eng, dr, L, k, ctx, e):
@@ -314,13 +330,19 @@ def draw_cta(eng, dr, L, k, ctx, e):
     x = eng.x_anchor(ctx, w) if ctx.align == "left" else (W - w) / 2
     y = H * LY["cta_frac"] - slide
     pad = LY["cta_pad"]
+    # v1.42 item 5: breathe scales text AND outline box together about the
+    # same anchor — the CTA is one lockup, not loose type inside a fixed frame.
+    s = ctx.idle_s or 1.0
+    ws, xs = w * s, x + (w - w * s) / 2
+    wcol = _wave_fill(WHITE, _wave_target(ctx, WHITE), ctx.idle_tint)
     # clamp the outline box to the frame so a long CTA can never
     # draw past the edge (checks.py flags the overflow instead)
-    dr.rounded_rectangle((max(LY["cta_edge"], x - pad), y + LY["cta_top_off"],
-                          min(W - LY["cta_edge"], x + w + pad), y + LY["cta_bot_off"]),
+    dr.rounded_rectangle((max(LY["cta_edge"], xs - pad), y + LY["cta_top_off"],
+                          min(W - LY["cta_edge"], xs + ws + pad), y + LY["cta_bot_off"]),
                          radius=18,
                          outline=(ACCENT[0], ACCENT[1], ACCENT[2], a), width=4)
-    dr.text((x, y), txt, font=eng.BODY, fill=(WHITE[0], WHITE[1], WHITE[2], a))
+    eng.draw_center_text(dr, y, txt, eng.BODY, (wcol[0], wcol[1], wcol[2], a),
+                         xa=None if ctx.align != "left" else xs, s=s)
 
 
 # ---- v1.4 C4e market-style kinds (tpl_stomp restyle) ----------------------
@@ -350,30 +372,39 @@ def draw_kicker(eng, dr, L, k, ctx, e):
     # optional per-word "colors" (v1.36 draft tint), default ACCENT everywhere.
     knames = L.get("colors")
     kcols = [ctx.PAL.get(n, ACCENT) for n in knames] if knames else None
+    # v1.42 item 5: breathe rides the GLYPHS only — per-char advances scale by
+    # `s` about the anchor; the rule rectangle stays put (one animated property,
+    # and scaling a hairline reads as flicker). Wave pulses the glyph fills.
+    s = ctx.idle_s or 1.0
+    kcols = _wave_cols(kcols, ctx, ctx.idle_tint) if kcols else kcols
     words = txt.split(" ")
     wsp = dr.textlength(" ", font=eng.SMALL)
     ws = [dr.textlength(x, font=eng.SMALL) for x in words]
     total = sum(ws) + wsp * (len(words) - 1) + trk * sum(len(x) for x in words)
     # v1.4 composition layer: left-align anchors line + rule at the shared inset
     x = eng.x_anchor(ctx, total) if ctx.align == "left" else (W - total) / 2
+    if s != 1.0:
+        x = (W - total * s) / 2 if ctx.align != "left" else x
     for i, word in enumerate(words):
         wt = clamp01((ep - i * 0.15) / 0.45)
         if wt <= 0:
-            x += ws[i] + wsp + trk * len(word)
+            x += (ws[i] + wsp + trk * len(word)) * s
             continue
         eoc = ease_ow(wt)
         aa = int(a * min(1.0, wt * 1.6))
         yy = y + (1 - eoc) * 24
         col = kcols[i % len(kcols)] if kcols else ACCENT
+        if not kcols:
+            col = _wave_fill(col, _wave_target(ctx, col), ctx.idle_tint)
         if trk:
             for c in word:
                 dr.text((x, yy), c, font=eng.SMALL,
                         fill=(col[0], col[1], col[2], aa))
-                x += dr.textlength(c, font=eng.SMALL) + trk
+                x += (dr.textlength(c, font=eng.SMALL) + trk) * s
         else:
             dr.text((x, yy), word, font=eng.SMALL,
                     fill=(col[0], col[1], col[2], aa))
-            x += ws[i] + wsp
+            x += (ws[i] + wsp) * s
 
 
 def draw_burst(eng, dr, L, k, ctx, e):
@@ -466,6 +497,10 @@ def draw_typewriter(eng, dr, L, k, ctx, e):
             # word index of this char
             wi = txt[:i].count(" ")
             col = tints[wi % len(tints)]
+        # v1.42 item 5: color_wave pulses the settled chars' fill (gate already
+        # holds until typing DONE, so no entrance interaction; caret untouched).
+        if ctx.idle_tint is not None:
+            col = _wave_fill(col, _wave_target(ctx, col), ctx.idle_tint)
         dr.text((x0, y), c, font=fnt, fill=(col[0], col[1], col[2], a))
         x0 += adv
     # caret: blinks while typing, solid for 0.3s after the last char, gone once
@@ -495,11 +530,36 @@ def draw_pump(eng, dr, L, k, ctx, e):
         appear = min(appear, float(ctx.shot_t) - at)
     names = L.get("colors") or ["white", "accent"]
     cols = _tint_pieces({"colors": names}, ctx) or [WHITE]
+    # v1.42 item 5: color_wave cross-fades the settled word colors toward white
+    cols = _wave_cols(cols, ctx, ctx.idle_tint)
     base = eng.L["h1"]
     eng.word_pump(dr, H * LY["burst_frac"] - slide,
                   lambda sz: eng._mkfont(eng.preset["fonts"]["display"], sz),
                   L["text"], cols, appear, tracking=0, base_size=base,
                   alpha_cap=a_gate)
+
+
+def _wave_fill(base, target, gain):
+    """v1.42 item 5 (color_wave) fill: cross-fade `base` toward `target` by the
+    wave gain (gain 0 -> byte-identical before the gate opens; max 0.35 mix).
+    Kinds WITHOUT an explicit `colors` list pass target=ACCENT — pulsing
+    white-on-white is invisible by definition (typewriter/split/maskline
+    default fills ARE white), so the no-colors wave reads as a white<->accent
+    micro-pulse instead (plan item 5: 'without colors, accent<->white').
+    Kinds with `colors` cycle their palette through _wave_cols instead."""
+    if gain is None:
+        return base
+    return (int(base[0] + (target[0] - base[0]) * gain * 0.35),
+            int(base[1] + (target[1] - base[1]) * gain * 0.35),
+            int(base[2] + (target[2] - base[2]) * gain * 0.35))
+
+
+def _wave_target(ctx, base):
+    """color_wave target for a kind without an explicit `colors` list: white
+    if the settled fill isn't white; ACCENT when it already is (white-on-white
+    pulse = zero pixels)."""
+    w = ctx.PAL.get("white", ctx.WHITE)
+    return ctx.ACCENT if tuple(base) == tuple(w) else w
 
 
 def _kin_cols(L, ctx, default):
@@ -509,6 +569,16 @@ def _kin_cols(L, ctx, default):
     if not names:
         return [default]
     return [ctx.PAL.get(n, default) for n in names]
+
+
+def _wave_cols(cols, ctx, gain):
+    """color_wave over an explicit palette cycle: cross-fade each word color
+    toward white by the wave gain (subtle; 0.35 max). None gain -> unchanged."""
+    if gain is None:
+        return cols
+    w = ctx.PAL.get("white", ctx.WHITE)
+    return [_wave_fill(c, ctx.ACCENT if tuple(c) == tuple(w) else w, gain)
+            for c in cols]
 
 
 def draw_wipe(eng, dr, L, k, ctx, e):
@@ -555,7 +625,7 @@ def draw_split(eng, dr, L, k, ctx, e):
     a = int(255 * min(1.0, prog * 2.0))
     if a_gate is not None:
         a = min(a, a_gate)
-    cols = _kin_cols(L, ctx, WHITE)
+    cols = _wave_cols(_kin_cols(L, ctx, WHITE), ctx, ctx.idle_tint)
     y = H * LY["accent_frac"] - slide
     if left:
         dr.text((x - off, y), left, font=fnt, fill=cols[0] + (a,))
@@ -674,7 +744,7 @@ def draw_maskline(eng, dr, L, k, ctx, e):
     # v1.4 composition layer: left-align anchors the masked word run at the inset
     x0 = eng.x_anchor(ctx, total) if ctx.align == "left" else (W - total) / 2
     y = H * LY["caplines_frac"] - slide
-    cols = _kin_cols(L, ctx, WHITE)
+    cols = _wave_cols(_kin_cols(L, ctx, WHITE), ctx, ctx.idle_tint)
     asc = int(eng.L["body"] * 1.05)   # mask window height above the baseline row
     x = x0
     for i, w in enumerate(words):
@@ -695,8 +765,10 @@ def draw_maskline(eng, dr, L, k, ctx, e):
 
 def draw_handle(eng, dr, L, k, ctx, e):
     H, LY, ACCENT, slide = ctx.H, ctx.LY, ctx.ACCENT, ctx.slide
+    col = _wave_fill(ACCENT, _wave_target(ctx, ACCENT), ctx.idle_tint)
     eng.draw_center_text(dr, H * LY["handle_frac"] - slide, L["text"], eng.BODY,
-                         (ACCENT[0], ACCENT[1], ACCENT[2], ctx.a), tracking=4)
+                         (col[0], col[1], col[2], ctx.a), tracking=4,
+                         s=ctx.idle_s or 1.0)
 
 
 def draw_big_number(eng, dr, L, k, ctx, e):

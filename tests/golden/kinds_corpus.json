@@ -17,7 +17,7 @@
     {"kind": "panel_mid", "at": 0.3, "lines": ["mid panel says stop.", "then the punch."]}]},
   {"t": 2.0, "transition": "cut", "captions": [
     {"kind": "small", "at": 0.3, "text": "a small note chip for golden"},
-    {"kind": "cta", "at": 0.8, "text": "GET IT FREE"}]},
+    {"kind": "cta", "at": 0.8, "text": "GET IT FREE", "idle": true}]},
   {"t": 2.0, "transition": "cut", "captions": [
     {"kind": "big_number", "at": 0.3, "text": "8.3s"},
     {"kind": "cap_lines", "at": 0.6, "lines": ["one two three", "four five six"]}]},
@@ -28,6 +28,6 @@
   {"t": 2.0, "transition": "wipe_left", "captions": [
     {"kind": "title_block", "at": 0.2, "text": "WIPE OUT"}]},
   {"t": 2.0, "transition": "cut", "captions": [
-    {"kind": "accent_word", "at": 0.3, "text": "INCOMING"}]}
+    {"kind": "accent_word", "at": 0.3, "text": "INCOMING NOW", "colors": ["white", "accent"], "idle": true}]}
  ]
 }

@@ -17,6 +17,8 @@ draw functions import them so a formula change lands in BOTH paths at once.
 The Engine-level metrics cache (fit/wrap computed once per caption instead of
 per frame) ships as C3b on top of this module."""
 
+import math
+
 from PIL import Image, ImageDraw
 
 # --- shared clock constants: SINGLE source for stagger math ---------------
@@ -109,6 +111,114 @@ EXIT_DEFAULT = 0.32   # shipped gate for every other kind (goldens)
 # must be SETTLED before it starts moving out (checker flag kind 'exit').
 EXIT_RAMP = 0.25
 EXIT_KINDS = ("rise", "wipe", "scale")
+
+# v1.42 item 5: opt-in idle motion ("idle": true) — breathe (scale sine) and
+# color_wave (per-word tint pulse). House rule: the line's ONE animated
+# property AFTER settle; entrance kinds untouched. Window = done_at -> exit
+# start (or shot end), so an exiting caption never breathes while rising out.
+IDLE_PERIOD = 3.0        # breathe sine period (s) — seed-locked phase per caption slot
+IDLE_AMP = 0.02          # +/-2% scale swing (house rule: one property, subtle)
+IDLE_WAVE_HZ = 1.0       # color_wave pulse rate (Hz) on per-word tints
+# Kinds breathe scales cleanly (whole-element fills or word_pop draws):
+IDLE_BREATHE_KINDS = ("accent_word", "cta", "small", "handle", "panel_top",
+                      "panel_mid")
+# Kinds whose per-word tints color_wave pulses (colors come from `colors` or
+# a kind default; no entrance clock rides prog, so the wave can't distort it):
+IDLE_WAVE_KINDS = ("kicker", "typewriter", "pump", "split", "maskline")
+
+
+def idle_flag(L, done_at, shot_t):
+    """None if the caption's `idle` field is absent/valid; else an error
+    string (kind can't carry idle motion, or it never settles inside the
+    shot). Renderer and checker read this SAME flag."""
+    if not L.get("idle"):
+        return None
+    k = L.get("kind")
+    if k in ("terminal", "chips", "big_number", "wipe", "flashpop", "burst"):
+        return ("idle on kind %r unsupported (perpetual-motion kinds, or no "
+                "clean post-settle window)" % k)
+    if k not in IDLE_BREATHE_KINDS + IDLE_WAVE_KINDS:
+        return "idle on unknown kind %r" % (k,)
+    if done_at is None or done_at >= shot_t:
+        return ("idle needs the line to settle inside the shot (%s)"
+                % ("never" if done_at is None else "%.2fs >= %.2fs" % (done_at, shot_t)))
+    return None
+
+
+def idle_breathe(eng, cap_idx, lt):
+    """Breathe scale factor at SHOT-LOCAL time `lt`: 1 +/- IDLE_AMP, period
+    IDLE_PERIOD (fixed house tempo — NOT the beat clock: a `bpm` override or
+    BPM.json lookup must never change what idle pixels look like). Phase is
+    seed-locked to the caption slot AND rides the shot clock (not global g):
+    a caption's breathe is identical whether it sits in shot 0 or shot 7, and
+    pure function of (slot, lt) keeps sample renders == full renders."""
+    phase = (lt / IDLE_PERIOD + 0.13 * (cap_idx[0] * 7 + cap_idx[1])) % 1.0
+    return 1.0 + IDLE_AMP * math.sin(2 * math.pi * phase)
+
+
+def idle_wave(eng, cap_idx, lt):
+    """color_wave gain in [0,1] at SHOT-LOCAL time `lt`: per-slot seed-locked
+    phase (same slot-key rule as breathe), rate IDLE_WAVE_HZ."""
+    phase = (lt * IDLE_WAVE_HZ + 0.37 * (cap_idx[0] * 5 + cap_idx[1])) % 1.0
+    return 0.5 + 0.5 * math.sin(2 * math.pi * phase)
+
+
+def idle_done_at(k, L, eng=None):
+    """Settle time for an idle-eligible kind — the renderer gate clock. MUST
+    equal measure()'s m['done_at'] (checker parity by construction). Keep in
+    sync with the per-kind branches; None for kinds without a model.
+    `at` here is the PREAMBLE-SHIFTED clock (preamble_at), matching render_layer.
+    Wrap-dependent kinds (panel_*) route through `eng.fit_panel_lines` exactly
+    like measure() does — pass the rendering Engine; without one, raw lines are
+    a safe LOWER bound only."""
+    at = preamble_at(k, float(L.get("at", 0.2)))
+    if k in ("accent_word", "cta"):
+        nw = len(L.get("text", "").split(" "))
+        return at + (nw - 1) * WORD_STEP + WORD_RAMP
+    if k in ("small", "handle"):
+        # single draw_center_text line: entrance rides the shared gated prog,
+        # fully open at at+POP_RAMP; measure's generic fallback counts its
+        # words through the word_pop stagger clock — take the LATER of both.
+        nw = len(L.get("text", "").split(" "))
+        return max(at + POP_RAMP,
+                   at + max(0, nw - 1) * WORD_STEP + WORD_RAMP)
+    if k in ("panel_top", "panel_mid"):
+        lines = (eng.fit_panel_lines(_probe_dr(), L["lines"], eng.H1)
+                 if eng is not None else L.get("lines", []))
+        return _panel_settle(lines, at)
+    if k == "kicker":
+        nw = len(L.get("text", "").split(" "))
+        return at + POP_RAMP / KICKER_RAMP * max(1.0, (nw - 1) * 0.15 + 0.45)
+    if k == "typewriter":
+        n = len(L.get("text", ""))
+        return at + (n - 1) * TYPE_STEP + TYPE_RAMP
+    if k == "pump":
+        nw = len(L.get("text", "").split(" "))
+        return at + (nw - 1) * PUMP_STEP + PUMP_RAMP
+    if k in ("split", "maskline"):
+        # split: gate fully opens at at+POP_RAMP (measure). maskline: word_pop
+        # clocks on raw appear (draw_maskline), last word lands there.
+        nw = len(L.get("text", "").split(" "))
+        if k == "split":
+            return at + POP_RAMP
+        return at + (nw - 1) * WORD_STEP + WORD_RAMP
+    return None
+
+
+def _panel_settle(lines, at):
+    """Panel word-pop settle over RAW lines (measure() fits through the engine
+    first; wrapped lines only ever ADD stagger, so this is a safe lower bound)."""
+    n = len(lines)
+    if not n:
+        return None
+    nww = [len(l.split(" ")) for l in lines]
+    span = max(nww) * WORD_STEP + WORD_RAMP
+    Sv = (1.0 - span) / (n - 1) if n > 1 else 0.0
+    worst = 0.0
+    for j in range(n):
+        req_j = (nww[j] - 1) * WORD_STEP + WORD_RAMP
+        worst = max(worst, (req_j + j * Sv) / (span / 0.55))
+    return at + PANEL_WDELAY + PANEL_WRAMP * min(worst, 1.0)
 
 
 def exit_flag(L, done_at, shot_t):

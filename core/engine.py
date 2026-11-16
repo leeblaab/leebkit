@@ -174,6 +174,10 @@ def validate_project(proj):
             if ex is not None and ex not in CAPTIONS.M.EXIT_KINDS:
                 raise ValueError("shot %d caption exit %r unknown (choices: %s)"
                                  % (i, ex, ", ".join(CAPTIONS.M.EXIT_KINDS)))
+            # v1.42 item 5: opt-in idle-motion shape check (eligibility +
+            # settle-window timing gated by checks via metrics.idle_flag).
+            if "idle" in c and not isinstance(c["idle"], bool):
+                raise ValueError("shot %d caption idle must be a boolean" % i)
             if "at" in c:
                 a = float(c["at"])
                 if not (0.0 <= a <= float(s.get("t", 0))):
@@ -437,18 +441,38 @@ class Engine:
             return ctx.LY["left_inset"]
         return (self.W - w) / 2
 
-    def draw_center_text(self, dr, y, txt, fnt, fill, tracking=0, xa=None):
+    def draw_center_text(self, dr, y, txt, fnt, fill, tracking=0, xa=None,
+                         s=1.0):
         W = self.W
         if tracking:
             ws = [dr.textlength(c, font=fnt) for c in txt]
             total = sum(ws) + tracking * (len(txt) - 1)
-            x = (W - total) / 2 if xa is None else xa
-            for c, w in zip(txt, ws):
-                dr.text((x, y), c, font=fnt, fill=fill)
-                x += w + tracking
+            if s != 1.0:
+                # v1.42 item 5: breathe scales glyph advances AND the
+                # letterspacing gaps — the tracking lockup breathes as one.
+                total *= s
+                x = (W - total) / 2 if xa is None else xa
+                for c, w in zip(txt, ws):
+                    dr.text((x, y), c, font=fnt, fill=fill)
+                    x += (w + tracking) * s
+            else:
+                x = (W - total) / 2 if xa is None else xa
+                for c, w in zip(txt, ws):
+                    dr.text((x, y), c, font=fnt, fill=fill)
+                    x += w + tracking
         else:
             w = dr.textlength(txt, font=fnt)
-            dr.text(((W - w) / 2 if xa is None else xa, y), txt, font=fnt, fill=fill)
+            if s != 1.0:
+                # v1.42 item 5 (idle breathe): per-glyph advances ride `s` —
+                # a whole-string horizontal scale about the center anchor.
+                total = w * s
+                x = (W - total) / 2 if xa is None else xa
+                for c in txt:
+                    cw = dr.textlength(c, font=fnt) * s
+                    dr.text((x, y), c, font=fnt, fill=fill)
+                    x += cw
+            else:
+                dr.text(((W - w) / 2 if xa is None else xa, y), txt, font=fnt, fill=fill)
 
     def _measure_tracked(self, dr, txt, fnt, tracking):
         return sum(dr.textlength(c, font=fnt) for c in txt) + tracking * max(0, len(txt) - 1)
@@ -553,11 +577,14 @@ class Engine:
         return ys
 
     def word_pop(self, dr, y, fnt, txt, color, appear, tracking=0, dy=30, alpha_cap=None,
-                 xa=None, dy_scale=1.0):
+                 xa=None, dy_scale=1.0, s=1.0):
         """Whole-word staggered pop with overshoot. appear is this call's clock.
         alpha_cap: hard ceiling on glyph alpha (outgoing layer inside a
         transition window must fade even though its pop clock is frozen).
-        v1.4 composition layer: `xa` = left start x (left-align); None centers."""
+        v1.4 composition layer: `xa` = left start x (left-align); None centers.
+        v1.42 item 5: `s` = idle-breathe horizontal scale — word advances ride
+        `s` around the same layout anchor (entrance clocks untouched; s==1.0 is
+        byte-identical to every shipped frame)."""
         if appear <= 0:
             return
         W = self.W
@@ -565,11 +592,13 @@ class Engine:
         wsp = dr.textlength(" ", font=fnt)
         ws = [dr.textlength(w, font=fnt) for w in words]
         total = sum(ws) + wsp * (len(words) - 1) + tracking * sum(len(w) for w in words)
+        if s != 1.0:
+            total *= s
         x = (W - total) / 2 if xa is None else xa
         for i, w in enumerate(words):
             wt = clamp01((appear - i * 0.18) / 0.36)
             if wt <= 0:
-                x += ws[i] + wsp + tracking * len(w)
+                x += (ws[i] + wsp + tracking * len(w)) * s
                 continue
             e = ease_ow(wt)
             a = int(255 * min(1.0, wt * 1.5))
@@ -582,17 +611,21 @@ class Engine:
                 for c in w:
                     cw = dr.textlength(c, font=fnt)
                     dr.text((x, yy), c, font=fnt, fill=(color[0], color[1], color[2], a))
-                    x += cw + tracking
+                    x += (cw + tracking) * s
             else:
                 dr.text((x, yy), w, font=fnt, fill=(color[0], color[1], color[2], a))
-                x += ws[i]
-            x += wsp + tracking
+                x += ws[i] * s
+            x += (wsp + tracking) * s
 
     def word_pop_multicol(self, dr, y, fnt, txt, colors, appear, tracking=0,
-                          dy=30, alpha_cap=None, xa=None, dy_scale=1.0):
+                          dy=30, alpha_cap=None, xa=None, dy_scale=1.0, s=1.0,
+                          tint=None):
         """v1.42 item 1: word_pop with a per-word color CYCLE. Layout and the
         per-word stagger clock (WORD_STEP/WORD_RAMP) are identical to
-        word_pop — only the fill changes, so metrics/checks parity holds."""
+        word_pop — only the fill changes, so metrics/checks parity holds.
+        v1.42 item 5: `s` = idle breathe (same as word_pop); `tint(gain)` is an
+        optional callable word_idx -> (r,g,b) override for color_wave — when
+        present it replaces the palette cycle fill, entrance clocks untouched."""
         from . import metrics as M
         if appear <= 0:
             return
@@ -601,12 +634,14 @@ class Engine:
         wsp = dr.textlength(" ", font=fnt)
         ws = [dr.textlength(w, font=fnt) for w in words]
         total = sum(ws) + wsp * (len(words) - 1) + tracking * sum(len(w) for w in words)
+        if s != 1.0:
+            total *= s
         x = (W - total) / 2 if xa is None else xa
         for i, w in enumerate(words):
             wt = clamp01((appear - i * M.WORD_STEP) / M.WORD_RAMP)
-            col = colors[i % len(colors)]
+            col = tint(i) if tint is not None else colors[i % len(colors)]
             if wt <= 0:
-                x += ws[i] + wsp + tracking * len(w)
+                x += (ws[i] + wsp + tracking * len(w)) * s
                 continue
             e = ease_ow(wt)
             a = int(255 * min(1.0, wt * 1.5))
@@ -619,11 +654,11 @@ class Engine:
                 for c in w:
                     cw = dr.textlength(c, font=fnt)
                     dr.text((x, yy), c, font=fnt, fill=(col[0], col[1], col[2], a))
-                    x += cw + tracking
+                    x += (cw + tracking) * s
             else:
                 dr.text((x, yy), w, font=fnt, fill=(col[0], col[1], col[2], a))
-                x += ws[i]
-            x += wsp + tracking
+                x += ws[i] * s
+            x += (wsp + tracking) * s
 
     def line_wipe(self, dr, y, fnt, txt, color, prog, tracking=0, alpha_cap=None,
                   xa=None):
@@ -857,6 +892,27 @@ class Engine:
                                  / CAPTIONS.M.EXIT_RAMP)
             else:
                 exit_p = None
+            # v1.42 item 5: idle-motion window gate (opt-in caption `idle`).
+            # ACTIVE only while SETTLED (metrics.idle_done_at == the same
+            # done_at the checker reads), before the exit ramp, and never on
+            # the transition-out layer (its prog is frozen mid-fade). Frames
+            # stay byte-identical when `idle` is absent — idle_s/idle_tint None.
+            # The gate opens at max(idle_done_at, POP_RAMP_GATE): every kind's
+            # own entrance clock fully OPENs at the per-kind POP_RAMP_GATE
+            # (metrics preamble block), so taking the later of the two clocks
+            # guarantees idle never rides a half-open shared `prog`.
+            idle_s = idle_tint = None
+            if L.get("idle") and not transition_out:
+                _idone = CAPTIONS.M.idle_done_at(k, L, eng=self)
+                if _idone is not None:
+                    _idone = max(_idone, at + POP_RAMP_GATE)
+                if (_idone is not None and lt >= _idone and
+                        (exit_p is None or
+                         lt < float(s["t"]) - CAPTIONS.M.EXIT_RAMP)):
+                    if k in CAPTIONS.M.IDLE_BREATHE_KINDS:
+                        idle_s = CAPTIONS.M.idle_breathe(self, (i, ci), lt)
+                    if k in CAPTIONS.M.IDLE_WAVE_KINDS:
+                        idle_tint = CAPTIONS.M.idle_wave(self, (i, ci), lt)
             # outgoing-side kill switch: inside a transition window the incoming
             # layer runs its own early clock (OV) while this layer's lt keeps
             # running past the shot end — freeze each caption's animation clock
@@ -903,7 +959,8 @@ class Engine:
                 align=L.get("align", "center"),
                 avail_w=W - 2 * LY["left_inset"],
                 beat=self.beat_phase(g),
-                exit_p=exit_p)
+                exit_p=exit_p,
+                idle_s=idle_s, idle_tint=idle_tint)
             _cf(self, dr, L, k, ctx, (clamp01, ease_o, ease_ow))
         # film grain (per-frame seeded; disabled in presets with grain_points=0)
         gp = int(P.get("grain_points", 90))
