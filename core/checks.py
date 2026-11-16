@@ -92,6 +92,13 @@ def check_project(engine):
                 flags.append({"shot": i, "kind": "idle", "severity": "error",
                               "message": "shot %d %s: %s" % (i, k, _idf)})
 
+            # --- v1.42 item 6: easing eligibility (kicker's stagger is LOCKED;
+            # no clock change for the allowed kinds -> no settle re-gate) ---
+            _ezf = M.ease_flag(L)
+            if _ezf:
+                flags.append({"shot": i, "kind": "ease", "severity": "error",
+                              "message": "shot %d %s: %s" % (i, k, _ezf)})
+
             # --- flag 1: text overflow (PIL measured) ---
             def over(txt, fnt, limit=safe_w, label=None):
                 w = fnt.getlength(txt)

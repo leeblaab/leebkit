@@ -394,6 +394,13 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_idle_motion.py")],
 ok("idle motion test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.42 item 6: easing library (expo/back/elastic/step3) + opt-in "ease" field
+# on pop/pump/slam/wipe/trackin; kicker locked; ramp-window A/B, settle-identical.
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_easings.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("easing library test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)

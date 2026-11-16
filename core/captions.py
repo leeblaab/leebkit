@@ -211,6 +211,27 @@ def _exit_state(L, ctx, a_default):
     return dy, cap
 
 
+def ease_of(L, e):
+    """v1.42 item 6: resolve the opt-in per-caption `ease` name to a curve on
+    the kind's EXISTING progress var. None (absent/unknown) -> callers keep
+    their shipped curve, byte-identical. Settle clocks untouched: the ease only
+    re-shapes progress INSIDE the ramp window (done_at / EXIT_CLOCK parity by
+    construction). e = the (clamp01, ease_o, ease_ow) tuple from engine."""
+    name = L.get("ease")
+    if not name:
+        return None
+    import math as _m
+    if name == "expo":
+        return lambda t: 0.0 if t <= 0 else (1.0 if t >= 1 else 1 - pow(2, -10 * t))
+    if name == "elastic":
+        c4 = (2 * _m.pi) / 3
+        return lambda t: 0.0 if t <= 0 else (1.0 if t >= 1 else
+                                            pow(2, -10 * t) * _m.sin((t * 10 - 0.75) * c4) + 1)
+    if name == "steps":
+        return lambda t: 0.0 if t <= 0 else (1.0 if t >= 1 else _m.ceil(t * 3) / 3)
+    return None   # unknown name: validate_project rejects these; belt & braces
+
+
 def draw_accent_word(eng, dr, L, k, ctx, e):
     """v1.42 item 1: optional per-caption `colors` cycle the WORDS (the
     accent underline/rule keeps ACCENT — one animated property per line).
@@ -242,12 +263,12 @@ def draw_accent_word(eng, dr, L, k, ctx, e):
     if len(cols) == 1:
         eng.word_pop(dr, y, eng.H1, L["text"], cols[0],
                      prog, tracking=2, alpha_cap=acap, dy_scale=dscale,
-                     s=ctx.idle_s or 1.0)
+                     s=ctx.idle_s or 1.0, ez=ease_of(L, e))
     else:
         eng.word_pop_multicol(dr, y, eng.H1, L["text"],
                               _wave_cols(cols, ctx, ctx.idle_tint), prog,
                               tracking=2, alpha_cap=acap, dy_scale=dscale,
-                              s=ctx.idle_s or 1.0)
+                              s=ctx.idle_s or 1.0, ez=ease_of(L, e))
 
 
 def draw_panel(eng, dr, L, k, ctx, e):
@@ -536,7 +557,7 @@ def draw_pump(eng, dr, L, k, ctx, e):
     eng.word_pump(dr, H * LY["burst_frac"] - slide,
                   lambda sz: eng._mkfont(eng.preset["fonts"]["display"], sz),
                   L["text"], cols, appear, tracking=0, base_size=base,
-                  alpha_cap=a_gate)
+                  alpha_cap=a_gate, ez=ease_of(L, e))
 
 
 def _wave_fill(base, target, gain):
@@ -588,7 +609,10 @@ def draw_wipe(eng, dr, L, k, ctx, e):
     H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
                                             ctx.prog, ctx.slide, ctx.a_gate)
     lines = _wrap(eng, dr, L["text"].split(" "), eng.H1, LY["safe_w"], ctx=ctx)
-    wp = clamp01(prog * M.WIPE_K)   # metrics done_at mirrors this gain
+    # v1.42 item 6: opt-in ease re-shapes the wipe sweep INSIDE the same gain
+    # window (wp clamped to [0,1]; metrics done_at = at+POP_RAMP/WIPE_K stays).
+    _ez = ease_of(L, e)
+    wp = clamp01((_ez(prog) if _ez else prog) * M.WIPE_K)   # metrics done_at mirrors this gain
     cols = _kin_cols(L, ctx, WHITE)
     line_h = int(eng.L["h1"] * 1.06)
     n = max(1, len(lines))
@@ -641,6 +665,9 @@ def draw_slam(eng, dr, L, k, ctx, e):
     H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
                                             ctx.prog, ctx.slide, ctx.a_gate)
     sp = clamp01(prog / M.SLAM_RAMP * 0.32)   # gate-normalized settle clock
+    _ez = ease_of(L, e)                        # v1.42 item 6: re-shape inside ramp
+    if _ez is not None:
+        sp = clamp01(_ez(sp))
     scale = M.SLAM_FROM - (M.SLAM_FROM - 1.0) * (sp ** 0.7)
     fnt = eng._mkfont(eng.preset["fonts"]["display"], int(eng.L["h1"] * scale))
     txt = L["text"]
@@ -662,6 +689,9 @@ def draw_trackin(eng, dr, L, k, ctx, e):
     H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
                                             ctx.prog, ctx.slide, ctx.a_gate)
     tp = clamp01(prog / M.TRACK_RAMP * 0.32)
+    _ez = ease_of(L, e)                        # v1.42 item 6: re-shape inside ramp
+    if _ez is not None:
+        tp = clamp01(_ez(tp))
     trk = int(eng.L["h1"] * 0.35 * (1 - e[1](tp)))
     a = int(255 * min(1.0, prog * 2.4))
     if a_gate is not None:

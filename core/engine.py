@@ -69,6 +69,41 @@ def ease_ow(t):  # back-out with overshoot
     return 1 + c3 * pow(t - 1, 3) + c1 * pow(t - 1, 2)
 
 
+def ease_expo_out(t):  # v1.42 item 6: explosive front-load, asymptotic settle
+    if t <= 0:
+        return 0.0
+    if t >= 1:
+        return 1.0
+    return 1 - pow(2, -10 * t)
+
+
+def ease_back_in(t):   # v1.42 item 6: anticipation dip before the drive-out
+    if t <= 0:
+        return 0.0
+    if t >= 1:
+        return 1.0
+    c1 = 1.70158
+    c3 = c1 + 1
+    return c3 * pow(t, 3) - c1 * pow(t, 2)
+
+
+def ease_elastic_out(t):  # v1.42 item 6: damped spring past rest, lands at 1
+    if t <= 0:
+        return 0.0
+    if t >= 1:
+        return 1.0
+    c4 = (2 * math.pi) / 3
+    return pow(2, -10 * t) * math.sin((t * 10 - 0.75) * c4) + 1
+
+
+def ease_step3(t):     # v1.42 item 6: three hard plateaus (mechanical snap-in)
+    if t <= 0:
+        return 0.0
+    if t >= 1:
+        return 1.0
+    return math.ceil(t * 3) / 3
+
+
 def clamp01(t):
     return max(0.0, min(1.0, t))
 
@@ -178,6 +213,12 @@ def validate_project(proj):
             # settle-window timing gated by checks via metrics.idle_flag).
             if "idle" in c and not isinstance(c["idle"], bool):
                 raise ValueError("shot %d caption idle must be a boolean" % i)
+            # v1.42 item 6: opt-in easing whitelist (kind eligibility gated by
+            # checks via metrics.ease_flag — kicker's stagger is locked).
+            ez = c.get("ease")
+            if ez is not None and ez not in CAPTIONS.M.EASE_NAMES:
+                raise ValueError("shot %d caption ease %r unknown (choices: %s)"
+                                 % (i, ez, ", ".join(CAPTIONS.M.EASE_NAMES)))
             if "at" in c:
                 a = float(c["at"])
                 if not (0.0 <= a <= float(s.get("t", 0))):
@@ -577,14 +618,16 @@ class Engine:
         return ys
 
     def word_pop(self, dr, y, fnt, txt, color, appear, tracking=0, dy=30, alpha_cap=None,
-                 xa=None, dy_scale=1.0, s=1.0):
+                 xa=None, dy_scale=1.0, s=1.0, ez=None):
         """Whole-word staggered pop with overshoot. appear is this call's clock.
         alpha_cap: hard ceiling on glyph alpha (outgoing layer inside a
         transition window must fade even though its pop clock is frozen).
         v1.4 composition layer: `xa` = left start x (left-align); None centers.
         v1.42 item 5: `s` = idle-breathe horizontal scale — word advances ride
         `s` around the same layout anchor (entrance clocks untouched; s==1.0 is
-        byte-identical to every shipped frame)."""
+        byte-identical to every shipped frame).
+        v1.42 item 6: `ez` optionally replaces ease_ow on the per-word rise
+        (opt-in caption `ease`); None == byte-identical."""
         if appear <= 0:
             return
         W = self.W
@@ -600,7 +643,7 @@ class Engine:
             if wt <= 0:
                 x += (ws[i] + wsp + tracking * len(w)) * s
                 continue
-            e = ease_ow(wt)
+            e = ez(wt) if ez is not None else ease_ow(wt)
             a = int(255 * min(1.0, wt * 1.5))
             if alpha_cap is not None:
                 a = min(a, alpha_cap)
@@ -619,13 +662,15 @@ class Engine:
 
     def word_pop_multicol(self, dr, y, fnt, txt, colors, appear, tracking=0,
                           dy=30, alpha_cap=None, xa=None, dy_scale=1.0, s=1.0,
-                          tint=None):
+                          tint=None, ez=None):
         """v1.42 item 1: word_pop with a per-word color CYCLE. Layout and the
         per-word stagger clock (WORD_STEP/WORD_RAMP) are identical to
         word_pop — only the fill changes, so metrics/checks parity holds.
         v1.42 item 5: `s` = idle breathe (same as word_pop); `tint(gain)` is an
         optional callable word_idx -> (r,g,b) override for color_wave — when
-        present it replaces the palette cycle fill, entrance clocks untouched."""
+        present it replaces the palette cycle fill, entrance clocks untouched.
+        v1.42 item 6: `ez` optionally replaces ease_ow on the per-word rise
+        (opt-in caption `ease`); None == byte-identical."""
         from . import metrics as M
         if appear <= 0:
             return
@@ -643,7 +688,7 @@ class Engine:
             if wt <= 0:
                 x += (ws[i] + wsp + tracking * len(w)) * s
                 continue
-            e = ease_ow(wt)
+            e = ez(wt) if ez is not None else ease_ow(wt)
             a = int(255 * min(1.0, wt * 1.5))
             if alpha_cap is not None:
                 a = min(a, alpha_cap)
@@ -693,12 +738,14 @@ class Engine:
         self._canvas.paste(tmp, (int(x0), int(y)), tmp)
 
     def word_pump(self, dr, y, mkfont, txt, colors, appear, tracking=0,
-                  base_size=0, kick=None, alpha_cap=None, xa=None):
+                  base_size=0, kick=None, alpha_cap=None, xa=None, ez=None):
         """v1.36 (Onyx draft): per-word SCALE PUNCH — each word pops in at
         ~2x size and overshoots down to rest (the market "pump" move), vs
         word_pop's translate rise. `colors` = list of RGBA per word (cycled).
         mkfont(size) builds the punch font per frame; base_size is the rest
-        size. Word i's clock: wt = (appear - i*PUMP_STEP)/PUMP_RAMP."""
+        size. Word i's clock: wt = (appear - i*PUMP_STEP)/PUMP_RAMP.
+        v1.42 item 6: `ez` optionally replaces the sin-bump settle curve on the
+        per-word progress (opt-in caption `ease`); None == byte-identical."""
         from . import metrics as M
         if appear <= 0 or not txt:
             return
@@ -713,9 +760,12 @@ class Engine:
             if wt <= 0:
                 x += ws[i] + wsp + tracking * len(w)
                 continue
-            # punch: sin bump to `kick` at appear, back-out settle to 1.0
-            punch = 1.0 + (kick - 1.0) * math.sin(math.pi * min(1.0, wt * 1.6)) \
-                     * (1.0 if wt < 0.95 else (1.0 - wt) / 0.05)
+            # punch: sin bump to `kick` at appear, back-out settle to 1.0.
+            # v1.42 item 6: opt-in `ez` re-shapes the progress inside the same
+            # window (wt itself — and therefore done_at — untouched).
+            _w = ez(wt) if ez is not None else wt
+            punch = 1.0 + (kick - 1.0) * math.sin(math.pi * min(1.0, _w * 1.6)) \
+                     * (1.0 if _w < 0.95 else (1.0 - _w) / 0.05)
             fnt = mkfont(max(1, int(base_size * punch)))
             a = int(255 * min(1.0, wt * 2.4))
             if alpha_cap is not None:

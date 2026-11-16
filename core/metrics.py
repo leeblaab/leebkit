@@ -112,6 +112,26 @@ EXIT_DEFAULT = 0.32   # shipped gate for every other kind (goldens)
 EXIT_RAMP = 0.25
 EXIT_KINDS = ("rise", "wipe", "scale")
 
+# v1.42 item 6: opt-in per-caption easing ("ease": expo|elastic|steps) on the
+# entrance kinds whose progress var plugs in cleanly. The ease REPLACES the
+# default curve (ease_o/ease_ow) inside the same ramp window — settle clocks
+# (done_at, EXIT_CLOCK) untouched, so checker parity holds by construction.
+EASE_NAMES = ("expo", "elastic", "steps")
+EASE_KINDS = ("accent_word", "pump", "slam", "wipe", "trackin")
+# kicker's stagger is LOCKED (house rule): validate tolerates the shared field
+# shape, checks.py flags ease-on-kicker so nobody ships an ignored ease.
+
+
+def ease_flag(L):
+    """None if the caption's `ease` field is absent/valid; else an error
+    string (kind whose entrance clock can't take an ease — kicker locked)."""
+    if not L.get("ease"):
+        return None
+    if L.get("kind") not in EASE_KINDS:
+        return ("ease on kind %r unsupported (locked/no plug-in progress var; "
+                "choices: %s)" % (L.get("kind"), ", ".join(EASE_KINDS)))
+    return None
+
 # v1.42 item 5: opt-in idle motion ("idle": true) — breathe (scale sine) and
 # color_wave (per-word tint pulse). House rule: the line's ONE animated
 # property AFTER settle; entrance kinds untouched. Window = done_at -> exit
