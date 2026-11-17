@@ -162,6 +162,50 @@ EQ_H_FRAC = 0.16          # tallest bar as a fraction of canvas height
 EQ_BEAT_CYCLES = 2.0      # per-bar sine cycles per beat (amplitude modulator)
 EQ_VO_WIN = 0.05          # VO envelope: RMS window (s); precomputed ONCE/shot
 
+# --- v1.42 C9.1 (Yasser directive): per-caption vertical placement ----------
+# "place": "top" | "middle" | "bottom" retargets the caption's OWN anchor frac
+# (per-kind key below) to a band value; "middle" = the kind's shipped frac
+# (byte-identical). Fine-tune: "y": float 0..1 overrides the frac exactly.
+# Opt-in only — no field -> render_layer passes the SHARED LY dict through,
+# so every shipped project stays byte-for-byte.
+PLACE_NAMES = ("top", "middle", "bottom")
+PLACE_TOP_FRAC = 0.16     # band anchor for place:"top" (as fraction of H)
+PLACE_BOTTOM_FRAC = 0.74  # band anchor for place:"bottom" (above eq/handle zone)
+# kind -> the *_frac key its draw path reads as the vertical anchor (audited
+# against captions.py draw_* sites; kinds with no frac — panel_*, cap_lines,
+# chips, handle, title_block, rule_draw — reject `place` in validate: their
+# geometry is a fixed plate/derived anchor, not a band choice).
+PLACE_KEYS = {
+    "burst": "burst_frac", "slam": "burst_frac", "slam_v2": "burst_frac",
+    "pump": "burst_frac", "flashpop": "accent_frac", "wipe": "accent_frac",
+    "trackin": "accent_frac", "accent_word": "accent_frac",
+    "big_word": "accent_frac", "split": "accent_frac",
+    "maskline": "caplines_frac", "big_number": "bignum_frac",
+    "small": "small_frac", "cta": "cta_frac", "kicker": "kicker_frac",
+    "terminal": "term_y_frac",
+}
+
+
+def place_merge(LY, L):
+    """Per-caption copy of the merged shot LY with `place`/`y` applied.
+    Returns LY ITSELF (no copy) when neither field is present — the shipped
+    byte-identical path. Unknown kind for `place` is pre-gated by validate."""
+    place, y = L.get("place"), L.get("y")
+    if place is None and y is None:
+        return LY
+    M = dict(LY)
+    if place is not None:
+        key = PLACE_KEYS[L["kind"]]
+        if place == "top":
+            M[key] = PLACE_TOP_FRAC
+        elif place == "bottom":
+            M[key] = PLACE_BOTTOM_FRAC
+        # "middle" -> keep the shot/preset frac (explicitly allowed no-op)
+    if y is not None:
+        for key in set(PLACE_KEYS.values()):
+            M[key] = float(y)   # fine-tune pins this caption's anchors
+    return M
+
 
 def eq_bar_height(eng, L, idx, lt, g, vo_env, frame=None):
     """Height (px, >0) of bar slot `idx` at local time `lt` / global time `g`:

@@ -119,12 +119,14 @@
           "kind": "burst",
           "at": 0.3,
           "text": "GLITCH SPLIT",
-          "fx": "glitch"
+          "fx": "glitch",
+          "place": "top"
         },
         {
           "kind": "slam_v2",
           "at": 1.4,
-          "text": "SLAM"
+          "text": "SLAM",
+          "place": "top"
         },
         {
           "kind": "accent_word",
@@ -145,7 +147,8 @@
           "kind": "wipe",
           "at": 0.3,
           "text": "EASED WIPE",
-          "ease": "expo"
+          "ease": "expo",
+          "place": "top"
         },
         {
           "kind": "pump",
@@ -251,7 +254,6 @@
       ]
     },
     {
-      "fill": "gen:grid_pulse",
       "t": 3.5,
       "transition": "flashdip",
       "captions": [
@@ -271,7 +273,8 @@
           "text": "FREE FOREVER",
           "idle": true
         }
-      ]
+      ],
+      "image": "img_00058.png"
     },
     {
       "image": "img_00039.png",
@@ -289,7 +292,8 @@
         {
           "kind": "flashpop",
           "at": 1.4,
-          "text": "BY LEEBLAAB"
+          "text": "BY LEEBLAAB",
+          "place": "bottom"
         },
         {
           "kind": "small",

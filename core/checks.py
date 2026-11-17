@@ -57,8 +57,13 @@ def check_project(engine):
             k = L["kind"]
             at = float(L.get("at", 0.2))
             left = L.get("align") == "left"
+            # v1.42 C9.1: per-caption place/y rides the SAME merge the draw
+            # path uses (metrics.place_merge returns LY itself when absent ->
+            # zero change for shipped projects). Checker budgets what the
+            # renderer draws, agree-by-construction as always.
+            cap_LY = M.place_merge(LY, L)
             avail_w = (engine.W - 2 * LY["left_inset"]) if left else None
-            m = M.measure(engine, L, k, t, at, avail_w=avail_w, LY=LY)   # same numbers as the draw path
+            m = M.measure(engine, L, k, t, at, avail_w=avail_w, LY=cap_LY)   # same numbers as the draw path
 
             # --- v1.42 item 11 gate half: per-shot warn budget -----------------
             # A shot with more 'warn' flags than WARN_BUDGET is an error flag of

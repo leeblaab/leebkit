@@ -439,6 +439,14 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_bpm_finish.py")],
 ok("bpm_ledger / --finish test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.42 C9.1: per-caption `place`/`y` vertical placement (band retarget of the
+# kind's anchor frac; opt-in, default path byte-identical; checker budgets the
+# same merged LY).
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_place_field.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("place-field test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)

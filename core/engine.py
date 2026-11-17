@@ -219,6 +219,29 @@ def validate_project(proj):
             if ez is not None and ez not in CAPTIONS.M.EASE_NAMES:
                 raise ValueError("shot %d caption ease %r unknown (choices: %s)"
                                  % (i, ez, ", ".join(CAPTIONS.M.EASE_NAMES)))
+            # v1.42 C9.1: per-caption vertical placement shape gates. `place`
+            # only hosts on kinds with a band-choice anchor frac (metrics
+            # PLACE_KEYS — panel_*/cap_lines/chips/handle/title_block have a
+            # fixed plate geometry and reject it); `y` is a 0..1 fraction of H.
+            _pl = c.get("place")
+            if _pl is not None:
+                if _pl not in CAPTIONS.M.PLACE_NAMES:
+                    raise ValueError("shot %d caption place %r unknown (choices: %s)"
+                                     % (i, _pl, ", ".join(CAPTIONS.M.PLACE_NAMES)))
+                if c["kind"] not in CAPTIONS.M.PLACE_KEYS:
+                    raise ValueError("shot %d caption kind %r has no band anchor for "
+                                     "'place' (choices: %s)"
+                                     % (i, c["kind"], ", ".join(sorted(CAPTIONS.M.PLACE_KEYS))))
+            _y = c.get("y")
+            if _y is not None:
+                try:
+                    _yf = float(_y)
+                except (TypeError, ValueError):
+                    raise ValueError("shot %d caption y must be a 0..1 fraction (got %r)"
+                                     % (i, _y))
+                if not (0.0 <= _yf <= 1.0):
+                    raise ValueError("shot %d caption y must be within 0..1 (got %r)"
+                                     % (i, _y))
             # v1.42 item 8: opt-in FX whitelist (kind eligibility + settle
             # clock gated by checks via metrics.fx_flag — shape only here).
             fx = c.get("fx")
@@ -1133,11 +1156,17 @@ class Engine:
                 a = min(a, a_gate)
             slide = int((1 - ease_o(prog)) * LY["slide_dy"])
 
+            # v1.42 C9.1: per-caption vertical placement. place_merge returns
+            # the SHARED shot LY when the caption carries no place/y field, so
+            # shipped projects stay byte-identical with zero extra copies; a
+            # field retargets only THAT caption's anchor frac key (the slide
+            # offset above reads shared geometry — slide_dy is not an anchor).
+            ctx_LY = CAPTIONS.M.place_merge(LY, L)
             _cf = CAPTIONS.DISPATCH.get(k)
             if _cf is None:
                 continue    # unknown kind: validate_project gates these; belt & braces
             ctx = CAPTIONS.FrameCtx(
-                W=W, H=H, LY=LY, P=P, TRK=TRK,
+                W=W, H=H, LY=ctx_LY, P=P, TRK=TRK,
                 WHITE=WHITE, ACCENT=ACCENT, DIMC=DIMC, PAL=PAL,
                 lt=lt, at=at, g=g, shot_t=float(s["t"]),
                 prog=prog, a=a, slide=slide,

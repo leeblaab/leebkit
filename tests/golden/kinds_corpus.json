@@ -114,7 +114,7 @@
       "> PROMPT",
       "render the frame",
       "",
-      "░░░ 0%"
+      "\u2591\u2591\u2591 0%"
      ]
     }
    ]
@@ -185,6 +185,12 @@
      "kind": "eq_bars",
      "at": 0.2,
      "n": 6
+    },
+    {
+     "kind": "flashpop",
+     "at": 0.7,
+     "text": "PLACED HIGH",
+     "place": "top"
     }
    ]
   }
