@@ -94,8 +94,11 @@ else:
     outp = os.path.join(ROOT, "output", "_bpmfin.mp4")
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(p, f)
+    # --media is explicit: without it render_cli defaults to ROOT/media, which
+    # only exists on dev machines — CI checkouts carry images in samples/media.
     r = subprocess.run([sys.executable, os.path.join(ROOT, "render_cli.py"),
-                        tmp, "--out", outp, "--finish", "--jobs", "1"],
+                        tmp, "--out", outp, "--finish", "--jobs", "1",
+                        "--media", os.path.join(ROOT, "samples", "media")],
                        capture_output=True, text=True, cwd=ROOT)
     ok(r.returncode == 0, "--finish render exits 0 (%s)" % r.stderr[-300:])
     ok("re-rendering" in r.stdout and "with audio bed wired" in r.stdout,
