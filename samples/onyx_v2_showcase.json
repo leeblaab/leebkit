@@ -1,0 +1,302 @@
+{
+  "schema": 1,
+  "name": "onyx_v2_showcase",
+  "preset": "onyx.json",
+  "size": "1080x1920",
+  "target": 30.0,
+  "fps": 30,
+  "bpm": 120,
+  "voice": "en_US-lessac-medium",
+  "music": {
+    "bed": "pulse"
+  },
+  "vo_lines": [
+    {
+      "shot": 0,
+      "offset": 0.4,
+      "text": "This is LEEBKIT. Version one point four two."
+    },
+    {
+      "shot": 1,
+      "offset": 0.5,
+      "text": "Every animation style. One engine."
+    },
+    {
+      "shot": 2,
+      "offset": 0.6,
+      "text": "Glitch. Slam. Tracking collapse. Eased entrances."
+    },
+    {
+      "shot": 3,
+      "offset": 0.6,
+      "text": "Idle motion and color waves that never stop breathing."
+    },
+    {
+      "shot": 4,
+      "offset": 0.5,
+      "text": "Rules draw on. Words exit with style."
+    },
+    {
+      "shot": 5,
+      "offset": 0.5,
+      "text": "And the bars? They ride your voice. Live."
+    },
+    {
+      "shot": 6,
+      "offset": 0.4,
+      "text": "Fully offline. Free forever."
+    },
+    {
+      "shot": 7,
+      "offset": 0.3,
+      "text": "Get LEEBKIT on GitHub. LEEBLAAB."
+    }
+  ],
+  "shots": [
+    {
+      "image": "img_00014.png",
+      "t": 3.5,
+      "transition": "fade",
+      "cam": "pushin2",
+      "dim": 0.5,
+      "captions": [
+        {
+          "kind": "title_block",
+          "at": 0.3,
+          "text": "LEEBKIT",
+          "sub": "VERSION 1.42 SHOWCASE"
+        },
+        {
+          "kind": "handle",
+          "at": 1.9,
+          "text": "@leeblaab",
+          "idle": true
+        }
+      ]
+    },
+    {
+      "image": "img_00027.png",
+      "t": 3.5,
+      "transition": "whip",
+      "cam": "pandiag",
+      "dim": 0.52,
+      "captions": [
+        {
+          "kind": "split",
+          "at": 0.3,
+          "text": "EVERY ANIMATION",
+          "colors": [
+            "accent",
+            "pink",
+            "pink"
+          ]
+        },
+        {
+          "kind": "maskline",
+          "at": 1.6,
+          "text": "9 BY 16 SQUARE WIDE",
+          "colors": [
+            "accent",
+            "pink"
+          ],
+          "idle": true
+        },
+        {
+          "kind": "small",
+          "at": 2.4,
+          "text": "ONE ENGINE"
+        }
+      ]
+    },
+    {
+      "image": "img_00035.png",
+      "t": 4.0,
+      "transition": "flashdip",
+      "cam": "pushin",
+      "dim": 0.55,
+      "captions": [
+        {
+          "kind": "burst",
+          "at": 0.3,
+          "text": "GLITCH SPLIT",
+          "fx": "glitch"
+        },
+        {
+          "kind": "slam_v2",
+          "at": 1.4,
+          "text": "SLAM"
+        },
+        {
+          "kind": "accent_word",
+          "at": 2.5,
+          "text": "COLLAPSE",
+          "fx": "track_collapse"
+        }
+      ]
+    },
+    {
+      "image": "img_00039.png",
+      "t": 4.0,
+      "transition": "wipe_left",
+      "cam": "panup",
+      "dim": 0.58,
+      "captions": [
+        {
+          "kind": "wipe",
+          "at": 0.3,
+          "text": "EASED WIPE",
+          "ease": "expo"
+        },
+        {
+          "kind": "pump",
+          "at": 1.3,
+          "text": "ELASTIC PUMP",
+          "ease": "elastic"
+        },
+        {
+          "kind": "maskline",
+          "at": 1.2,
+          "text": "STEPS MASKLINE",
+          "colors": [
+            "pink",
+            "accent"
+          ],
+          "idle": true
+        },
+        {
+          "kind": "kicker",
+          "at": 3.1,
+          "text": "IDLE + COLOR WAVE",
+          "idle": true
+        },
+        {
+          "kind": "kicker",
+          "at": 2.6,
+          "text": "COLOR WAVE RIDES ON",
+          "idle": true
+        }
+      ]
+    },
+    {
+      "fill": "gen:ember_flow",
+      "t": 4.0,
+      "transition": "slideL",
+      "captions": [
+        {
+          "kind": "rule_draw",
+          "at": 0.2,
+          "w": 0.5
+        },
+        {
+          "kind": "typewriter",
+          "at": 0.6,
+          "text": "render the frame_",
+          "exit": "wipe",
+          "colors": [
+            "white",
+            "accent"
+          ]
+        },
+        {
+          "kind": "trackin",
+          "at": 1.8,
+          "text": "TRACKING IN"
+        },
+        {
+          "kind": "cta",
+          "at": 2.6,
+          "text": "EXIT WITH STYLE",
+          "exit": "scale",
+          "idle": true
+        }
+      ]
+    },
+    {
+      "image": "img_00014.png",
+      "t": 4.5,
+      "transition": "wipe_up",
+      "cam": "pushout",
+      "dim": 0.6,
+      "captions": [
+        {
+          "kind": "eq_bars",
+          "at": 0.2,
+          "n": 7,
+          "w": 0.4
+        },
+        {
+          "kind": "big_number",
+          "at": 0.5,
+          "text": "96kHz"
+        },
+        {
+          "kind": "accent_word",
+          "at": 1.6,
+          "text": "RIDES YOUR VOICE",
+          "idle": true,
+          "colors": [
+            "pink",
+            "accent"
+          ]
+        },
+        {
+          "kind": "terminal",
+          "at": 2.4,
+          "rows": [
+            "> bed: pulse @ 120 bpm",
+            "> envelope: RMS windows",
+            "> bars: LIVE"
+          ]
+        }
+      ]
+    },
+    {
+      "fill": "gen:grid_pulse",
+      "t": 3.5,
+      "transition": "flashdip",
+      "captions": [
+        {
+          "kind": "panel_top",
+          "at": 0.3,
+          "lines": [
+            "NO CLOUD.",
+            "NO ACCOUNT.",
+            "YOUR MACHINE."
+          ],
+          "idle": true
+        },
+        {
+          "kind": "cta",
+          "at": 2.1,
+          "text": "FREE FOREVER",
+          "idle": true
+        }
+      ]
+    },
+    {
+      "image": "img_00039.png",
+      "t": 3.0,
+      "transition": "cut",
+      "cam": "pushin",
+      "dim": 0.5,
+      "captions": [
+        {
+          "kind": "title_block",
+          "at": 0.25,
+          "text": "GET LEEBKIT",
+          "sub": "github.com/leeblaab/leebkit"
+        },
+        {
+          "kind": "flashpop",
+          "at": 1.4,
+          "text": "BY LEEBLAAB"
+        },
+        {
+          "kind": "small",
+          "at": 1.9,
+          "text": "v1.42 OUT NOW"
+        }
+      ]
+    }
+  ]
+}
