@@ -1,6 +1,11 @@
 # v1.42 item 6: easing library + opt-in "ease" field on entrance kinds
 # (pop/pump/slam/wipe/trackin; kicker's stagger is LOCKED — no ease).
 import math
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, ROOT)
 
 from core.engine import (Engine, validate_project,
                          ease_expo_out, ease_back_in, ease_elastic_out,

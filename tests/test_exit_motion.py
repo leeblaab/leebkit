@@ -1,4 +1,10 @@
 # v1.42 item 4: per-caption exit motion — rise / wipe / scale (opt-in `exit`)
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, ROOT)
+
 import core.metrics as M
 from core.engine import Engine, validate_project
 from core.checks import check_project

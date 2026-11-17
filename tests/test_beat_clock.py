@@ -1,5 +1,11 @@
 # v1.42 item 3: beat clock — BED_BPM single source + Engine.beat_phase + FrameCtx.beat
 import math
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, ROOT)
+
 import core.audio as A
 from core.engine import Engine
 

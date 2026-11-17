@@ -10,6 +10,12 @@ no done_at gate; validate gates n/width/at inside the safe area. Determinism:
 every input is a pure function of frame index + project JSON -> sample == full.
 """
 import json, hashlib
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, ROOT)
+
 from core.engine import Engine, validate_project
 from core import metrics as M
 

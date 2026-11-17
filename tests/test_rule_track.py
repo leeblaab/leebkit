@@ -7,6 +7,12 @@ collapses to 0 over TRACK_RAMP (trackin math inverted). Opt-in; default
 path byte-identical.
 """
 import json, hashlib
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, ROOT)
+
 from core.engine import Engine, validate_project
 from core import metrics as M
 
