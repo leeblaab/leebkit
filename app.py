@@ -21,6 +21,9 @@ import time as _time
 
 from core.engine import Engine, load_preset, validate_project
 from core import audio as A
+# v1.51: engine option tables surfaced to the UI (single source of truth —
+# the UI must not hand-copy whitelists the server already enforces).
+from core import captions as CAPS
 from core import generators as G
 from core.checks import storyboard_strip, check_project
 from core.queue import QUEUE, QueueFull, ROOT
@@ -108,6 +111,16 @@ def meta():
             # gen shot would look like before rendering it.
             "generators": [{"id": k, "label": v["label"], "palette": list(v["palette"])}
                            for k, v in G.GEN_PRESETS.items()],
+            # v1.51 (audit #2: "v1.5 kinds invisible in the UI"): ship the
+            # engine's option tables so the UI offers exactly what validate
+            # accepts — no hand-copied lists to drift out of sync.
+            "caption_kinds": sorted(CAPS.DISPATCH),
+            "exit_kinds": list(CAPS.M.EXIT_KINDS),
+            "ease_names": list(CAPS.M.EASE_NAMES),
+            "fx_names": list(CAPS.M.FX_NAMES),
+            "place_names": list(CAPS.M.PLACE_NAMES),
+            "place_kinds": sorted(CAPS.M.PLACE_KEYS),
+            "idle_kinds": sorted(CAPS.M.IDLE_BREATHE_KINDS + CAPS.M.IDLE_WAVE_KINDS),
             "piper_ready": bool(A.piper_available() and len(A.list_voices()) > 1)}
 
 

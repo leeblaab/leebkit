@@ -69,6 +69,32 @@ for mm in re.finditer(r'(?:src|href)="([^"]*)"', html):
         bad.append((mm.group(0)[:40], expr[:60]))
 check("no unescaped ${} inside src=/href= attributes", not bad, repr(bad))
 
+# --- 2b. text-position interpolations of caption fields (v1.51 audit #2) ---
+# c.kind reaches innerHTML in two places (animations list <b>, shot-card
+# <label>). A hand-authored project JSON with a hostile "kind" string must
+# not inject markup. Gate: no raw ${c.kind} left anywhere, and every
+# interpolation of the caption-kind variable inside templates is esc()-wrapped.
+raw_kind = [mm.group(0) for mm in re.finditer(r"\$\{(?!\s*esc\()[^{}]*c\.kind[^{}]*\}", html)]
+check("no raw ${...c.kind...} interpolation outside esc()", not raw_kind, repr(raw_kind[:3]))
+# same rule for the colors array we now render into an input value=
+raw_colors = [mm.group(0) for mm in re.finditer(r'value="\$\{(?!\s*esc\()[^{}]*colors[^{}]*\}"', html)]
+check("caption colors input value is esc()-wrapped", not raw_colors, repr(raw_colors[:3]))
+
+# --- 2c. meta-driven option lists are static engine ids (no injection) ----
+# capMotionOptions builds <option value="${o}"> from META tables; those come
+# from /api/meta which ships engine constants only — assert the route emits
+# plain identifiers so the UI can trust them without esc().
+import json as _json
+sys.path.insert(0, ROOT)
+import app as _app  # noqa: E402
+_meta_ep = {r.path: r.endpoint for r in _app.app.routes if hasattr(r, "endpoint")}["/api/meta"]
+_m = _meta_ep()
+for key in ("exit_kinds", "ease_names", "fx_names", "place_names",
+            "place_kinds", "idle_kinds", "caption_kinds"):
+    vals = _m.get(key)
+    ok = isinstance(vals, list) and all(re.fullmatch(r"[a-z_0-9]+", v) for v in vals)
+    check("meta %s are plain ids" % key, ok, repr(vals)[:80])
+
 # --- 3. node --check on the inline script (syntax must survive) ----------
 import subprocess, tempfile, shutil
 scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
