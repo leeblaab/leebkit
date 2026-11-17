@@ -57,7 +57,3 @@ python render_cli.py samples/release_v15.json --media samples/media --out output
 - golden frames: PASS, 1314 hashed frames (re-baselined exactly for the C9.1
   corpus drift: 12 shot-9 keys; everything else untouched)
 - release render ffprobe gate: video and audio both exactly 47.00s
-
-## What's next
-**v2.0 — the monetization era** (was the old v1.5 plan): packaging, presets
-storefront, licensing. The kinetic engine line is done; v2.0 builds on top of it.
