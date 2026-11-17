@@ -90,6 +90,10 @@ else:
     # NO eq_bars and confirm the re-render line fires + output gates clean.
     p = json.loads(json.dumps(BASE))
     p["name"] = "_bpmfin"
+    # voice -> none: the piper model (vo/models/*.onnx, 61MB) is intentionally
+    # not in git, so CI has no VO synth — the music bed still drives --finish.
+    p["voice"] = "none"
+    p.pop("vo_lines", None)
     tmp = os.path.join(ROOT, "output", "_bpmfin_proj.json")
     outp = os.path.join(ROOT, "output", "_bpmfin.mp4")
     with open(tmp, "w", encoding="utf-8") as f:
