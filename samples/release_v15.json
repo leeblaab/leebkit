@@ -28,7 +28,8 @@
         {
           "kind": "slam_v2",
           "at": 0.35,
-          "text": "WANT A VIDEO LIKE THIS?",
+          "y": 0.68,
+          "text": "LIKE THIS?",
           "style": { "color": "#ffffff", "stroke": "#0b0e14" }
         }
       ]
@@ -38,8 +39,8 @@
       "t": 6.5,
       "transition": "wipe_left",
       "captions": [
-        { "kind": "title_block", "at": 0.4, "text": "GET LEEBKIT" },
-        { "kind": "panel_top", "at": 1.8, "lines": ["NO CLOUD", "NO ACCOUNT", "YOUR MACHINE"] }
+        { "kind": "panel_top", "at": 1.8, "lines": ["NO CLOUD", "NO ACCOUNT", "YOUR MACHINE"] },
+        { "kind": "title_block", "at": 0.4, "text": "GET LEEBKIT" }
       ]
     },
     {
@@ -59,11 +60,11 @@
       "t": 6.5,
       "transition": "cut",
       "captions": [
-        { "kind": "slam_v2", "at": 0.3, "text": "SLAM", "style": { "color": "#e0555a" } },
-        { "kind": "flashpop", "at": 1.4, "text": "GLITCH" },
-        { "kind": "wipe", "at": 2.6, "text": "WIPE", "place": "top" },
-        { "kind": "burst", "at": 3.7, "text": "BURST", "place": "top" },
-        { "kind": "pump", "at": 4.8, "text": "PUNCH" }
+        { "kind": "slam_v2", "at": 0.3, "text": "SLAM", "style": { "color": "#e0555a" }, "exit": "rise" },
+        { "kind": "flashpop", "at": 1.4, "text": "GLITCH", "y": 0.36, "exit": "rise" },
+        { "kind": "wipe", "at": 2.6, "text": "WIPE", "y": 0.145 },
+        { "kind": "burst", "at": 3.7, "text": "BURST", "y": 0.235 },
+        { "kind": "pump", "at": 4.8, "text": "PUNCH", "y": 0.60 }
       ]
     },
     {
@@ -83,8 +84,8 @@
       "captions": [
         { "kind": "small", "at": 0.4, "text": "C9 PLACEMENT — NEW IN v1.5" },
         { "kind": "kicker", "at": 1.2, "text": "TOP OF FRAME", "place": "top" },
-        { "kind": "burst", "at": 2.6, "text": "ANYWHERE", "place": "bottom" },
-        { "kind": "trackin", "at": 3.9, "text": "ON THE BEAT", "place": "bottom" }
+        { "kind": "burst", "at": 2.6, "text": "ANYWHERE", "y": 0.78 },
+        { "kind": "trackin", "at": 3.9, "text": "ON THE BEAT", "y": 0.56 }
       ]
     },
     {
@@ -102,9 +103,9 @@
       "t": 4.5,
       "transition": "fade",
       "captions": [
-        { "kind": "cta", "at": 0.3, "text": "github.com/leeblaab/leebkit" },
-        { "kind": "terminal", "at": 1.4, "rows": ["$ git clone https://github.com/leeblaab/leebkit.git"] },
-        { "kind": "small", "at": 2.6, "text": "v1.5 OUT NOW · LEEBLAAB" }
+        { "kind": "cta", "at": 0.3, "text": "github.com/leeblaab/leebkit", "exit": "rise" },
+        { "kind": "terminal", "at": 1.4, "rows": ["$ git clone https://github.com/leeblaab/leebkit.git"], "y": 0.685 },
+        { "kind": "small", "at": 2.6, "text": "v1.5 OUT NOW · LEEBLAAB", "y": 0.335 }
       ]
     }
   ]
