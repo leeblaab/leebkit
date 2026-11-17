@@ -9,7 +9,7 @@
     {"t": 4.0, "transition": "cut",
      "captions": [
        {"kind": "burst", "at": 0.6, "text": "FX SPLIT", "fx": "glitch"},
-       {"kind": "cta", "at": 2.2, "text": "LEEBKIT v1.42"}
+       {"kind": "cta", "at": 2.2, "text": "LEEBKIT v1.5"}
      ]}
   ]
 }

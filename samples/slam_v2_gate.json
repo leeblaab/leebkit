@@ -8,7 +8,7 @@
     {"t": 4.0, "transition": "cut",
      "captions": [
        {"kind": "slam_v2", "at": 0.6, "text": "STAMP IT"},
-       {"kind": "cta", "at": 2.2, "text": "LEEBKIT v1.42"}
+       {"kind": "cta", "at": 2.2, "text": "LEEBKIT v1.5"}
      ]}
   ]
 }

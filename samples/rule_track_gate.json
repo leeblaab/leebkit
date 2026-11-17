@@ -9,7 +9,7 @@
      "captions": [
        {"kind": "accent_word", "at": 0.6, "text": "COLLAPSE", "fx": "track_collapse"},
        {"kind": "rule_draw", "at": 1.4, "w": 0.35},
-       {"kind": "cta", "at": 2.4, "text": "LEEBKIT v1.42"}
+       {"kind": "cta", "at": 2.4, "text": "LEEBKIT v1.5"}
      ]}
   ]
 }
