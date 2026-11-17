@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "name": "release_v15",
+  "preset": "onyx.json",
+  "size": "1080x1920",
+  "target": 47.0,
+  "fps": 30,
+  "bpm": 120,
+  "voice": "en_US-lessac-medium",
+  "music": { "bed": "pulse" },
+  "vo_lines": [
+    { "shot": 0, "offset": 0.45, "text": "Do you want to generate a video like this?" },
+    { "shot": 1, "offset": 0.6, "text": "This is LEEBKIT. An offline video generator for still images." },
+    { "shot": 2, "offset": 0.5, "text": "No APIs. No cloud. No account. Your machine, your renders." },
+    { "shot": 3, "offset": 0.6, "text": "Slam. Glitch. Burst. Punch. Words that move like you mean it." },
+    { "shot": 4, "offset": 0.7, "text": "Live equalizer bars ride your voice. Terminal rows type themselves." },
+    { "shot": 5, "offset": 0.6, "text": "And captions now place anywhere on frame — top, bottom, or right on the beat." },
+    { "shot": 6, "offset": 0.6, "text": "One JSON file. One command. Fully offline. Free forever." },
+    { "shot": 7, "offset": 0.5, "text": "Get LEEBKIT on GitHub. Version one point five is out now." }
+  ],
+  "shots": [
+    {
+      "image": "img_00014.png",
+      "t": 3.5,
+      "transition": "none",
+      "cam": "pushin2",
+      "captions": [
+        {
+          "kind": "slam_v2",
+          "at": 0.35,
+          "text": "WANT A VIDEO LIKE THIS?",
+          "style": { "color": "#ffffff", "stroke": "#0b0e14" }
+        }
+      ]
+    },
+    {
+      "image": "img_00027.png",
+      "t": 6.5,
+      "transition": "wipe_left",
+      "captions": [
+        { "kind": "title_block", "at": 0.4, "text": "GET LEEBKIT" },
+        { "kind": "panel_top", "at": 1.8, "lines": ["NO CLOUD", "NO ACCOUNT", "YOUR MACHINE"] }
+      ]
+    },
+    {
+      "image": "img_00374.png",
+      "t": 6.0,
+      "transition": "fade",
+      "cam": "pushin",
+      "captions": [
+        { "kind": "kicker", "at": 0.5, "text": "STILL IMAGES" },
+        { "kind": "rule_draw", "at": 1.2, "width_frac": 0.62 },
+        { "kind": "kicker", "at": 2.4, "text": "KINETIC VIDEO" },
+        { "kind": "small", "at": 4.0, "text": "ONE ENGINE · OFFLINE" }
+      ]
+    },
+    {
+      "image": "img_00039.png",
+      "t": 6.5,
+      "transition": "cut",
+      "captions": [
+        { "kind": "slam_v2", "at": 0.3, "text": "SLAM", "style": { "color": "#e0555a" } },
+        { "kind": "flashpop", "at": 1.4, "text": "GLITCH" },
+        { "kind": "wipe", "at": 2.6, "text": "WIPE", "place": "top" },
+        { "kind": "burst", "at": 3.7, "text": "BURST", "place": "top" },
+        { "kind": "pump", "at": 4.8, "text": "PUNCH" }
+      ]
+    },
+    {
+      "image": "img_00056.png",
+      "t": 7.0,
+      "transition": "slideR",
+      "captions": [
+        { "kind": "eq_bars", "at": 0.3, "n": 7, "w": 0.5 },
+        { "kind": "terminal", "at": 1.6, "rows": ["$ leebkit render release.json", "frames: 1410/1410", "muxed -> release_v15.mp4"] }
+      ]
+    },
+    {
+      "image": "img_00058.png",
+      "t": 6.5,
+      "transition": "fade",
+      "cam": "pandiag",
+      "captions": [
+        { "kind": "small", "at": 0.4, "text": "C9 PLACEMENT — NEW IN v1.5" },
+        { "kind": "kicker", "at": 1.2, "text": "TOP OF FRAME", "place": "top" },
+        { "kind": "burst", "at": 2.6, "text": "ANYWHERE", "place": "bottom" },
+        { "kind": "trackin", "at": 3.9, "text": "ON THE BEAT", "place": "bottom" }
+      ]
+    },
+    {
+      "image": "img_00075.png",
+      "t": 6.5,
+      "transition": "wipe_up",
+      "captions": [
+        { "kind": "typewriter", "at": 0.4, "text": "python render_cli.py release.json" },
+        { "kind": "small", "at": 3.2, "text": "ZERO UPLOADS · ZERO LOGINS" },
+        { "kind": "cta", "at": 4.6, "text": "FREE FOREVER" }
+      ]
+    },
+    {
+      "image": "img_00035.png",
+      "t": 4.5,
+      "transition": "fade",
+      "captions": [
+        { "kind": "cta", "at": 0.3, "text": "github.com/leeblaab/leebkit" },
+        { "kind": "terminal", "at": 1.4, "rows": ["$ git clone https://github.com/leeblaab/leebkit.git"] },
+        { "kind": "small", "at": 2.6, "text": "v1.5 OUT NOW · LEEBLAAB" }
+      ]
+    }
+  ]
+}

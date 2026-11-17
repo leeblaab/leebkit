@@ -32,7 +32,19 @@ stills (Ken Burns), kinetic text, transitions, voiceover and music with auto-duc
 rendered entirely on your machine by Python + ffmpeg. Double-click `start.bat`, open the
 webUI, get an MP4.
 
-**Status: v1.4 — November 2026.** Everything listed below is built and in daily use.
+**Status: v1.5 — November 2026.** Everything listed below is built and in daily use.
+Full 47s v1.5 release video (voiceover + music, all real photos):
+`https://github.com/leeblaab/leebkit/releases/download/v1.5/release_v15.mp4`
+(project JSON: `samples/release_v15.json`, reproducible with the one command below).
+v1.5 adds: **caption placement** — `place: top|middle|bottom` or an explicit
+`y:` fraction on kinetic captions (burst/slam_v2/pump/wipe/trackin/kicker/small/cta/
+maskline/terminal/big_number/accent_word/split/flashpop; checker/renderer parity); heavier
+`slam_v2`, `accent_word` per-word color, self-drawing `rule_draw`, live `eq_bars` that ride
+the real audio bed; opt-in `exit:` motion (`rise|wipe|scale`), `idle:` motion shapes, easing
+(`ease: expo|elastic|steps`) and FX (`fx: glitch|track_collapse`); a shared beat clock
+(project `bpm` drives picture AND procedural beds; file beds carry a BPM ledger);
+and `render_cli.py --finish` — audio assembled first, frames re-rendered on the real mix.
+All opt-in: default path byte-identical, 1314-frame golden corpus green.
 v1.4 adds: eight kinetic caption kinds — `kicker` (rule + tracked caps stagger), `burst`
 (scale-punch word, per-word color), plus `wipe`, `split`, `slam`, `trackin`, `flashpop`,
 `maskline` — all metrics/checker parity with the renderer; a composition layer so any
