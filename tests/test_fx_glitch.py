@@ -1,6 +1,6 @@
 """v1.42 item 8 test-first: opt-in "fx": "glitch" (RGB-split channel fringe).
 
-Spec (docs/v1.42_plan.md): fx on accent_word/burst ("big_word" family)/slam_v2
+Spec (docs/_local_v1.5_plan.md): fx on accent_word/burst ("big_word" family)/slam_v2
 (schema + validate). ACTIVE ONLY within the entrance ramp: R/Cyan channel
 offsets +/- (4..12) px driven by a sin STEP of the beat clock (item 3; falls
 back to a seed time function when beat is None), amplitude scaled by the

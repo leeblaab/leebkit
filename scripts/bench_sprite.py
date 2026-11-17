@@ -3,7 +3,7 @@ via Image.transform AFFINE bilinear + alpha_composite) vs the current
 per-frame PIL redraw path, measured on a slam-style caption inside the kinds
 corpus shot at 1080x1920.
 
-Decision rule from docs/v1.42_plan.md: proceed with the sprite compositor for
+Decision rule from docs/_local_v1.5_plan.md: proceed with the sprite compositor for
 slam_v2 ONLY if frame cost <= +15%; otherwise ship slam_v2 with scale-only math
 on the existing draw path and document why here.
 
