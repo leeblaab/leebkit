@@ -27,10 +27,15 @@ Eleven capability additions in total, all opt-in, default path byte-identical
   whitelisted per kind, gated at save time.
 
 ### Timing
-- **Shared beat clock** — one tempo table (`bpm` in the project) drives both
-  picture pulses and the procedural beds; transitions land on beats.
-- **File-bed BPM ledger** — your own MP3/WAV beds carry a known tempo so beat
-  visuals stay locked to them too.
+- **Shared beat clock** — one tempo table drives both picture pulses and the beds;
+  transitions land on beats.
+- **File-bed BPM ledger** — your own MP3/WAV beds carry a known tempo (`music/BPM.json`)
+  so beat visuals stay locked to them too: `"music": { "mode": "file", "bed": "..." }`.
+
+### Audio
+- **Real music beds, not synths** — the release video runs on a CC0 track
+  (`bed_one_cool_minute.mp3`, loudness-matched to the mix), provenance in
+  `music/ATTRIBUTIONS.md`. Procedural beds remain available as the zero-asset path.
 
 ### Pipeline
 - **`render_cli.py --finish`** — assembles the audio mix FIRST, wires it into
