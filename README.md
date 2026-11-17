@@ -2,12 +2,12 @@
 
 **Kinetic promo videos. No cloud. No API. No subscription.**
 
-![LEEBKIT v1.4 promo — looped preview (full voiced MP4 links below)](docs/promo_v14_preview.gif)
+![LEEBKIT v1.5 promo — looped preview (full voiced MP4 links below)](docs/promo_v15_preview.gif)
 
-Full 20s video with voiceover + music:
-https://github.com/leeblaab/leebkit/releases/download/v1.4/promo_v14.mp4
-(v1.3 cut still available at the v1.3 release.)
-*Same project JSON ships in `samples/promo_v12.json` (its 4 stills in
+Full 47s video with voiceover + music:
+https://github.com/leeblaab/leebkit/releases/download/v1.5/release_v15.mp4
+(v1.4/v1.3 cuts still available at their releases.)
+*Same project JSON ships in `samples/release_v15.json` (its photos in
 `samples/media/`), reproducible with one command below.*
 
 ## The v1.4 look — every preset and caption kind, one grid
