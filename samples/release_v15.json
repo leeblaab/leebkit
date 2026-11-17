@@ -5,9 +5,8 @@
   "size": "1080x1920",
   "target": 47.0,
   "fps": 30,
-  "bpm": 120,
   "voice": "en_US-lessac-medium",
-  "music": { "bed": "pulse" },
+  "music": { "mode": "file", "bed": "bed_one_cool_minute.mp3" },
   "vo_lines": [
     { "shot": 0, "offset": 0.45, "text": "Do you want to generate a video like this?" },
     { "shot": 1, "offset": 0.6, "text": "This is LEEBKIT. An offline video generator for still images." },
@@ -50,8 +49,8 @@
       "cam": "pushin",
       "captions": [
         { "kind": "kicker", "at": 0.5, "text": "STILL IMAGES" },
-        { "kind": "rule_draw", "at": 1.2, "width_frac": 0.62 },
-        { "kind": "kicker", "at": 2.4, "text": "KINETIC VIDEO" },
+        { "kind": "rule_draw", "at": 1.2, "width_frac": 0.62, "y": 0.38 },
+        { "kind": "kicker", "at": 2.4, "text": "KINETIC VIDEO", "y": 0.585 },
         { "kind": "small", "at": 4.0, "text": "ONE ENGINE · OFFLINE" }
       ]
     },
@@ -61,10 +60,10 @@
       "transition": "cut",
       "captions": [
         { "kind": "slam_v2", "at": 0.3, "text": "SLAM", "style": { "color": "#e0555a" }, "exit": "rise" },
-        { "kind": "flashpop", "at": 1.4, "text": "GLITCH", "y": 0.36, "exit": "rise" },
-        { "kind": "wipe", "at": 2.6, "text": "WIPE", "y": 0.145 },
-        { "kind": "burst", "at": 3.7, "text": "BURST", "y": 0.235 },
-        { "kind": "pump", "at": 4.8, "text": "PUNCH", "y": 0.60 }
+        { "kind": "flashpop", "at": 1.4, "text": "GLITCH", "y": 0.27, "exit": "rise" },
+        { "kind": "wipe", "at": 2.6, "text": "WIPE", "y": 0.135 },
+        { "kind": "burst", "at": 3.7, "text": "BURST", "y": 0.50 },
+        { "kind": "pump", "at": 4.8, "text": "PUNCH", "y": 0.62 }
       ]
     },
     {
@@ -93,7 +92,7 @@
       "t": 6.5,
       "transition": "wipe_up",
       "captions": [
-        { "kind": "typewriter", "at": 0.4, "text": "python render_cli.py release.json" },
+        { "kind": "typewriter", "at": 2.9, "text": "python render_cli.py my_project.json", "rule": false, "y": 0.575 },
         { "kind": "small", "at": 3.2, "text": "ZERO UPLOADS · ZERO LOGINS" },
         { "kind": "cta", "at": 4.6, "text": "FREE FOREVER" }
       ]
