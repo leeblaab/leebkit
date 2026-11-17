@@ -1,4 +1,4 @@
-"""v1.42 item 2 (C0a): rule-anchor regression probe.
+"""v1.5 item 2 (C0a): rule-anchor regression probe.
 
 The advisor claimed a "strikethrough" where an underline crosses wrapped
 kicker text. Audit against v1.41 says both kicker rules and the title_block

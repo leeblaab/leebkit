@@ -1,4 +1,4 @@
-"""v1.42 item 11: BPM ledger for file beds + render_cli --finish pass.
+"""v1.5 item 11: BPM ledger for file beds + render_cli --finish pass.
 
 Gates:
  1. load_bpm_ledger() parses the shipped assets/music/BPM.json (no _-keys,

@@ -125,7 +125,7 @@ def build_layout(W, H, sizes, landscape=None):
     # v1.4 composition layer: ONE shared safe inset for left-aligned captions
     # (ChatGPT directive: consistent horizontal margin, not per-kind magic).
     L["left_inset"] = sc(80)
-    # v1.42 item 10: bottom safe margin for the eq_bars strip (floor line the
+    # v1.5 item 10: bottom safe margin for the eq_bars strip (floor line the
     # bars stand on; matches the W-160 horizontal safe band's scale).
     L["bottom_inset"] = sc(140)
     return L

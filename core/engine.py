@@ -27,7 +27,7 @@ from .layout import build_layout, clamp_font_sizes
 from . import layout as LAYOUT
 from .camutil import cam_name
 from .audio import VO_SPEED_RANGE  # v1.4 C2: one source of truth for speed bounds
-from . import audio as AUDIO      # v1.42 item 3: BED_BPM single-source tempo table
+from . import audio as AUDIO      # v1.5 item 3: BED_BPM single-source tempo table
 from .generators import (GEN_PRESETS, render as gen_render,
                          render_base as gen_base,
                          composite_grain as gen_grain)  # v1.4 C3 / C4d
@@ -69,7 +69,7 @@ def ease_ow(t):  # back-out with overshoot
     return 1 + c3 * pow(t - 1, 3) + c1 * pow(t - 1, 2)
 
 
-def ease_expo_out(t):  # v1.42 item 6: explosive front-load, asymptotic settle
+def ease_expo_out(t):  # v1.5 item 6: explosive front-load, asymptotic settle
     if t <= 0:
         return 0.0
     if t >= 1:
@@ -77,7 +77,7 @@ def ease_expo_out(t):  # v1.42 item 6: explosive front-load, asymptotic settle
     return 1 - pow(2, -10 * t)
 
 
-def ease_back_in(t):   # v1.42 item 6: anticipation dip before the drive-out
+def ease_back_in(t):   # v1.5 item 6: anticipation dip before the drive-out
     if t <= 0:
         return 0.0
     if t >= 1:
@@ -87,7 +87,7 @@ def ease_back_in(t):   # v1.42 item 6: anticipation dip before the drive-out
     return c3 * pow(t, 3) - c1 * pow(t, 2)
 
 
-def ease_elastic_out(t):  # v1.42 item 6: damped spring past rest, lands at 1
+def ease_elastic_out(t):  # v1.5 item 6: damped spring past rest, lands at 1
     if t <= 0:
         return 0.0
     if t >= 1:
@@ -96,7 +96,7 @@ def ease_elastic_out(t):  # v1.42 item 6: damped spring past rest, lands at 1
     return pow(2, -10 * t) * math.sin((t * 10 - 0.75) * c4) + 1
 
 
-def ease_step3(t):     # v1.42 item 6: three hard plateaus (mechanical snap-in)
+def ease_step3(t):     # v1.5 item 6: three hard plateaus (mechanical snap-in)
     if t <= 0:
         return 0.0
     if t >= 1:
@@ -203,23 +203,23 @@ def validate_project(proj):
             if c["kind"] not in CAPTIONS.DISPATCH:
                 raise ValueError("shot %d caption kind %r unknown (choices: %s)"
                                  % (i, c["kind"], ", ".join(sorted(CAPTIONS.DISPATCH))))
-            # v1.42 item 4: opt-in exit motion whitelist (timing itself is
+            # v1.5 item 4: opt-in exit motion whitelist (timing itself is
             # gated by checks via metrics.exit_flag — validate only shape).
             ex = c.get("exit")
             if ex is not None and ex not in CAPTIONS.M.EXIT_KINDS:
                 raise ValueError("shot %d caption exit %r unknown (choices: %s)"
                                  % (i, ex, ", ".join(CAPTIONS.M.EXIT_KINDS)))
-            # v1.42 item 5: opt-in idle-motion shape check (eligibility +
+            # v1.5 item 5: opt-in idle-motion shape check (eligibility +
             # settle-window timing gated by checks via metrics.idle_flag).
             if "idle" in c and not isinstance(c["idle"], bool):
                 raise ValueError("shot %d caption idle must be a boolean" % i)
-            # v1.42 item 6: opt-in easing whitelist (kind eligibility gated by
+            # v1.5 item 6: opt-in easing whitelist (kind eligibility gated by
             # checks via metrics.ease_flag — kicker's stagger is locked).
             ez = c.get("ease")
             if ez is not None and ez not in CAPTIONS.M.EASE_NAMES:
                 raise ValueError("shot %d caption ease %r unknown (choices: %s)"
                                  % (i, ez, ", ".join(CAPTIONS.M.EASE_NAMES)))
-            # v1.42 C9.1: per-caption vertical placement shape gates. `place`
+            # v1.5 C9.1: per-caption vertical placement shape gates. `place`
             # only hosts on kinds with a band-choice anchor frac (metrics
             # PLACE_KEYS — panel_*/cap_lines/chips/handle/title_block have a
             # fixed plate geometry and reject it); `y` is a 0..1 fraction of H.
@@ -242,13 +242,13 @@ def validate_project(proj):
                 if not (0.0 <= _yf <= 1.0):
                     raise ValueError("shot %d caption y must be within 0..1 (got %r)"
                                      % (i, _y))
-            # v1.42 item 8: opt-in FX whitelist (kind eligibility + settle
+            # v1.5 item 8: opt-in FX whitelist (kind eligibility + settle
             # clock gated by checks via metrics.fx_flag — shape only here).
             fx = c.get("fx")
             if fx is not None and fx not in CAPTIONS.M.FX_NAMES:
                 raise ValueError("shot %d caption fx %r unknown (choices: %s)"
                                  % (i, fx, ", ".join(CAPTIONS.M.FX_NAMES)))
-            # v1.42 item 10 (C5): eq_bars shape gates (n/width fractions;
+            # v1.5 item 10 (C5): eq_bars shape gates (n/width fractions;
             # timing is N/A — the strip never settles, checks has no branch).
             if c["kind"] == "eq_bars":
                 _M = CAPTIONS.M
@@ -304,7 +304,7 @@ class Engine:
         self.XF = float(P.get("xf", 0.5))
         self.OVER = float(P.get("overscan", 1.35))
 
-        # ---- v1.42 item 3: beat clock (picture <-> music shared tempo) ----
+        # ---- v1.5 item 3: beat clock (picture <-> music shared tempo) ----
         # BPM truth lives in audio.BED_BPM (procedural beds) + the optional
         # project `bpm` override. mode none/sidechain/file without an explicit
         # bpm -> None: no clock, FrameCtx.beat stays None everywhere (items 8/10
@@ -328,7 +328,7 @@ class Engine:
                     (".mp3", ".wav", ".m4a", ".ogg")):
                 self.BPM = AUDIO.BED_BPM.get(str(_bed))
             elif str(_bed).lower().endswith((".mp3", ".wav", ".m4a", ".ogg")):
-                # v1.42 item 11a: file bed -> tempo from the BPM.json ledger
+                # v1.5 item 11a: file bed -> tempo from the BPM.json ledger
                 # (bare name or file:-prefixed id both resolve). Ledger miss /
                 # null value -> no clock, seed-time fallbacks stand.
                 self.BPM = AUDIO.load_bpm_ledger().get(os.path.basename(str(_bed)))
@@ -544,7 +544,7 @@ class Engine:
             ws = [dr.textlength(c, font=fnt) for c in txt]
             total = sum(ws) + tracking * (len(txt) - 1)
             if s != 1.0:
-                # v1.42 item 5: breathe scales glyph advances AND the
+                # v1.5 item 5: breathe scales glyph advances AND the
                 # letterspacing gaps — the tracking lockup breathes as one.
                 total *= s
                 x = (W - total) / 2 if xa is None else xa
@@ -559,7 +559,7 @@ class Engine:
         else:
             w = dr.textlength(txt, font=fnt)
             if s != 1.0:
-                # v1.42 item 5 (idle breathe): per-glyph advances ride `s` —
+                # v1.5 item 5 (idle breathe): per-glyph advances ride `s` —
                 # a whole-string horizontal scale about the center anchor.
                 total = w * s
                 x = (W - total) / 2 if xa is None else xa
@@ -678,10 +678,10 @@ class Engine:
         alpha_cap: hard ceiling on glyph alpha (outgoing layer inside a
         transition window must fade even though its pop clock is frozen).
         v1.4 composition layer: `xa` = left start x (left-align); None centers.
-        v1.42 item 5: `s` = idle-breathe horizontal scale — word advances ride
+        v1.5 item 5: `s` = idle-breathe horizontal scale — word advances ride
         `s` around the same layout anchor (entrance clocks untouched; s==1.0 is
         byte-identical to every shipped frame).
-        v1.42 item 6: `ez` optionally replaces ease_ow on the per-word rise
+        v1.5 item 6: `ez` optionally replaces ease_ow on the per-word rise
         (opt-in caption `ease`); None == byte-identical."""
         if appear <= 0:
             return
@@ -703,7 +703,7 @@ class Engine:
             if alpha_cap is not None:
                 a = min(a, alpha_cap)
                 if a <= 0:
-                    return      # exit fully faded (v1.42): stop drawing words
+                    return      # exit fully faded (v1.5): stop drawing words
             yy = y + (1 - e) * dy * dy_scale
             if tracking:
                 for c in w:
@@ -718,13 +718,13 @@ class Engine:
     def word_pop_multicol(self, dr, y, fnt, txt, colors, appear, tracking=0,
                           dy=30, alpha_cap=None, xa=None, dy_scale=1.0, s=1.0,
                           tint=None, ez=None):
-        """v1.42 item 1: word_pop with a per-word color CYCLE. Layout and the
+        """v1.5 item 1: word_pop with a per-word color CYCLE. Layout and the
         per-word stagger clock (WORD_STEP/WORD_RAMP) are identical to
         word_pop — only the fill changes, so metrics/checks parity holds.
-        v1.42 item 5: `s` = idle breathe (same as word_pop); `tint(gain)` is an
+        v1.5 item 5: `s` = idle breathe (same as word_pop); `tint(gain)` is an
         optional callable word_idx -> (r,g,b) override for color_wave — when
         present it replaces the palette cycle fill, entrance clocks untouched.
-        v1.42 item 6: `ez` optionally replaces ease_ow on the per-word rise
+        v1.5 item 6: `ez` optionally replaces ease_ow on the per-word rise
         (opt-in caption `ease`); None == byte-identical."""
         from . import metrics as M
         if appear <= 0:
@@ -748,7 +748,7 @@ class Engine:
             if alpha_cap is not None:
                 a = min(a, alpha_cap)
                 if a <= 0:
-                    return      # exit fully faded (v1.42): stop drawing words
+                    return      # exit fully faded (v1.5): stop drawing words
             yy = y + (1 - e) * dy * dy_scale
             if tracking:
                 for c in w:
@@ -799,7 +799,7 @@ class Engine:
         word_pop's translate rise. `colors` = list of RGBA per word (cycled).
         mkfont(size) builds the punch font per frame; base_size is the rest
         size. Word i's clock: wt = (appear - i*PUMP_STEP)/PUMP_RAMP.
-        v1.42 item 6: `ez` optionally replaces the sin-bump settle curve on the
+        v1.5 item 6: `ez` optionally replaces the sin-bump settle curve on the
         per-word progress (opt-in caption `ease`); None == byte-identical."""
         from . import metrics as M
         if appear <= 0 or not txt:
@@ -816,7 +816,7 @@ class Engine:
                 x += ws[i] + wsp + tracking * len(w)
                 continue
             # punch: sin bump to `kick` at appear, back-out settle to 1.0.
-            # v1.42 item 6: opt-in `ez` re-shapes the progress inside the same
+            # v1.5 item 6: opt-in `ez` re-shapes the progress inside the same
             # window (wt itself — and therefore done_at — untouched).
             _w = ez(wt) if ez is not None else wt
             punch = 1.0 + (kick - 1.0) * math.sin(math.pi * min(1.0, _w * 1.6)) \
@@ -874,7 +874,7 @@ class Engine:
 
     # ------------------------------------------------------------- layer kinds
     def beat_phase(self, g):
-        """v1.42 item 3: beat phase 0..1 at global time `g` (pure function of
+        """v1.5 item 3: beat phase 0..1 at global time `g` (pure function of
         the frame index — sample renders == full renders by construction).
         None when no procedural bed / bpm override resolved a tempo."""
         if not self.BPM:
@@ -882,17 +882,17 @@ class Engine:
         return (g * self.BPM / 60.0) % 1.0
 
     def fx_phase(self, idx):
-        """v1.42 item 8: glitch's clock when the project has NO beat — a seed
+        """v1.5 item 8: glitch's clock when the project has NO beat — a seed
         time function of the frame index (same determinism contract as
         beat_phase: pure f(idx), sample == full)."""
         return ((idx * 7 + 3) % 6) / 6.0
 
     def vo_envelope(self, i):
-        """v1.42 item 10 (C5): per-frame loudness envelope for shot i (list
+        """v1.5 item 10 (C5): per-frame loudness envelope for shot i (list
         indexed by GLOBAL frame index, values 0..1), or None when the project
         has no voice/vo_lines. Precomputed ONCE per shot and cached.
 
-        v1.42 C5 audit fix: the envelope rides the AUDIO BED, not the piper
+        v1.5 C5 audit fix: the envelope rides the AUDIO BED, not the piper
         wavs. VO wavs live in a PER-RENDER scratch dir that build_audio picks
         by output name (render_cli), so they are NOT on disk when frames
         render first -- and synthesizing inside compose_frame would fire piper
@@ -904,7 +904,7 @@ class Engine:
         # NOTE: set_vo_bed() clears the cache WITHOUT creating it, so this
         # guard must init BOTH _vo_env and _acc_total together — a split
         # guard once crashed with AttributeError on the first bed-wired call.
-        # v1.42 C5 audit fix (Windows/py3.14): `hasattr(self, "_vo_env")` as a
+        # v1.5 C5 audit fix (Windows/py3.14): `hasattr(self, "_vo_env")` as a
         # guard proved UNRELIABLE here — set_vo_bed() stores _vo_env={} and the
         # very next vo_envelope call still evaluated the hasattr branch as if
         # fresh while _acc_total (stored in the same block) was missing at
@@ -953,14 +953,14 @@ class Engine:
         return env
 
     def set_vo_bed(self, samples):
-        """v1.42 C5: hand the engine build_audio's final mono mix (list of
+        """v1.5 C5: hand the engine build_audio's final mono mix (list of
         float -1..1) so vo_envelope() reads REAL bed loudness instead of a
         beat-only approximation. Called by render_cli after audio assembly,
         before encoding; pure data, no I/O."""
         self._vo_bed = samples
         self._vo_env = {}
     def glitch_overlay(self, base, off):
-        """v1.42 item 8: RGB-split fringe for one frame — the whole canvas
+        """v1.5 item 8: RGB-split fringe for one frame — the whole canvas
         shifted +/-off px through a RED and a CYAN mask (two tinted paste
         layers, no gaussian, no per-pixel loops). `base` is the finished
         layer image; returns a new image (callers assign it)."""
@@ -1044,7 +1044,7 @@ class Engine:
         # their offscreen strips onto this frame's canvas; captions.py reads
         # it via eng._canvas (set per frame before the caption loop).
         self._canvas = img
-        fx_done = False   # v1.42 item 8: glitch applies to the FIRST fx host only
+        fx_done = False   # v1.5 item 8: glitch applies to the FIRST fx host only
         dim = float(s.get("dim", 0.4))
         if base is not None and dim > 0:
             black = self._dim_overlay(dim)
@@ -1086,7 +1086,7 @@ class Engine:
             if k in ("panel_top", "panel_mid"):
                 at -= CAPTIONS.M.PANEL_SHIFT
             prog = clamp01((lt - at) / POP_RAMP_GATE)
-            # v1.42 item 8: glitch offset for THIS caption — computed in the
+            # v1.5 item 8: glitch offset for THIS caption — computed in the
             # loop, APPLIED to the host layer image right after its draw call
             # (the shared ImageDraw can't be retargeted on PIL 13; the shifted
             # copies ride this layer only). Non-fx captions keep fx_off == 0:
@@ -1097,7 +1097,7 @@ class Engine:
                     prog, _ph if _ph is not None else self.fx_phase(idx))
             else:
                 fx_off = 0.0
-            # v1.42 item 4: exit window clock (opt-in per-caption `exit`).
+            # v1.5 item 4: exit window clock (opt-in per-caption `exit`).
             # None unless the caption declares an exit kind; render_layer only
             # runs this for captions, never touches shipped paths.
             _exk = L.get("exit")
@@ -1106,7 +1106,7 @@ class Engine:
                                  / CAPTIONS.M.EXIT_RAMP)
             else:
                 exit_p = None
-            # v1.42 item 5: idle-motion window gate (opt-in caption `idle`).
+            # v1.5 item 5: idle-motion window gate (opt-in caption `idle`).
             # ACTIVE only while SETTLED (metrics.idle_done_at == the same
             # done_at the checker reads), before the exit ramp, and never on
             # the transition-out layer (its prog is frozen mid-fade). Frames
@@ -1134,7 +1134,7 @@ class Engine:
             # the window (Yasser: outgoing captions bled under the incoming
             # shot even in the shipped demo). Hard cuts never enter here.
             if transition_out:
-                # v1.42 item 4: freeze at shot end with the kind's OWN settle
+                # v1.5 item 4: freeze at shot end with the kind's OWN settle
                 # ramp (metrics.exit_gate — same table the checker reads), not
                 # a hardcoded 0.32 that killed long-stagger kinds mid-entrance.
                 _eg = CAPTIONS.M.exit_gate(k)
@@ -1156,7 +1156,7 @@ class Engine:
                 a = min(a, a_gate)
             slide = int((1 - ease_o(prog)) * LY["slide_dy"])
 
-            # v1.42 C9.1: per-caption vertical placement. place_merge returns
+            # v1.5 C9.1: per-caption vertical placement. place_merge returns
             # the SHARED shot LY when the caption carries no place/y field, so
             # shipped projects stay byte-identical with zero extra copies; a
             # field retargets only THAT caption's anchor frac key (the slide
@@ -1182,7 +1182,7 @@ class Engine:
                 exit_p=exit_p,
                 idle_s=idle_s, idle_tint=idle_tint)
             _cf(self, dr, L, k, ctx, (clamp01, ease_o, ease_ow))
-            # v1.42 item 8: glitch rides the HOST layer only — the shifted
+            # v1.5 item 8: glitch rides the HOST layer only — the shifted
             # copies never touch later captions or other layers.
             if fx_off and not fx_done:
                 img = self.glitch_overlay(img, fx_off)

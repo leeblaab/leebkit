@@ -1,4 +1,4 @@
-# v1.42 item 5: idle motion — breathe (scale) + color_wave after SETTLE only
+# v1.5 item 5: idle motion — breathe (scale) + color_wave after SETTLE only
 import os
 import sys
 

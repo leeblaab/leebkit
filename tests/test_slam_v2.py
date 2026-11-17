@@ -1,4 +1,4 @@
-"""v1.42 item 7 test-first: slam_v2 (scale-only decision per benchmark).
+"""v1.5 item 7 test-first: slam_v2 (scale-only decision per benchmark).
 
 Benchmark verdict (scripts/bench_sprite.py, run on the kinds corpus shot at
 1080x1920): full-frame AFFINE sprite transform costs +1737% vs per-frame

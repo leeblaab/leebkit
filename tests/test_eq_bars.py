@@ -1,4 +1,4 @@
-"""v1.42 item 10 (C5): eq_bars kind + VO envelope mix.
+"""v1.5 item 10 (C5): eq_bars kind + VO envelope mix.
 
 "kind": "eq_bars": N bars (default 5, <=7) standing at the bottom safe
 margin, heights = abs-sine stack seeded per bar slot, amplitude modulated by

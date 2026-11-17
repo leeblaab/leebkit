@@ -47,21 +47,21 @@ FrameCtx = namedtuple("FrameCtx", [
     "cap_idx",             # (shot_idx, caption_idx): C3b per-caption slot for fit/wrap caches
     "align",               # v1.4 composition layer: "center" (default) | "left"
     "avail_w",             # horizontal budget for a left-aligned run (wrap-aware widths)
-    "beat",                # v1.42 item 3: beat phase 0..1 at the bed BPM, or None
+    "beat",                # v1.5 item 3: beat phase 0..1 at the bed BPM, or None
                            # (no procedural clock / bpm override). Pure function of
                            # frame index; items 8/10 read it, others ignore it.
-    "exit_p",              # v1.42 item 4: exit-motion progress 0..1 (opt-in
+    "exit_p",              # v1.5 item 4: exit-motion progress 0..1 (opt-in
                            # caption `exit`), or None. render_layer precomputes
                            # frac((lt - (shot_t-EXIT_RAMP))/EXIT_RAMP); draw paths
                            # apply the kind's OUT transform on top of the settled
                            # entrance state (rise / wipe / scale).
-    "idle_s",              # v1.42 item 5: idle-breathe scale factor at this
+    "idle_s",              # v1.5 item 5: idle-breathe scale factor at this
                            # frame, or None when the caption has no `idle` flag
                            # OR sits outside its settled window (pre-settle /
                            # exit window / transition-out layer). Draw paths do
                            # `s = ctx.idle_s or 1.0` — None == byte-identical
                            # shipped frame.
-    "idle_tint",           # v1.42 item 5: color_wave tint callable word_idx ->
+    "idle_tint",           # v1.5 item 5: color_wave tint callable word_idx ->
                            # (r,g,b) at this frame, or None (same gating).
 ])
 
@@ -187,7 +187,7 @@ def _ease_io(t):   # smoothstep in-out (mirrors engine.ease_io; captions must no
 
 
 def _exit_state(L, ctx, a_default):
-    """v1.42 item 4: shared exit transform for word-pop style kinds. Returns
+    """v1.5 item 4: shared exit transform for word-pop style kinds. Returns
     (y_offset_px, alpha_cap_or_None). Only active when the caption opts in via
     `exit` AND the precomputed clock (ctx.exit_p) is running — the entrance
     path stays byte-identical when exit_p is None."""
@@ -212,7 +212,7 @@ def _exit_state(L, ctx, a_default):
 
 
 def ease_of(L, e):
-    """v1.42 item 6: resolve the opt-in per-caption `ease` name to a curve on
+    """v1.5 item 6: resolve the opt-in per-caption `ease` name to a curve on
     the kind's EXISTING progress var. None (absent/unknown) -> callers keep
     their shipped curve, byte-identical. Settle clocks untouched: the ease only
     re-shapes progress INSIDE the ramp window (done_at / EXIT_CLOCK parity by
@@ -233,13 +233,13 @@ def ease_of(L, e):
 
 
 def draw_accent_word(eng, dr, L, k, ctx, e):
-    """v1.42 item 1: optional per-caption `colors` cycle the WORDS (the
+    """v1.5 item 1: optional per-caption `colors` cycle the WORDS (the
     accent underline/rule keeps ACCENT — one animated property per line).
     No list -> preset ACCENT for every word, byte-identical to v1.41."""
     H, LY, ACCENT, prog, slide = ctx.H, ctx.LY, ctx.ACCENT, ctx.prog, ctx.slide
     y = H * LY["accent_frac"] - slide
     cols = _kin_cols(L, ctx, ACCENT)
-    # v1.42 item 4: opt-in exit motion (rise/wipe/scale), None-when-absent.
+    # v1.5 item 4: opt-in exit motion (rise/wipe/scale), None-when-absent.
     dy, acap = _exit_state(L, ctx, ctx.a_gate)
     y += dy
     exk = L.get("exit")
@@ -272,7 +272,7 @@ def draw_accent_word(eng, dr, L, k, ctx, e):
 
 
 def _track_collapse(L, ctx):
-    """v1.42 item 9: opt-in fx=track_collapse — extra per-char tracking that
+    """v1.5 item 9: opt-in fx=track_collapse — extra per-char tracking that
     starts +18px and collapses to 0 over TRACK_RAMP (trackin math inverted).
     Convergent settle: px==0 past the ramp -> the plain kind's rest frame is
     byte-identical. Pure function of prog -> sample == full.
@@ -289,7 +289,7 @@ def _track_collapse(L, ctx):
 
 
 def draw_rule_draw(eng, dr, L, k, ctx, e):
-    """v1.42 item 9: standalone accent rule that draws left->right over the
+    """v1.5 item 9: standalone accent rule that draws left->right over the
     generic POP_RAMP window (single-beat family; done_at = at + POP_RAMP in
     metrics). Width = L['w'] fraction of the safe width (or measured text
     when 'text' is given); height/gap ride the kicker rule geometry so it
@@ -312,7 +312,7 @@ def draw_rule_draw(eng, dr, L, k, ctx, e):
 
 
 def draw_eq_bars(eng, dr, L, k, ctx, e):
-    """v1.42 item 10 (C5): ambient equalizer strip standing on the bottom safe
+    """v1.5 item 10 (C5): ambient equalizer strip standing on the bottom safe
     margin. N bars (default 5, <=7) spread across the safe width; heights =
     abs-sine stack seeded per bar slot, amplitude-modulated by the bed's beat
     clock (fx_phase seed fallback when no tempo), plus the shot's precomputed
@@ -377,7 +377,7 @@ def draw_small(eng, dr, L, k, ctx, e):
     clamp01, ease_o, ease_ow = e
     H, W, LY = ctx.H, ctx.W, ctx.LY
     WHITE, prog, slide, a = ctx.WHITE, ctx.prog, ctx.slide, ctx.a
-    # v1.42 item 5: breathe scales the TEXT run only (chip plate stays put —
+    # v1.5 item 5: breathe scales the TEXT run only (chip plate stays put —
     # one animated property per line; scaling the plate too would read as a
     # zoom, not a breath). Wave pulses the text fill toward white.
     s = ctx.idle_s or 1.0
@@ -423,7 +423,7 @@ def draw_cta(eng, dr, L, k, ctx, e):
     x = eng.x_anchor(ctx, w) if ctx.align == "left" else (W - w) / 2
     y = H * LY["cta_frac"] - slide
     pad = LY["cta_pad"]
-    # v1.42 item 5: breathe scales text AND outline box together about the
+    # v1.5 item 5: breathe scales text AND outline box together about the
     # same anchor — the CTA is one lockup, not loose type inside a fixed frame.
     s = ctx.idle_s or 1.0
     ws, xs = w * s, x + (w - w * s) / 2
@@ -465,7 +465,7 @@ def draw_kicker(eng, dr, L, k, ctx, e):
     # optional per-word "colors" (v1.36 draft tint), default ACCENT everywhere.
     knames = L.get("colors")
     kcols = [ctx.PAL.get(n, ACCENT) for n in knames] if knames else None
-    # v1.42 item 5: breathe rides the GLYPHS only — per-char advances scale by
+    # v1.5 item 5: breathe rides the GLYPHS only — per-char advances scale by
     # `s` about the anchor; the rule rectangle stays put (one animated property,
     # and scaling a hairline reads as flicker). Wave pulses the glyph fills.
     s = ctx.idle_s or 1.0
@@ -536,7 +536,7 @@ def _tint_pieces(L, ctx):
     names = L.get("colors")
     if not names:
         return None
-    # v1.42 item 1 (C0b follow-up): unknown palette names used to fall back to
+    # v1.5 item 1 (C0b follow-up): unknown palette names used to fall back to
     # WHITE at draw time while the checker flagged them -> renderer and checker
     # disagreed on what a bad project LOOKS like. Now every kind reads PAL
     # through this helper; an unknown name renders its first defined color
@@ -559,7 +559,7 @@ def draw_typewriter(eng, dr, L, k, ctx, e):
     # transition_out freeze mirrors render_layer's outgoing-side kill switch)
     tp = lt - at
     if ctx.transition_out:
-        # v1.42 item 4: the typewriter clock rides SECONDS-since-at; freeze it
+        # v1.5 item 4: the typewriter clock rides SECONDS-since-at; freeze it
         # at shot end (nothing GROWS while the shot leaves). The old hardcoded
         # /0.32 prog cap saturated >1 for TYPE_RAMP=0.10 and was a no-op on tp,
         # so this draw-side clamp is what actually holds typing mid-run through
@@ -590,7 +590,7 @@ def draw_typewriter(eng, dr, L, k, ctx, e):
             # word index of this char
             wi = txt[:i].count(" ")
             col = tints[wi % len(tints)]
-        # v1.42 item 5: color_wave pulses the settled chars' fill (gate already
+        # v1.5 item 5: color_wave pulses the settled chars' fill (gate already
         # holds until typing DONE, so no entrance interaction; caret untouched).
         if ctx.idle_tint is not None:
             col = _wave_fill(col, _wave_target(ctx, col), ctx.idle_tint)
@@ -615,7 +615,7 @@ def draw_pump(eng, dr, L, k, ctx, e):
         ctx.H, ctx.W, ctx.LY, ctx.WHITE, ctx.ACCENT, ctx.lt, ctx.at, ctx.slide, ctx.a_gate)
     appear = lt - at   # seconds past start; gate opens fully for this kind
     if ctx.transition_out:
-        # v1.42 item 4: the per-word pump clock rides `appear` directly (not
+        # v1.5 item 4: the per-word pump clock rides `appear` directly (not
         # prog), so the exit freeze must clamp it HERE too — late words were
         # popping in mid-fade-out while the shot was leaving. Freeze at the
         # kind's own settle ramp (metrics.exit_gate) instead of the old
@@ -623,7 +623,7 @@ def draw_pump(eng, dr, L, k, ctx, e):
         appear = min(appear, float(ctx.shot_t) - at)
     names = L.get("colors") or ["white", "accent"]
     cols = _tint_pieces({"colors": names}, ctx) or [WHITE]
-    # v1.42 item 5: color_wave cross-fades the settled word colors toward white
+    # v1.5 item 5: color_wave cross-fades the settled word colors toward white
     cols = _wave_cols(cols, ctx, ctx.idle_tint)
     base = eng.L["h1"]
     eng.word_pump(dr, H * LY["burst_frac"] - slide,
@@ -633,7 +633,7 @@ def draw_pump(eng, dr, L, k, ctx, e):
 
 
 def _wave_fill(base, target, gain):
-    """v1.42 item 5 (color_wave) fill: cross-fade `base` toward `target` by the
+    """v1.5 item 5 (color_wave) fill: cross-fade `base` toward `target` by the
     wave gain (gain 0 -> byte-identical before the gate opens; max 0.35 mix).
     Kinds WITHOUT an explicit `colors` list pass target=ACCENT — pulsing
     white-on-white is invisible by definition (typewriter/split/maskline
@@ -681,7 +681,7 @@ def draw_wipe(eng, dr, L, k, ctx, e):
     H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
                                             ctx.prog, ctx.slide, ctx.a_gate)
     lines = _wrap(eng, dr, L["text"].split(" "), eng.H1, LY["safe_w"], ctx=ctx)
-    # v1.42 item 6: opt-in ease re-shapes the wipe sweep INSIDE the same gain
+    # v1.5 item 6: opt-in ease re-shapes the wipe sweep INSIDE the same gain
     # window (wp clamped to [0,1]; metrics done_at = at+POP_RAMP/WIPE_K stays).
     _ez = ease_of(L, e)
     wp = clamp01((_ez(prog) if _ez else prog) * M.WIPE_K)   # metrics done_at mirrors this gain
@@ -737,7 +737,7 @@ def draw_slam(eng, dr, L, k, ctx, e):
     H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
                                             ctx.prog, ctx.slide, ctx.a_gate)
     sp = clamp01(prog / M.SLAM_RAMP * 0.32)   # gate-normalized settle clock
-    _ez = ease_of(L, e)                        # v1.42 item 6: re-shape inside ramp
+    _ez = ease_of(L, e)                        # v1.5 item 6: re-shape inside ramp
     if _ez is not None:
         sp = clamp01(_ez(sp))
     scale = M.SLAM_FROM - (M.SLAM_FROM - 1.0) * (sp ** 0.7)
@@ -755,7 +755,7 @@ def draw_slam(eng, dr, L, k, ctx, e):
 
 
 def draw_slam_v2(eng, dr, L, k, ctx, e):
-    """v1.42 item 7 (benchmark-locked): scale-only slam_v2 on the existing
+    """v1.5 item 7 (benchmark-locked): scale-only slam_v2 on the existing
     mkfont redraw path. The sprite-compositor alternative was benchmarked
     (scripts/bench_sprite.py: full-frame AFFINE = +1737% frame cost — PIL
     resamples the whole 1080x1920 canvas for one word box) and REJECTED per
@@ -769,7 +769,7 @@ def draw_slam_v2(eng, dr, L, k, ctx, e):
     H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
                                             ctx.prog, ctx.slide, ctx.a_gate)
     sp = clamp01(prog / M.SLAM_RAMP * 0.32)   # same gate-normalized clock as slam
-    _ez = ease_of(L, e)                        # v1.42 item 6 easing rides it too
+    _ez = ease_of(L, e)                        # v1.5 item 6 easing rides it too
     if _ez is not None:
         sp = clamp01(_ez(sp))
     txt = L["text"]
@@ -820,7 +820,7 @@ def draw_trackin(eng, dr, L, k, ctx, e):
     H, W, LY, WHITE, prog, slide, a_gate = (ctx.H, ctx.W, ctx.LY, ctx.WHITE,
                                             ctx.prog, ctx.slide, ctx.a_gate)
     tp = clamp01(prog / M.TRACK_RAMP * 0.32)
-    _ez = ease_of(L, e)                        # v1.42 item 6: re-shape inside ramp
+    _ez = ease_of(L, e)                        # v1.5 item 6: re-shape inside ramp
     if _ez is not None:
         tp = clamp01(_ez(tp))
     trk = int(eng.L["h1"] * 0.35 * (1 - e[1](tp)))
@@ -1088,10 +1088,10 @@ DISPATCH = {
     "wipe": draw_wipe,              # v1.4 kinetic drafts: mask-wipe reveal
     "split": draw_split,            # v1.4: halves slide in from frame edges
     "slam": draw_slam,              # v1.4: scale-down stamp from oversize
-    "slam_v2": draw_slam_v2,        # v1.42 item 7: slam + squash-stretch + trail
+    "slam_v2": draw_slam_v2,        # v1.5 item 7: slam + squash-stretch + trail
     "trackin": draw_trackin,        # v1.4: tracking-expand lockup
-    "rule_draw": draw_rule_draw,    # v1.42 item 9: accent rule draws L->R
-    "eq_bars": draw_eq_bars,        # v1.42 item 10: ambient EQ strip (beat/VO)
+    "rule_draw": draw_rule_draw,    # v1.5 item 9: accent rule draws L->R
+    "eq_bars": draw_eq_bars,        # v1.5 item 10: ambient EQ strip (beat/VO)
     "flashpop": draw_flashpop,      # v1.4: word stagger w/ alpha flash
     "maskline": draw_maskline,      # v1.4: words rise out of a baseline mask
     "big_number": draw_big_number,

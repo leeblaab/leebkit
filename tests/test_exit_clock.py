@@ -1,4 +1,4 @@
-"""v1.42 items 4 + 11-gate-half (C2).
+"""v1.5 items 4 + 11-gate-half (C2).
 
 Item 4 — exit clock: inside a transition window the renderer froze every
 caption's prog at its shot end with a hardcoded /0.32 regardless of the kind's
@@ -55,7 +55,7 @@ def test_exit_gate_table():
 
 
 def test_typewriter_exit_clock():
-    # v1.42 item 4 (exit clock): the typewriter clock rides SECONDS-since-at
+    # v1.5 item 4 (exit clock): the typewriter clock rides SECONDS-since-at
     # (`tp = lt - at`). Inside an outgoing transition window the OLD code's
     # only freeze was render_layer's prog cap at clamp((shot_t-at)/0.32) —
     # for TYPE_RAMP=0.10 that saturates >1 and is a NO-OP on the seconds

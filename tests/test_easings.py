@@ -1,4 +1,4 @@
-# v1.42 item 6: easing library + opt-in "ease" field on entrance kinds
+# v1.5 item 6: easing library + opt-in "ease" field on entrance kinds
 # (pop/pump/slam/wipe/trackin; kicker's stagger is LOCKED — no ease).
 import math
 import os

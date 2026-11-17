@@ -1,4 +1,4 @@
-"""v1.42 C9.1 — per-caption `place` field (Yasser directive after testing
+"""v1.5 C9.1 — per-caption `place` field (Yasser directive after testing
 onyx_v2_showcase: stacked big-type shares anchor fracs and collides; the fix
 is letting each caption pick its own vertical band, not hand-editing fracs).
 

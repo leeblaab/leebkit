@@ -26,7 +26,7 @@ def _font(engine, kind):
             "big": engine.BIG}.get(kind, engine.H1)
 
 
-WARN_BUDGET = 3   # v1.42 item 11 gate half: max 'warn' flags per shot before
+WARN_BUDGET = 3   # v1.5 item 11 gate half: max 'warn' flags per shot before
                   # the shot itself becomes an error flag (smoke gates errors)
 
 
@@ -57,7 +57,7 @@ def check_project(engine):
             k = L["kind"]
             at = float(L.get("at", 0.2))
             left = L.get("align") == "left"
-            # v1.42 C9.1: per-caption place/y rides the SAME merge the draw
+            # v1.5 C9.1: per-caption place/y rides the SAME merge the draw
             # path uses (metrics.place_merge returns LY itself when absent ->
             # zero change for shipped projects). Checker budgets what the
             # renderer draws, agree-by-construction as always.
@@ -65,7 +65,7 @@ def check_project(engine):
             avail_w = (engine.W - 2 * LY["left_inset"]) if left else None
             m = M.measure(engine, L, k, t, at, avail_w=avail_w, LY=cap_LY)   # same numbers as the draw path
 
-            # --- v1.42 item 11 gate half: per-shot warn budget -----------------
+            # --- v1.5 item 11 gate half: per-shot warn budget -----------------
             # A shot with more 'warn' flags than WARN_BUDGET is an error flag of
             # its own: the smoke suite gates errors, so a project that piles up
             # warnings can no longer sail through green (the advisor's "warn
@@ -79,32 +79,32 @@ def check_project(engine):
                                   "message": "shot %d carries %d warnings (budget %d)"
                                              % (i, len(shot_warns), WARN_BUDGET)})
 
-            # --- v1.42: caption `colors` gate (list cap + palette names) ---
+            # --- v1.5: caption `colors` gate (list cap + palette names) ---
             if m.get("colors_error"):
                 flags.append({"shot": i, "kind": "colors", "severity": "error",
                               "message": "shot %d %s: %s" % (i, k, m["colors_error"])})
 
-            # --- v1.42 item 4: exit-motion gate (settle BEFORE exit starts) ---
+            # --- v1.5 item 4: exit-motion gate (settle BEFORE exit starts) ---
             _xef = M.exit_flag(L, m.get("done_at"), t)
             if _xef:
                 flags.append({"shot": i, "kind": "exit", "severity": "error",
                               "message": "shot %d %s: %s" % (i, k, _xef)})
 
-            # --- v1.42 item 5: idle-motion gate (eligible kind + settles with
+            # --- v1.5 item 5: idle-motion gate (eligible kind + settles with
             # a real window inside the shot; renderer uses the SAME done_at) ---
             _idf = M.idle_flag(L, m.get("done_at"), t)
             if _idf:
                 flags.append({"shot": i, "kind": "idle", "severity": "error",
                               "message": "shot %d %s: %s" % (i, k, _idf)})
 
-            # --- v1.42 item 6: easing eligibility (kicker's stagger is LOCKED;
+            # --- v1.5 item 6: easing eligibility (kicker's stagger is LOCKED;
             # no clock change for the allowed kinds -> no settle re-gate) ---
             _ezf = M.ease_flag(L)
             if _ezf:
                 flags.append({"shot": i, "kind": "ease", "severity": "error",
                               "message": "shot %d %s: %s" % (i, k, _ezf)})
 
-            # --- v1.42 item 8: FX eligibility (fx needs an entrance kind with
+            # --- v1.5 item 8: FX eligibility (fx needs an entrance kind with
             # a settle clock; renderer reads the SAME fx_flag rule) ---
             _fxf = M.fx_flag(L, m.get("done_at"))
             if _fxf:
@@ -215,7 +215,7 @@ def check_project(engine):
                 # v1.4 kinetic drafts: single-beat kinds — settle on their
                 # metrics clock AND width gate at the draw font (h1; slam's
                 # overscan start is measured like burst, conservatively).
-                # v1.42 item 9: rule_draw joins the family (done_at = at +
+                # v1.5 item 9: rule_draw joins the family (done_at = at +
                 # POP_RAMP; its width is a fraction of safe_w by schema, so
                 # no text-overflow gate applies — w bounds gated in metrics).
                 if m["done_at"] > t - 0.1:

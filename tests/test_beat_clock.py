@@ -1,4 +1,4 @@
-# v1.42 item 3: beat clock — BED_BPM single source + Engine.beat_phase + FrameCtx.beat
+# v1.5 item 3: beat clock — BED_BPM single source + Engine.beat_phase + FrameCtx.beat
 import math
 import os
 import sys

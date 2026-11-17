@@ -1,4 +1,4 @@
-"""v1.42 item 8 test-first: opt-in "fx": "glitch" (RGB-split channel fringe).
+"""v1.5 item 8 test-first: opt-in "fx": "glitch" (RGB-split channel fringe).
 
 Spec (docs/_local_v1.5_plan.md): fx on accent_word/burst ("big_word" family)/slam_v2
 (schema + validate). ACTIVE ONLY within the entrance ramp: R/Cyan channel

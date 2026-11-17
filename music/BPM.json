@@ -1,5 +1,5 @@
 {
-  "_comment": "v1.42 item 11a: tempo ledger for FILE beds in music/ (procedural bed tempos live in core/audio.py BED_BPM). Keys are music/ filenames; values BPM. Engine resolves file-bed tempo from this table when the project has no explicit `bpm` override. BPMs measured 2026-11-17 with librosa beat_track (median inter-beat interval) on the shipped CC0 masters — provenance in music/ATTRIBUTIONS.md; caveats: cave_drone is an ambient bed (pulse estimate, not a real beat) and old_key's raw estimate (152.0) likely sits at 2x its felt pulse, so it is halved.",
+  "_comment": "v1.5 item 11a: tempo ledger for FILE beds in music/ (procedural bed tempos live in core/audio.py BED_BPM). Keys are music/ filenames; values BPM. Engine resolves file-bed tempo from this table when the project has no explicit `bpm` override. BPMs measured 2026-11-17 with librosa beat_track (median inter-beat interval) on the shipped CC0 masters — provenance in music/ATTRIBUTIONS.md; caveats: cave_drone is an ambient bed (pulse estimate, not a real beat) and old_key's raw estimate (152.0) likely sits at 2x its felt pulse, so it is halved.",
   "bed_cave_drone.mp3": 123.0,
   "bed_old_key.mp3": 76.0,
   "bed_one_cool_minute.mp3": 117.5

@@ -1,4 +1,4 @@
-"""v1.42 item 9 (C4): rule_draw micro-kind + track_collapse fx.
+"""v1.5 item 9 (C4): rule_draw micro-kind + track_collapse fx.
 
 rule_draw: a standalone accent rule that draws left->right over POP_RAMP,
 width from L["w"] (fraction of safe width) or measured text when no w.

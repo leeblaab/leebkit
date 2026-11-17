@@ -18,7 +18,7 @@ import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MUSIC_DIR = os.path.join(ROOT, "music")
-# v1.42 item 11a: tempo ledger for FILE beds (procedural tempos live in the
+# v1.5 item 11a: tempo ledger for FILE beds (procedural tempos live in the
 # BED_BPM table below). Shipped as a tracked data file; keys are music/ names.
 BPM_LEDGER_PATH = os.path.join(MUSIC_DIR, "BPM.json")
 
@@ -169,7 +169,7 @@ def bed_synthwave(dur, cuts, t_typing=None):
     # pulse bass: eighth notes 120bpm between first and last cut
     body0 = bounds[1] if len(bounds) > 2 else 0.0
     body1 = bounds[-2] if len(bounds) > 2 else dur
-    bpm = BED_BPM["pulse"]          # v1.42: single-source tempo table
+    bpm = BED_BPM["pulse"]          # v1.5: single-source tempo table
     step = 60 / bpm / 2
     for n, ts in enumerate(np.arange(body0, body1, step)):
         m = (t >= ts) & (t < ts + step)
@@ -246,7 +246,7 @@ def bed_pulse(dur, cuts, t_typing=None):
     out = np.zeros_like(t)
     rng = np.random.default_rng(11)
     scale = [220.0, 261.63, 329.63, 392.0, 440.0]
-    step = 60 / BED_BPM["synthwave"] / 2   # v1.42: single-source tempo table
+    step = 60 / BED_BPM["synthwave"] / 2   # v1.5: single-source tempo table
     for n, ts in enumerate(np.arange(0.5, dur - 0.5, step)):
         m = (t >= ts) & (t < ts + step)
         tt = t[m] - ts
@@ -274,7 +274,7 @@ def bed_low_drive(dur, cuts, t_typing=None):
     t = np.arange(int(SR * dur)) / SR
     out = np.zeros_like(t)
     rng = np.random.default_rng(23)
-    bpm = BED_BPM["low_drive"]    # v1.42: single-source tempo table
+    bpm = BED_BPM["low_drive"]    # v1.5: single-source tempo table
     beat = 60 / bpm
     # sub bass: root per section (cycle CHORD roots), glide into each note
     bounds = [0.0] + sorted(cuts) + [dur]
@@ -342,7 +342,7 @@ def bed_sparkle(dur, cuts, t_typing=None):
     t = np.arange(int(SR * dur)) / SR
     out = np.zeros_like(t)
     rng = np.random.default_rng(31)
-    bpm = BED_BPM["sparkle"]      # v1.42: single-source tempo table
+    bpm = BED_BPM["sparkle"]      # v1.5: single-source tempo table
     beat = 60 / bpm
     scale = [220.0, 261.63, 329.63, 392.0, 440.0, 523.25]
     step = beat / 2                            # eighth-note arps
@@ -443,7 +443,7 @@ BEDS = {"synthwave": bed_synthwave, "pulse": bed_pulse,
         "low_drive": bed_low_drive, "sparkle": bed_sparkle,
         "ambient_glow": bed_ambient_glow}
 
-# v1.42 item 3 (beat clock): single source for each procedural bed's tempo —
+# v1.5 item 3 (beat clock): single source for each procedural bed's tempo —
 # the SAME literals the bed generators synthesize with (wired below), plus
 # synthwave's eighths tempo. Engine.beat_phase(g) reads this table so picture
 # and music share one BPM truth; `assets/music/BPM.json` (item 11a) extends
@@ -735,7 +735,7 @@ def build_audio(proj, media_dir=None, scratch=None, music_override=None,
     mix = mix / peak * 0.93 if peak > 0 else mix
 
     assert len(mix) == TOTAL, "bed length %d != TOTAL %d" % (len(mix), TOTAL)
-    # v1.42 C5: hand the mono mix to any live Engine so eq_bars can ride real
+    # v1.5 C5: hand the mono mix to any live Engine so eq_bars can ride real
     # bed loudness (Engine.set_vo_bed); render_cli re-renders with it wired in.
     if on_mix is not None:
         try:

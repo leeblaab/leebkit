@@ -53,7 +53,7 @@ PUMP_RAMP = 0.30        # word pump: per-word progress ramp
 # --- v1.4 kinetic drafts: mask-wipe / split-slide / slam / track-in / flash --
 SLAM_RAMP = 0.26        # slam: scale-down-from-overscan settle ramp
 SLAM_FROM = 1.85        # slam: start scale (text "falls into" the frame)
-# v1.42 item 7: slam_v2 squash-stretch control points over SLAM_RAMP
+# v1.5 item 7: slam_v2 squash-stretch control points over SLAM_RAMP
 # (scaleY 0.8 -> 1.1 -> 1; piecewise-linear, lands exactly at 1 when sp=1).
 SLAM_V2_SY = (0.80, 1.10, 1.0)
 SLAM_V2_SX = (1.15, 0.94, 1.0)   # inverse-width squash (volume-preserving feel)
@@ -99,9 +99,9 @@ def _probe_dr():
     return ImageDraw.Draw(Image.new("RGB", (8, 8)))
 
 
-COLORS_MAX = 4   # per-caption "colors" list cap (word-cycle kinds; v1.42 gate)
+COLORS_MAX = 4   # per-caption "colors" list cap (word-cycle kinds; v1.5 gate)
 
-# v1.42 item 4: exit-clock table — the settle ramp each kind's animation uses
+# v1.5 item 4: exit-clock table — the settle ramp each kind's animation uses
 # on the OUTGOING side of a transition window. The renderer froze every kind's
 # prog at its shot end with a hardcoded /0.32 regardless of its entrance ramp,
 # so long-stagger kinds (typewriter 1.8s, pump, slam, trackin) were killed mid-
@@ -111,13 +111,13 @@ EXIT_CLOCK = {"typewriter": TYPE_RAMP, "pump": PUMP_RAMP,
               "slam": SLAM_RAMP, "slam_v2": SLAM_RAMP, "trackin": TRACK_RAMP}
 EXIT_DEFAULT = 0.32   # shipped gate for every other kind (goldens)
 
-# v1.42 item 4: per-caption opt-in exit motion ("exit": rise|wipe|scale).
+# v1.5 item 4: per-caption opt-in exit motion ("exit": rise|wipe|scale).
 # The exit window starts at shot_t - EXIT_RAMP and runs to the cut; a caption
 # must be SETTLED before it starts moving out (checker flag kind 'exit').
 EXIT_RAMP = 0.25
 EXIT_KINDS = ("rise", "wipe", "scale")
 
-# v1.42 item 6: opt-in per-caption easing ("ease": expo|elastic|steps) on the
+# v1.5 item 6: opt-in per-caption easing ("ease": expo|elastic|steps) on the
 # entrance kinds whose progress var plugs in cleanly. The ease REPLACES the
 # default curve (ease_o/ease_ow) inside the same ramp window — settle clocks
 # (done_at, EXIT_CLOCK) untouched, so checker parity holds by construction.
@@ -137,14 +137,14 @@ def ease_flag(L):
                 "choices: %s)" % (L.get("kind"), ", ".join(EASE_KINDS)))
     return None
 
-# v1.42 item 8: opt-in entrance FX ("fx": "glitch" = RGB-split channel
+# v1.5 item 8: opt-in entrance FX ("fx": "glitch" = RGB-split channel
 # fringe). Rides the entrance ramp ONLY: offset amplitude scales with the
 # ramp's REMAINING energy (1-prog), so it settles to zero at done_at by
 # construction. Host kinds must have a settle clock (measure().done_at) that
 # the ramp window plugs into — checker flags fx on any other kind.
 FX_NAMES = ("glitch", "track_collapse")
 FX_KINDS = ("accent_word", "burst", "slam_v2")   # "big_word" family hosts
-# v1.42 item 9: track_collapse — tracking starts +TRACK_COLLAPSE_PX and
+# v1.5 item 9: track_collapse — tracking starts +TRACK_COLLAPSE_PX and
 # collapses to 0 over TRACK_RAMP (trackin math INVERTED). Convergent settle:
 # trk=0 equals the plain kind's rest state byte-for-byte, so like slam_v2 it
 # only hosts on kinds whose done_at rides TRACK_RAMP.
@@ -153,7 +153,7 @@ TRACK_COLLAPSE_PX = 18   # px extra tracking at entrance start (plan-locked)
 GLITCH_MIN_OFF = 4       # px, floor of the channel offset while ramping
 GLITCH_MAX_OFF = 12      # px, ceiling at entrance start
 
-# --- v1.42 item 10 (C5): eq_bars — ambient equalizer strip -----------------
+# --- v1.5 item 10 (C5): eq_bars — ambient equalizer strip -----------------
 EQ_DEFAULT_N = 5          # bar count when omitted (plan: default 5)
 EQ_MAX_N = 7              # hard cap (plan: <=7)
 EQ_DEFAULT_W = 0.32       # bar width as a fraction of its slot
@@ -162,7 +162,7 @@ EQ_H_FRAC = 0.16          # tallest bar as a fraction of canvas height
 EQ_BEAT_CYCLES = 2.0      # per-bar sine cycles per beat (amplitude modulator)
 EQ_VO_WIN = 0.05          # VO envelope: RMS window (s); precomputed ONCE/shot
 
-# --- v1.42 C9.1 (Yasser directive): per-caption vertical placement ----------
+# --- v1.5 C9.1 (Yasser directive): per-caption vertical placement ----------
 # "place": "top" | "middle" | "bottom" retargets the caption's OWN anchor frac
 # (per-kind key below) to a band value; "middle" = the kind's shipped frac
 # (byte-identical). Fine-tune: "y": float 0..1 overrides the frac exactly.
@@ -267,7 +267,7 @@ def fx_flag(L, done_at):
         return "fx %r but the line never settles inside the shot" % fx
     return None
 
-# v1.42 item 5: opt-in idle motion ("idle": true) — breathe (scale sine) and
+# v1.5 item 5: opt-in idle motion ("idle": true) — breathe (scale sine) and
 # color_wave (per-word tint pulse). House rule: the line's ONE animated
 # property AFTER settle; entrance kinds untouched. Window = done_at -> exit
 # start (or shot end), so an exiting caption never breathes while rising out.
@@ -397,7 +397,7 @@ def exit_gate(k):
 
 
 def colors_flag(eng, L):
-    """v1.42: shared validation for a caption's optional `colors` palette-name
+    """v1.5: shared validation for a caption's optional `colors` palette-name
     list -> error message or None. Renderer builds PAL from the SAME preset
     dict this reads, so an unknown name never silently falls back at draw
     time; >COLORS_MAX names can't cycle meaningfully on word kinds."""
@@ -427,7 +427,7 @@ def measure(eng, L, k, shot_t, at_raw, avail_w=None, LY=None):
     LY = LY if LY is not None else eng.L
     at = preamble_at(k, at_raw)
     m = {"at_eff": at}
-    # v1.42: caption-level colors gate (renderer + checker agree by
+    # v1.5: caption-level colors gate (renderer + checker agree by
     # construction; kinds read PAL built from this same preset dict).
     cf = colors_flag(eng, L)
     if cf:
@@ -547,7 +547,7 @@ def measure(eng, L, k, shot_t, at_raw, avail_w=None, LY=None):
         m.update(done_at=done_at)
 
     elif k == "rule_draw":
-        # v1.42 item 9: standalone accent rule, draws left->right over the
+        # v1.5 item 9: standalone accent rule, draws left->right over the
         # generic POP_RAMP gate (single-beat family). Width is L["w"] as a
         # fraction of safe_w, or the measured text width when text is given.
         done_at = at + POP_RAMP
@@ -557,7 +557,7 @@ def measure(eng, L, k, shot_t, at_raw, avail_w=None, LY=None):
         m.update(done_at=done_at, rule_w=int(wfrac * (m.get("avail_w") or 999)))
 
     elif k == "eq_bars":
-        # v1.42 item 10 (C5): ambient equalizer strip — ALWAYS animating, so
+        # v1.5 item 10 (C5): ambient equalizer strip — ALWAYS animating, so
         # like terminal/chips there is NO settle clock (the generic word-pop
         # fallback below must not fire: no text/lines keys here anyway, and
         # the kind list excludes it). Shape gates mirror validate_project.
@@ -579,7 +579,7 @@ def measure(eng, L, k, shot_t, at_raw, avail_w=None, LY=None):
         done_at = at + (nw - 1) * WORD_STEP + WORD_RAMP
         m.update(done_at=done_at, nwords=nw)
 
-    # v1.42 item 4: word_pop-based kinds (accent_word/cta/small/handle/kicker/
+    # v1.5 item 4: word_pop-based kinds (accent_word/cta/small/handle/kicker/
     # title sub...) have no per-kind branch above; give them the generic pop
     # settle so exit_flag has a done_at to gate against. WORD math matches
     # engine.word_pop's stagger (0.18 step / 0.36 ramp = WORD_STEP/WORD_RAMP).

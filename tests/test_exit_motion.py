@@ -1,4 +1,4 @@
-# v1.42 item 4: per-caption exit motion — rise / wipe / scale (opt-in `exit`)
+# v1.5 item 4: per-caption exit motion — rise / wipe / scale (opt-in `exit`)
 import os
 import sys
 

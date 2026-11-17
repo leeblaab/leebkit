@@ -387,28 +387,28 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_templates.py")],
 ok("templates gallery test suite", r.returncode == 0,
    (r.stdout or "")[-300:] + (r.stderr or "")[-300:])
 
-# v1.42 item 5: idle motion (breathe + color_wave) — settled-window gate,
+# v1.5 item 5: idle motion (breathe + color_wave) — settled-window gate,
 # renderer/checker done_at parity, A/B pixel proof inside the idle window only.
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_idle_motion.py")],
                    capture_output=True, text=True, cwd=ROOT)
 ok("idle motion test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
-# v1.42 item 6: easing library (expo/back/elastic/step3) + opt-in "ease" field
+# v1.5 item 6: easing library (expo/back/elastic/step3) + opt-in "ease" field
 # on pop/pump/slam/wipe/trackin; kicker locked; ramp-window A/B, settle-identical.
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_easings.py")],
                    capture_output=True, text=True, cwd=ROOT)
 ok("easing library test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
-# v1.42 item 7: slam_v2 scale-only entrance (squash-stretch + trail); settled
+# v1.5 item 7: slam_v2 scale-only entrance (squash-stretch + trail); settled
 # frame byte-identical to plain slam; shared slam settle clock.
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_slam_v2.py")],
                    capture_output=True, text=True, cwd=ROOT)
 ok("slam_v2 test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
-# v1.42 item 8: opt-in fx="glitch" on accent_word/burst/slam_v2 — RGB-split
+# v1.5 item 8: opt-in fx="glitch" on accent_word/burst/slam_v2 — RGB-split
 # fringe inside the entrance ramp only; settled frames byte-identical; beat
 # clock with seed-time fallback; renderer==metrics formula parity.
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_fx_glitch.py")],
@@ -416,7 +416,7 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_fx_glitch.py")],
 ok("fx glitch test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
-# v1.42 item 9: rule_draw micro-kind (accent rule draws L->R over POP_RAMP)
+# v1.5 item 9: rule_draw micro-kind (accent rule draws L->R over POP_RAMP)
 # + fx=track_collapse on accent_word/title_block (+18px -> 0, convergent
 # settle == plain kind's rest frame byte-identical).
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_rule_track.py")],
@@ -424,14 +424,14 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_rule_track.py")],
 ok("rule_draw / track_collapse test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
-# v1.42 item 10: eq_bars ambient strip (beat/seed sine stack + VO RMS envelope;
+# v1.5 item 10: eq_bars ambient strip (beat/seed sine stack + VO RMS envelope;
 # terminal-like — no done_at gate; bars stand on the bottom safe margin).
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_eq_bars.py")],
                    capture_output=True, text=True, cwd=ROOT)
 ok("eq_bars test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
-# v1.42 item 11: BPM ledger for file beds (assets/music/BPM.json -> Engine
+# v1.5 item 11: BPM ledger for file beds (assets/music/BPM.json -> Engine
 # beat clock; explicit bpm override stands) + render_cli --finish single-job
 # re-render pass on the bed-wired engine.
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_bpm_finish.py")],
@@ -439,7 +439,7 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_bpm_finish.py")],
 ok("bpm_ledger / --finish test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
-# v1.42 C9.1: per-caption `place`/`y` vertical placement (band retarget of the
+# v1.5 C9.1: per-caption `place`/`y` vertical placement (band retarget of the
 # kind's anchor frac; opt-in, default path byte-identical; checker budgets the
 # same merged LY).
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_place_field.py")],

@@ -40,7 +40,7 @@ def _worker_chunk(args):
 def render_frames(proj_path, media_dir, frames_dir, n, jobs=1, progress=None,
                   engine=None):
     """Render n frames into frames_dir. Pass `engine` (an already-built Engine)
-    to force the single-process path — v1.42 item 11b (--finish re-renders on
+    to force the single-process path — v1.5 item 11b (--finish re-renders on
     an engine that already carries the audio bed; worker pools build their own
     Engines and would never see it)."""
     os.makedirs(frames_dir, exist_ok=True)
@@ -209,7 +209,7 @@ def main():  # CLI boundary: engine errors become exit codes here, nowhere else
                     help="also write a share animated WebP next to the mp4 "
                          "(caps: %dpx / %.0fs)" % (share_caps.WEBP_MAX_W, share_caps.WEBP_MAX_S))
     ap.add_argument("--finish", action="store_true",
-                    help="v1.42 item 11b: assemble audio FIRST, wire the mix "
+                    help="v1.5 item 11b: assemble audio FIRST, wire the mix "
                          "into the engine, then re-render frames on it (single "
                          "job) before encode+mux — eq_bars/beat visuals react to "
                          "the REAL bed+VO envelope for ANY project, not only "
@@ -233,7 +233,7 @@ def main():  # CLI boundary: engine errors become exit codes here, nowhere else
 
     n = int(round(proj["target"] * proj.get("fps", 30)))
 
-    # v1.42 C5: eq_bars bars ride the real audio bed. The mix only exists
+    # v1.5 C5: eq_bars bars ride the real audio bed. The mix only exists
     # after build_audio, so when a project has an eq_bars caption AND voice
     # audio, assemble audio FIRST, wire the mono mix into the engine via
     # Engine.set_vo_bed(), then render frames on that SAME single-process
@@ -263,7 +263,7 @@ def main():  # CLI boundary: engine errors become exit codes here, nowhere else
                        progress=lambda d, t: print("  %d/%d" % (d, t), flush=True) if d % 150 == 0 else None,
                        engine=_ENG if _audio_first else None)
     if args.finish:
-        # v1.42 item 11b (--finish): the pass above ran with no bed wired
+        # v1.5 item 11b (--finish): the pass above ran with no bed wired
         # (build_audio's on_mix only fires at mix time), so re-render once on
         # the bed-carrying engine — every beat/envelope visual now reads the
         # REAL final mix. Deterministic: same Engine, same pure clocks.
