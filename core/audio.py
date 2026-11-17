@@ -18,8 +18,28 @@ import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MUSIC_DIR = os.path.join(ROOT, "music")
+# v1.42 item 11a: tempo ledger for FILE beds (procedural tempos live in the
+# BED_BPM table below). Shipped as a tracked data file; keys are music/ names.
+BPM_LEDGER_PATH = os.path.join(MUSIC_DIR, "BPM.json")
+
+
+def load_bpm_ledger():
+    """File-bed tempo table {filename: bpm|None} from BPM_LEDGER_PATH.
+    Missing/broken file -> {} (file beds then have no beat clock; items 8/10
+    fall back to seed time). Never raises — a data file must not crash boots."""
+    try:
+        with open(BPM_LEDGER_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return {k: (float(v) if v is not None else None)
+                for k, v in data.items() if not k.startswith("_")}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
 VO_MODELS = os.path.join(ROOT, "vo", "models")
 SR_OUT = 48000          # final bed sample rate
+
+
 def _find_py311():
     """Locate a Python 3.11-3.13 interpreter for the piper subprocess (piper's CLI
     breaks on 3.14's wave module). Honors LEEBKIT_PY311, then common install dirs."""

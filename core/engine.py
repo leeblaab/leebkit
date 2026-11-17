@@ -304,6 +304,11 @@ class Engine:
             if _bed and _bed != "none" and not str(_bed).lower().endswith(
                     (".mp3", ".wav", ".m4a", ".ogg")):
                 self.BPM = AUDIO.BED_BPM.get(str(_bed))
+            elif str(_bed).lower().endswith((".mp3", ".wav", ".m4a", ".ogg")):
+                # v1.42 item 11a: file bed -> tempo from the BPM.json ledger
+                # (bare name or file:-prefixed id both resolve). Ledger miss /
+                # null value -> no clock, seed-time fallbacks stand.
+                self.BPM = AUDIO.load_bpm_ledger().get(os.path.basename(str(_bed)))
 
         # ---- aspect-aware layout metrics (v1.2: 9:16 / 1:1 / 16:9) ----
         self.L = build_layout(self.W, self.H, S, P.get("landscape"))

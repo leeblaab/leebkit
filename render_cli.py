@@ -37,11 +37,20 @@ def _worker_chunk(args):
     return b - a
 
 
-def render_frames(proj_path, media_dir, frames_dir, n, jobs=1, progress=None):
+def render_frames(proj_path, media_dir, frames_dir, n, jobs=1, progress=None,
+                  engine=None):
+    """Render n frames into frames_dir. Pass `engine` (an already-built Engine)
+    to force the single-process path — v1.42 item 11b (--finish re-renders on
+    an engine that already carries the audio bed; worker pools build their own
+    Engines and would never see it)."""
     os.makedirs(frames_dir, exist_ok=True)
     chunk = max(1, (n + jobs - 1) // jobs)
     ranges = [(a, min(a + chunk, n), frames_dir) for a in range(0, n, chunk)]
     t0 = time.time()
+    if engine is not None:
+        global _ENG
+        _ENG = engine
+        jobs = 1
     if jobs > 1:
         import multiprocessing as mp
         with mp.Pool(jobs, initializer=_worker_init, initargs=(proj_path, media_dir)) as pool:
@@ -199,6 +208,13 @@ def main():  # CLI boundary: engine errors become exit codes here, nowhere else
     ap.add_argument("--webp", action="store_true",
                     help="also write a share animated WebP next to the mp4 "
                          "(caps: %dpx / %.0fs)" % (share_caps.WEBP_MAX_W, share_caps.WEBP_MAX_S))
+    ap.add_argument("--finish", action="store_true",
+                    help="v1.42 item 11b: assemble audio FIRST, wire the mix "
+                         "into the engine, then re-render frames on it (single "
+                         "job) before encode+mux — eq_bars/beat visuals react to "
+                         "the REAL bed+VO envelope for ANY project, not only "
+                         "eq_bars+voice. Costs one extra frame pass; default "
+                         "path stays byte-identical.")
     args = ap.parse_args()
     if args.jobs < 1:
         ap.error("--jobs must be >= 1 (got %d)" % args.jobs)
@@ -231,7 +247,8 @@ def main():  # CLI boundary: engine errors become exit codes here, nowhere else
                for s in proj["shots"] for c in s.get("captions", []))
     _voaudio = (not args.no_audio and proj.get("voice") not in (None, "none")
                 and proj.get("vo_lines"))
-    if _eqb and _voaudio:
+    _audio_first = args.finish or (_eqb and _voaudio)
+    if _audio_first:
         global _ENG
         from core.engine import Engine as _E
         _ENG = _E(proj, media_dir=media_dir)
@@ -243,7 +260,18 @@ def main():  # CLI boundary: engine errors become exit codes here, nowhere else
 
     print("rendering %d frames (%d jobs)..." % (n, args.jobs), flush=True)
     dt = render_frames(proj_path, media_dir, frames_dir, n, jobs=args.jobs,
-                       progress=lambda d, t: print("  %d/%d" % (d, t), flush=True) if d % 150 == 0 else None)
+                       progress=lambda d, t: print("  %d/%d" % (d, t), flush=True) if d % 150 == 0 else None,
+                       engine=_ENG if _audio_first else None)
+    if args.finish:
+        # v1.42 item 11b (--finish): the pass above ran with no bed wired
+        # (build_audio's on_mix only fires at mix time), so re-render once on
+        # the bed-carrying engine — every beat/envelope visual now reads the
+        # REAL final mix. Deterministic: same Engine, same pure clocks.
+        print("re-rendering %d frames with audio bed wired (--finish)..." % n,
+              flush=True)
+        dt += render_frames(proj_path, media_dir, frames_dir, n, jobs=1,
+                            progress=lambda d, t: print("  %d/%d" % (d, t), flush=True) if d % 150 == 0 else None,
+                            engine=_ENG)
     print("frames done in %.1fs — encoding video..." % dt, flush=True)
     fps = proj.get("fps", 30)
     encode_video(frames_dir, out_mp4, fps=fps,

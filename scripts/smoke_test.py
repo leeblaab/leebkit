@@ -431,6 +431,14 @@ r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_eq_bars.py")],
 ok("eq_bars test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
+# v1.42 item 11: BPM ledger for file beds (assets/music/BPM.json -> Engine
+# beat clock; explicit bpm override stands) + render_cli --finish single-job
+# re-render pass on the bed-wired engine.
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_bpm_finish.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("bpm_ledger / --finish test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
 # counter bug (audit): the old expression was `(0 if fails else 0)` — always 0.
 print(("SMOKE PASS (%d checks)" % _checks_done) if not fails else "SMOKE FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)
