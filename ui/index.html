@@ -264,9 +264,9 @@ async function api(path,body){let r;try{r=await fetch(path,{method:body?'POST':'
 // ---------- meta ----------
 async function boot(){
   META=await api('/api/meta');
-  $('#preset').innerHTML=META.presets.map(p=>`<option value="${p.id}" title="${p.id} — ${p.label}" ${p.id===P.preset?'selected':''}>${p.id}${PRESET_SHORT[p.id]?' — '+PRESET_SHORT[p.id]:''}</option>`).join('');
-  $('#music').innerHTML=META.music.map(m=>`<option value="${m.id}">${m.label||m.id}</option>`).join('');
-  $('#voice').innerHTML=META.voices.map(v=>`<option value="${v.id}" ${v.id===P.voice?'selected':''}>${v.label||v.id}</option>`).join('');
+  $('#preset').innerHTML=META.presets.map(p=>`<option value="${esc(p.id)}" title="${esc(p.id)} — ${esc(p.label)}" ${p.id===P.preset?'selected':''}>${esc(p.id)}${PRESET_SHORT[p.id]?' — '+esc(PRESET_SHORT[p.id]):''}</option>`).join('');
+  $('#music').innerHTML=META.music.map(m=>`<option value="${esc(m.id)}">${esc(m.label||m.id)}</option>`).join('');
+  $('#voice').innerHTML=META.voices.map(v=>`<option value="${esc(v.id)}" ${v.id===P.voice?'selected':''}>${esc(v.label||v.id)}</option>`).join('');
   refreshOutputs();
   refreshProjects();
   // live-test bug #2: the gallery was only ever loaded from #preset.onchange,
@@ -340,8 +340,8 @@ function capMotionOptions(i,j){
   const row=(lab,inner)=>`<div class="row" style="margin-top:6px"><label style="min-width:52px">${lab}</label>${inner}</div>`;
   let h='';
   if(c.kind==='eq_bars'){
-    h+=row('Bars',`<input type="number" min="1" max="7" step="1" data-akind="${i}:${j}" data-afield="n" value="${c.n??5}" style="width:56px;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:5px 7px;font-size:12px">`);
-    h+=row('Width',`<input type="number" min="0.05" max="1" step="0.05" data-akind="${i}:${j}" data-afield="w" value="${c.w??0.32}" style="width:64px;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:5px 7px;font-size:12px"><span style="font-size:11px;color:var(--dim)">fraction of bar slot</span>`);
+    h+=row('Bars',`<input type="number" min="1" max="7" step="1" data-akind="${i}:${j}" data-afield="n" value="${esc(c.n??5)}" style="width:56px;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:5px 7px;font-size:12px">`);
+    h+=row('Width',`<input type="number" min="0.05" max="1" step="0.05" data-akind="${i}:${j}" data-afield="w" value="${esc(c.w??0.32)}" style="width:64px;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:5px 7px;font-size:12px"><span style="font-size:11px;color:var(--dim)">fraction of bar slot</span>`);
   }
   const ex=(META.exit_kinds||['rise','wipe','scale']);
   h+=row('Exit',`<select data-akind="${i}:${j}" data-afield="exit" ${sel}><option value="">none (stays on screen)</option>${_sel(i,j,'exit',ex,c.exit,{rise:'fade up',wipe:'reverse wipe out',scale:'shrink away'})}</select>`);
@@ -356,7 +356,7 @@ function capMotionOptions(i,j){
   if(placeKinds.includes(c.kind)){
     const pl=(META.place_names||['top','middle','bottom']);
     h+=row('Band',`<select data-akind="${i}:${j}" data-afield="place" ${sel}><option value="">default height</option>${_sel(i,j,'place',pl,c.place,{top:'top band',middle:'middle (default)',bottom:'bottom band'})}</select>`);
-    h+=row('Y fine',`<input type="number" min="0" max="1" step="0.02" data-akind="${i}:${j}" data-afield="y" value="${c.y??''}" placeholder="0..1" style="width:64px;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:5px 7px;font-size:12px"><span style="font-size:11px;color:var(--dim)">exact height (0=top, 1=bottom)</span>`);
+    h+=row('Y fine',`<input type="number" min="0" max="1" step="0.02" data-akind="${i}:${j}" data-afield="y" value="${esc(c.y??'')}" placeholder="0..1" style="width:64px;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:5px 7px;font-size:12px"><span style="font-size:11px;color:var(--dim)">exact height (0=top, 1=bottom)</span>`);
   }
   h+=row('Colors',`<input data-akind="${i}:${j}" data-afield="colors" value="${esc((c.colors||[]).join(', '))}" placeholder="word colors: accent, white…" style="flex:1;background:#0c0c14;border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:5px 7px;font-size:12px">`);
   return `<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:6px">${h}</div>`;

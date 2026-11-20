@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """C3 (v1.41) — S2 XSS hardening gates for ui/index.html (static analysis;
 no browser needed).
 
@@ -79,6 +80,24 @@ check("no raw ${...c.kind...} interpolation outside esc()", not raw_kind, repr(r
 # same rule for the colors array we now render into an input value=
 raw_colors = [mm.group(0) for mm in re.finditer(r'value="\$\{(?!\s*esc\()[^{}]*colors[^{}]*\}"', html)]
 check("caption colors input value is esc()-wrapped", not raw_colors, repr(raw_colors[:3]))
+
+# --- 2d. numeric caption field value attrs must be esc()-wrapped (v1.6 U1) ---
+# eq_bars n/w and the Y-fine y field reach input value="${...}" raw. A loaded
+# project JSON (loadProjectObj does NO client validation) can set them to a
+# string like '"><img src=x onerror=...>' -> attribute breakout XSS in the
+# editor before any server gate runs. Gate: every c.n/c.w/c.y value interpolation
+# is esc()-wrapped (node-repro confirmed n/w unescaped pre-fix).
+raw_num = [mm.group(0) for mm in re.finditer(r'value="\$\{(?!\s*esc\()[^{}]*c\.(?:n|w|y)\b[^{}]*\}"', html)]
+check("numeric caption fields (n/w/y) input value esc()-wrapped", not raw_num, repr(raw_num[:3]))
+
+# --- 2e. boot() preset/music/voice option id+label must be esc()-wrapped (v1.6 U2/U3) ---
+# music ids/labels derive from filenames (a file dropped into music/ bypasses the
+# upload safe-name filter); preset/voice ids+labels come from META. All reach
+# <option value=/title=/text> via innerHTML. Positive gate: the esc-wrapped forms
+# must be present (regression catches anyone removing esc()).
+for needle in ("esc(p.id)", "esc(p.label)", "esc(m.id)", "esc(m.label||m.id)",
+               "esc(v.id)", "esc(v.label||v.id)"):
+    check("boot option escapes %s" % needle, needle in html)
 
 # --- 2c. meta-driven option lists are static engine ids (no injection) ----
 # capMotionOptions builds <option value="${o}"> from META tables; those come
