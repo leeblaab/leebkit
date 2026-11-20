@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """LEEBKIT core — frame builder engine.
 
 Generalization of the proven build_video_v4.py pipeline (LEEBLAAB promo).
@@ -128,10 +129,23 @@ def load_preset(name):
         return json.load(f)
 
 
+MAX_CAPTIONS_PER_SHOT = 32  # v1.6 B3: bounds gap — block caption-list DoS (max shipped = 7)
+
+
 def validate_project(proj):
     """Schema-1 validation; raises ValueError with a readable message."""
     if proj.get("schema") != 1:
         raise ValueError("project schema must be 1 (got %r)" % proj.get("schema"))
+    # v1.6 B3: friendly type gates BEFORE any .get() on shots/shot — a None shot
+    # or a string `shots` previously crashed with AttributeError mid-validation.
+    _shots_raw = proj.get("shots")
+    if not isinstance(_shots_raw, list):
+        raise ValueError("project shots must be a list (got %s)"
+                         % type(_shots_raw).__name__)
+    for _i, _s in enumerate(_shots_raw):
+        if not isinstance(_s, dict):
+            raise ValueError("shot %d must be an object (got %s)"
+                             % (_i, type(_s).__name__))
     # media-relative convention (v1.2): Engine joins shot image paths onto
     # media_dir, so an "media/..."-prefixed path silently double-prefixes and
     # dies later as "outside media dir". Older writers produced that shape —
@@ -194,7 +208,17 @@ def validate_project(proj):
             if fill[4:] not in GEN_PRESETS:
                 raise ValueError("shot %d fill %r unknown generator (choices: gen:%s)"
                                  % (i, fill, ", gen:".join(sorted(GEN_PRESETS))))
-        for c in s.get("captions", []):
+        _caps = s.get("captions", [])
+        if not isinstance(_caps, list):
+            raise ValueError("shot %d captions must be a list (got %s)"
+                             % (i, type(_caps).__name__))
+        if len(_caps) > MAX_CAPTIONS_PER_SHOT:
+            raise ValueError("shot %d has %d captions (max %d)"
+                             % (i, len(_caps), MAX_CAPTIONS_PER_SHOT))
+        for c in _caps:
+            if not isinstance(c, dict):
+                raise ValueError("shot %d caption must be an object (got %s)"
+                                 % (i, type(c).__name__))
             if "kind" not in c:
                 raise ValueError("shot %d caption missing kind" % i)
             # DISPATCH whitelist (audit #5): render_layer's .get(k) silently
@@ -269,6 +293,15 @@ def validate_project(proj):
                     raise ValueError("shot %d eq_bars w must be a fraction "
                                      "%.2f..1.5 (got %.2f)"
                                      % (i, _M.EQ_MIN_W, _w))
+            # v1.6 B3: colors must be a list of color-name strings (palette-name
+            # + max-4 validation stays in metrics/checks). Hostile nested dicts
+            # and bare strings were previously accepted unvalidated.
+            _col = c.get("colors")
+            if _col is not None and (
+                    not isinstance(_col, list)
+                    or not all(isinstance(x, str) for x in _col)):
+                raise ValueError("shot %d caption colors must be a list of color "
+                                 "names (got %r)" % (i, _col))
             if "at" in c:
                 a = float(c["at"])
                 if not (0.0 <= a <= float(s.get("t", 0))):

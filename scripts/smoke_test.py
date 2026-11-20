@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """LEEBKIT pre-tag smoke test — runs against the working tree, not a release.
 
 Usage: python scripts/smoke_test.py
@@ -336,6 +337,18 @@ ok("trust boundary test suite", r.returncode == 0,
 r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_ui_xss.py")],
                    capture_output=True, text=True, cwd=ROOT)
 ok("UI XSS gate test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
+# v1.6 B1: every tracked .py carries the SPDX AGPL-3.0-only header.
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_license_headers.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("license header test suite", r.returncode == 0,
+   (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
+
+# v1.6 B3: validation bounds (caption cap, colors type) + friendly type errors.
+r = subprocess.run([PY, os.path.join(ROOT, "tests", "test_validation_bounds.py")],
+                   capture_output=True, text=True, cwd=ROOT)
+ok("validation bounds test suite", r.returncode == 0,
    (r.stdout or "")[-200:] + (r.stderr or "")[-200:])
 
 # v1.41 C4 (audit #1 S5): music beds confined to the shipped music/ folder —
