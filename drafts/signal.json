@@ -24,7 +24,7 @@
           "text": "BROADCAST GRADE KINETICS",
           "rule": false,
           "colors": [
-            "amber",
+            "accent",
             "white"
           ]
         },
@@ -34,7 +34,7 @@
           "text": "CLEAR SIGNAL\nZERO NOISE",
           "colors": [
             "white",
-            "amber",
+            "accent",
             "white"
           ]
         }
@@ -51,7 +51,7 @@
           "at": 0.35,
           "text": "MEET IN THE MIDDLE",
           "colors": [
-            "amber",
+            "accent",
             "white"
           ]
         }
@@ -68,7 +68,7 @@
           "at": 0.35,
           "text": "LOCKED IN",
           "colors": [
-            "amber"
+            "accent"
           ]
         }
       ],
@@ -88,7 +88,7 @@
           "text": "every word lands on its own beat",
           "colors": [
             "white",
-            "amber"
+            "accent"
           ]
         }
       ],
@@ -104,7 +104,7 @@
           "at": 0.35,
           "text": "ON AIR NOW",
           "colors": [
-            "amber"
+            "accent"
           ]
         }
       ],
@@ -120,7 +120,7 @@
           "at": 0.4,
           "text": "SIGNAL.",
           "colors": [
-            "amber"
+            "accent"
           ]
         },
         {

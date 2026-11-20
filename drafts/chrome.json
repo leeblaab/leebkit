@@ -17,9 +17,9 @@
       "transition": "cut",
       "captions": [
         {"kind": "kicker", "at": 0.15, "text": "PRECISION MOTION STUDIO", "rule": false,
-         "colors": ["violet", "white"]},
+         "colors": ["accent", "white"]},
         {"kind": "title_block", "at": 0.45, "text": "POLISHED\nTO THE PIXEL",
-         "colors": ["white", "violet", "white"]}
+         "colors": ["white", "accent", "white"]}
       ],
       "vo": "Polished to the pixel."
     },
@@ -28,7 +28,7 @@
       "t": 3.4,
       "transition": "cut",
       "captions": [
-        {"kind": "wipe", "at": 0.35, "text": "REVEAL IN MOTION", "colors": ["violet"]}
+        {"kind": "wipe", "at": 0.35, "text": "REVEAL IN MOTION", "colors": ["accent"]}
       ],
       "vo": "Reveal in motion."
     },
@@ -47,7 +47,7 @@
       "transition": "cut",
       "captions": [
         {"kind": "flashpop", "at": 0.35, "text": "GLOSS THAT MOVES WITH YOU",
-         "colors": ["violet", "white"]}
+         "colors": ["accent", "white"]}
       ],
       "vo": "Gloss that moves with you."
     },
@@ -56,7 +56,7 @@
       "t": 3.4,
       "transition": "cut",
       "captions": [
-        {"kind": "trackin", "at": 0.35, "text": "CHROME TYPE", "colors": ["white", "violet"]}
+        {"kind": "trackin", "at": 0.35, "text": "CHROME TYPE", "colors": ["white", "accent"]}
       ],
       "vo": "Chrome type."
     },
@@ -66,7 +66,7 @@
       "transition": "cut",
       "captions": [
         {"kind": "maskline", "at": 0.35, "text": "a quiet finish that keeps its shine",
-         "colors": ["violet", "white"]},
+         "colors": ["accent", "white"]},
         {"kind": "kicker", "at": 3.4, "text": "LEEBKIT KINETIC SET", "rule": false, "colors": ["white"]}
       ],
       "vo": "A quiet finish that keeps its shine."
