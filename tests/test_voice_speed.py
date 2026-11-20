@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.4 C2 — voice speed control gates (tests-first).
 
 Locks, in order:

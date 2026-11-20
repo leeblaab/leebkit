@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.5 item 10 (C5): eq_bars kind + VO envelope mix.
 
 "kind": "eq_bars": N bars (default 5, <=7) standing at the bottom safe

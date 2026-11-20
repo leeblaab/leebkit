@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.5 items 4 + 11-gate-half (C2).
 
 Item 4 — exit clock: inside a transition window the renderer froze every

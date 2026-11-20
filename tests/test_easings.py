@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 # v1.5 item 6: easing library + opt-in "ease" field on entrance kinds
 # (pop/pump/slam/wipe/trackin; kicker's stagger is LOCKED — no ease).
 import math

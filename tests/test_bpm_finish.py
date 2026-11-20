@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.5 item 11: BPM ledger for file beds + render_cli --finish pass.
 
 Gates:

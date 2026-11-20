@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """LEEBKIT server — FastAPI app serving the UI + /api/* endpoints. Offline:
 binds 127.0.0.1 only, zero network calls."""
 import json

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.5 item 8 test-first: opt-in "fx": "glitch" (RGB-split channel fringe).
 
 Spec (docs/_local_v1.5_plan.md, private/untracked): fx on accent_word/burst ("big_word" family)/slam_v2

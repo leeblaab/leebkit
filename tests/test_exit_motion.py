@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 # v1.5 item 4: per-caption exit motion — rise / wipe / scale (opt-in `exit`)
 import os
 import sys

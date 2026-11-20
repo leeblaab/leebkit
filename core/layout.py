@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """LEEBKIT core — aspect-aware layout metrics (v1.2).
 
 One place that turns (W, H) into every positional/size number the engine and

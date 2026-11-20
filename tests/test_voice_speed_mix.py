@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """C1 (v1.41) — B1 regression: voice_speed must reach the FINAL mix.
 
 Audit #1 B1: the build_audio VO mix loop re-synthesized each line WITHOUT the

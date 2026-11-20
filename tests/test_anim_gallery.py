@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.36 live-test obs #1 regression: animation gallery tiles must render for
 every preset. The C1 portrait-tier whitelist rejected the old 540x960 internal
 gallery size, so generate_gallery crashed inside Engine.__init__ and the UI

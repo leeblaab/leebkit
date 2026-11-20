@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """LEEBKIT job queue — single background renderer with websocket-friendly progress.
 
 One job at a time (simple): submissions go to a FIFO and one worker thread

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """LEEBKIT audio: procedural numpy beds + user music files + Piper VO + ducking.
 
 Ported from the proven make_audio.py (synthwave bed) and make_vo.py (VO bed).

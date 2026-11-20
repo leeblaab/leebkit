@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """LEEBKIT core — storyboard checks (the four auto-red-flags) + thumbnails.
 
 Implemented as CODE, not eyeballs (pixel-mask QA beats vision-QA per spec):

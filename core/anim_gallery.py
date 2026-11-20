@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """Animation gallery (v1.35) — CapCut-style looping webp previews for every
 transition and camera move, rendered on the preset's BLANK background through
 the real engine paths (no user images involved).

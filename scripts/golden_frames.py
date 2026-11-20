@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only
 """Golden-frame harness (v1.3 C1). Renders a fixed corpus deterministically and
 writes SHA-256 per frame to tests/golden/hashes.json. Zero engine changes; this
 is the safety net for C2-C4 refactors.

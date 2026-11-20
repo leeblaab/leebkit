@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 # v1.5 item 5: idle motion — breathe (scale) + color_wave after SETTLE only
 import os
 import sys

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """C4 (v1.41) — S5 absolute music-bed paths map into the shipped music/ folder.
 
 Audit #1 S5: the v1.31 confinement only guards RELATIVE beds; an absolute bed

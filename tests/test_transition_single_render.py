@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """C6 (v1.41) — P1: transition window must not render the outgoing layer twice.
 
 engine.compose_frame calls render_layer(i, lt, idx) at :847 for every frame,

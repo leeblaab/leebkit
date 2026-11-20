@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 # v1.5 item 3: beat clock — BED_BPM single source + Engine.beat_phase + FrameCtx.beat
 import math
 import os

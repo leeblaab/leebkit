@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """C2 (v1.41) — S1 trust boundary: Host allowlist + WS Origin check.
 
 Audit #1 S1: app.py binds 127.0.0.1 (good) but validated nothing about WHO

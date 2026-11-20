@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.4 C3 — procedural background generators (the six locked presets).
 
 Design decisions this module enforces (docs/v1.4_plan.md D2/D4/D5/D6):

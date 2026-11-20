@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """Unit tests for the pure stagger/settle math (metrics.py) — v1.31 audit fix #1/#2/#4.
 
 These test the INTENDED contract, agreed with Yasser's GO:

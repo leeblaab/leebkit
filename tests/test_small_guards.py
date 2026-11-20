@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """C8 (v1.41) — small guards bundle (S6b/S6c/B4a/B4b + B3 doc note).
 
   S6b  upload routes: UploadFile.filename is Optional[str]; a multipart POST

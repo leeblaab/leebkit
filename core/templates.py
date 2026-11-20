@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """C4b templates gallery — curated starter skeletons that load into the editor.
 
 A template = a schema-1 project skeleton built ON the v1.4 generator: every

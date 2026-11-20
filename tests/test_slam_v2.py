@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.5 item 7 test-first: slam_v2 (scale-only decision per benchmark).
 
 Benchmark verdict (scripts/bench_sprite.py, run on the kinds corpus shot at

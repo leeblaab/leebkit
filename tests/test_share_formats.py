@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.4 C5 — share export formats (GIF / animated WebP) gates.
 
 The GIF/WebP encoder lives in render_cli (encode_share, frame_dir_to_gif,

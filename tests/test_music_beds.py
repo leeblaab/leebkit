@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.4 C4b — procedural music bed gates (all five beds).
 
 Every BEDS entry must: run at short/mid/long durations, return EXACTLY

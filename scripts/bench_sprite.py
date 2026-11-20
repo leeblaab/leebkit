@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.5 item 7 BENCHMARK: per-word RGBA sprite layers (translate/scale/rotate
 via Image.transform AFFINE bilinear + alpha_composite) vs the current
 per-frame PIL redraw path, measured on a slam-style caption inside the kinds

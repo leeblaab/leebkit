@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """core/metrics.py — per-kind measure() (v1.3 C4).
 
 checks.py must never re-derive layout/timing math by mirroring render_layer

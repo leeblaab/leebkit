@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.5 item 2 (C0a): rule-anchor regression probe.
 
 The advisor claimed a "strikethrough" where an underline crosses wrapped

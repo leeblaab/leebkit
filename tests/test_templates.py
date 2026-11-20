@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.4 C4b — templates gallery gate (run as a script from repo root).
 
 Templates are COMMITTED product content (unlike projects/ save-files), so this

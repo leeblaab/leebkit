@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """C7 gate: title_block pop-in element clocks share ONE settle time (metrics source).
 
 The external typography review asked for overshoot easing on the title pop-in.

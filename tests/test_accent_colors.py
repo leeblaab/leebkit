@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.5 item 1 (C0b): accent_word honors per-caption `colors`.
 
 Gap found auditing the advisor doc against v1.41: draw_accent_word passed the

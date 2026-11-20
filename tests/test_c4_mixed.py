@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """C4 mixed + generator-only projects — end-to-end integration gate (v1.4).
 
 Locks:

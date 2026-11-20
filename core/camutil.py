@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """Shared camera-name normalization: project JSONs write either "cam" (UI +
 older samples) or "camera" (promo_v12 authoring drift). The engine must accept
 both — silently resolving to (0,0) on a typo'd/alternate key was audit bug:

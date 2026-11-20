@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """C7 (v1.41) — P2: PNG intermediate saves must use compress_level=1.
 
 Frames are written as lossless PNG intermediates at three sites (queue worker,

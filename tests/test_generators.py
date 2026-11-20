@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.4 C3 — background generator core tests (written RED-first).
 
 Run:  PYTHONPATH=. .venv/Scripts/python.exe tests/test_generators.py

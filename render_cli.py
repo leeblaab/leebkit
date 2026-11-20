@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """LEEBKIT CLI render entry.
 
   python render_cli.py samples/leebdark_sample.json [--media DIR] [--out FILE]

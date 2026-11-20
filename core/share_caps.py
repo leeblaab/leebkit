@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.4 C5 — share-format caps (single source of truth).
 
 "GIF is a share teaser, not the master" (plan risk #3). Cap locked by Yasser

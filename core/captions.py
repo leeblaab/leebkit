@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """core/captions.py — per-kind caption drawing (v1.3 C3a).
 
 The if/elif kind chain that lived in Engine.render_layer is moved HERE as

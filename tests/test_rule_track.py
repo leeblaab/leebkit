@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """v1.5 item 9 (C4): rule_draw micro-kind + track_collapse fx.
 
 rule_draw: a standalone accent rule that draws left->right over POP_RAMP,

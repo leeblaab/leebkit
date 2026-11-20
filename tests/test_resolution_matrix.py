@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 """C1 resolution matrix — 720p / FHD / 2K portrait tiers (v1.4 plan D-decisions).
 
 Locks:
