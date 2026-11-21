@@ -83,10 +83,11 @@
         {
           "kind": "small",
           "at": 3.9,
-          "text": "ease: steps",
+          "text": "STEPPED EASING",
           "colors": [
             "white"
-          ]
+          ],
+          "y": 0.34
         }
       ]
     },
@@ -102,7 +103,7 @@
         {
           "kind": "maskline",
           "at": 0.3,
-          "text": "COLOR WAVE",
+          "text": "WATCH THE HUES DRIFT",
           "idle": true,
           "colors": [
             "accent",
@@ -125,7 +126,7 @@
         {
           "kind": "small",
           "at": 3.0,
-          "text": "idle: color_wave",
+          "text": "COLOR WAVE IDLE",
           "colors": [
             "white"
           ]
@@ -161,7 +162,7 @@
         {
           "kind": "kicker",
           "at": 2.8,
-          "text": "fx: glitch  —  big-word family",
+          "text": "GLITCH FX ON DEMAND",
           "rule": false,
           "colors": [
             "white"
@@ -207,7 +208,7 @@
         {
           "kind": "small",
           "at": 4.4,
-          "text": "exits: rise / wipe / scale",
+          "text": "THREE WAYS OUT",
           "colors": [
             "white"
           ]
@@ -248,7 +249,7 @@
         {
           "kind": "small",
           "at": 3.8,
-          "text": "ease: elastic / expo",
+          "text": "ELASTIC AND EXPO",
           "colors": [
             "white"
           ]
@@ -311,7 +312,7 @@
         {
           "kind": "small",
           "at": 2.5,
-          "text": "smoke 62 / golden 1314 / zero drift",
+          "text": "62 SMOKE / 1314 GOLDEN",
           "colors": [
             "white"
           ]
