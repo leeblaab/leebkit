@@ -8,6 +8,7 @@ Renders frames (optionally parallel across processes), encodes with ffmpeg,
 then builds + muxes audio unless --no-audio. Verifies output with ffprobe.
 """
 import argparse
+import array
 import json
 import math
 import os
@@ -27,6 +28,24 @@ def _worker_init(proj_path, media_dir):
         _ENG = Engine(json.load(f), media_dir=media_dir)
 
 
+def _worker_init_bed(proj_path, media_dir, bed_wav):
+    # v1.6 B2: --finish used to force jobs=1 (the audio bed lived on the
+    # parent's engine only). The bed is pure data now — each worker loads it
+    # from the already-built mix wav and calls set_vo_bed itself, so the
+    # beat/envelope pass parallelizes exactly like the default path.
+    _worker_init(proj_path, media_dir)
+    import wave
+    with wave.open(bed_wav, "rb") as w:
+        assert w.getnchannels() == 2 and w.getsampwidth() == 2 \
+            and w.getframerate() == 48000, \
+            "bed wav must be the 48kHz stereo s16 build_audio output"
+        n = w.getnframes()
+        # de-interleave L channel: identical to build_audio's mono mix before
+        # its np.repeat stereo write (same PCM scale), so the bed is pure data.
+        pcm = array.array("h", w.readframes(n))
+        _ENG.set_vo_bed(pcm[0::2])
+
+
 def _worker_chunk(args):
     a, b, frames_dir = args
     for idx in range(a, b):
@@ -39,11 +58,11 @@ def _worker_chunk(args):
 
 
 def render_frames(proj_path, media_dir, frames_dir, n, jobs=1, progress=None,
-                  engine=None):
+                  engine=None, bed_wav=None):
     """Render n frames into frames_dir. Pass `engine` (an already-built Engine)
-    to force the single-process path — v1.5 item 11b (--finish re-renders on
-    an engine that already carries the audio bed; worker pools build their own
-    Engines and would never see it)."""
+    to force the single-process path. v1.6 B2: pass `bed_wav` (build_audio's
+    mono mix) instead of a bed-carrying engine — pool workers load the wav in
+    their initializer, so the --finish beat pass parallelizes too."""
     os.makedirs(frames_dir, exist_ok=True)
     chunk = max(1, (n + jobs - 1) // jobs)
     ranges = [(a, min(a + chunk, n), frames_dir) for a in range(0, n, chunk)]
@@ -54,14 +73,19 @@ def render_frames(proj_path, media_dir, frames_dir, n, jobs=1, progress=None,
         jobs = 1
     if jobs > 1:
         import multiprocessing as mp
-        with mp.Pool(jobs, initializer=_worker_init, initargs=(proj_path, media_dir)) as pool:
+        init, initargs = (_worker_init_bed, (proj_path, media_dir, bed_wav)) \
+            if bed_wav else (_worker_init, (proj_path, media_dir))
+        with mp.Pool(jobs, initializer=init, initargs=initargs) as pool:
             done = 0
             for k, cnt in enumerate(pool.imap_unordered(_worker_chunk, ranges)):
                 done += cnt
                 if progress:
                     progress(done, n)
     else:
-        _worker_init(proj_path, media_dir)
+        if bed_wav:
+            _worker_init_bed(proj_path, media_dir, bed_wav)
+        else:
+            _worker_init(proj_path, media_dir)
         for a, b, _ in ranges:
             _worker_chunk((a, b, frames_dir))
             if progress:
@@ -236,10 +260,8 @@ def main():  # CLI boundary: engine errors become exit codes here, nowhere else
 
     # v1.5 C5: eq_bars bars ride the real audio bed. The mix only exists
     # after build_audio, so when a project has an eq_bars caption AND voice
-    # audio, assemble audio FIRST, wire the mono mix into the engine via
-    # Engine.set_vo_bed(), then render frames on that SAME single-process
-    # engine (the ONLY re-render pass in the pipeline; worker pools each
-    # build their own Engine and would never see the bed, so jobs=1 here).
+    # audio, assemble audio FIRST and wire the mono mix into every engine
+    # (Engine.set_vo_bed / _worker_init_bed) before rendering frames.
     # Projects without eq_bars keep the exact v1.41 order: frames -> encode
     # -> audio -> mux (byte-identical default path).
     from core import audio as A
@@ -250,29 +272,25 @@ def main():  # CLI boundary: engine errors become exit codes here, nowhere else
                 and proj.get("vo_lines"))
     _audio_first = args.finish or (_eqb and _voaudio)
     if _audio_first:
-        global _ENG
-        from core.engine import Engine as _E
-        _ENG = _E(proj, media_dir=media_dir)
         wav = A.build_audio(
             proj, media_dir=media_dir,
-            scratch=os.path.join(out_dir, "_audio_%s" % name),
-            on_mix=lambda m: _ENG.set_vo_bed(m))
-        args.jobs = 1    # the bed lives on this process's engine only
+            scratch=os.path.join(out_dir, "_audio_%s" % name))
 
     print("rendering %d frames (%d jobs)..." % (n, args.jobs), flush=True)
     dt = render_frames(proj_path, media_dir, frames_dir, n, jobs=args.jobs,
                        progress=lambda d, t: print("  %d/%d" % (d, t), flush=True) if d % 150 == 0 else None,
-                       engine=_ENG if _audio_first else None)
+                       bed_wav=wav if _audio_first else None)
     if args.finish:
-        # v1.5 item 11b (--finish): the pass above ran with no bed wired
-        # (build_audio's on_mix only fires at mix time), so re-render once on
-        # the bed-carrying engine — every beat/envelope visual now reads the
-        # REAL final mix. Deterministic: same Engine, same pure clocks.
+        # v1.5 item 11b (--finish): the pass above ran before any bed existed
+        # (build_audio's mix only fires at mix time), so re-render once with
+        # the bed wired — every beat/envelope visual now reads the REAL final
+        # mix. Deterministic: same wav, same pure clocks; v1.6 B2 parallelizes
+        # this pass (workers self-wire via _worker_init_bed).
         print("re-rendering %d frames with audio bed wired (--finish)..." % n,
               flush=True)
-        dt += render_frames(proj_path, media_dir, frames_dir, n, jobs=1,
+        dt += render_frames(proj_path, media_dir, frames_dir, n, jobs=args.jobs,
                             progress=lambda d, t: print("  %d/%d" % (d, t), flush=True) if d % 150 == 0 else None,
-                            engine=_ENG)
+                            bed_wav=wav)
     print("frames done in %.1fs — encoding video..." % dt, flush=True)
     fps = proj.get("fps", 30)
     encode_video(frames_dir, out_mp4, fps=fps,
