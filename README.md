@@ -32,7 +32,7 @@ stills (Ken Burns), kinetic text, transitions, voiceover and music with auto-duc
 rendered entirely on your machine by Python + ffmpeg. Double-click `start.bat`, open the
 webUI, get an MP4.
 
-**Status: v1.5 — November 2026.** Everything listed below is built and in daily use.
+**Status: v1.6 — November 2026.** Everything listed below is built and in daily use.
 Full 47s v1.5 release video (voiceover + music, all real photos):
 `https://github.com/leeblaab/leebkit/releases/download/v1.5/release_v15.mp4`
 (project JSON: `samples/release_v15.json`, reproducible with the one command below).
