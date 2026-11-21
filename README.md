@@ -1,6 +1,9 @@
+
 # LEEBKIT — by LEEBLAAB
 
 **Kinetic promo videos. No cloud. No API. No subscription.**
+
+https://github.com/user-attachments/assets/ccb994d6-3f6b-44f4-b15b-53269c38d2a2
 
 ![LEEBKIT v1.5 promo — looped preview (full voiced MP4 links below)](docs/promo_v15_preview.gif)
 
