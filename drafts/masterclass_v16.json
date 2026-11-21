@@ -1,0 +1,324 @@
+{
+  "schema": 1,
+  "name": "tpl_masterclass_v16",
+  "label": "Masterclass v1.6 — full kinetic range showcase (steps ease + color_wave + glitch fx + exits, beat-synced)",
+  "preset": "signal",
+  "size": "1080x1920",
+  "width": 1080,
+  "height": 1920,
+  "target": 34.0,
+  "fps": 30,
+  "voice": "none",
+  "bpm": 117.5,
+  "music": {
+    "mode": "file",
+    "bed": "bed_one_cool_minute.mp3"
+  },
+  "shots": [
+    {
+      "fill": "solid",
+      "t": 4.0,
+      "transition": "cut",
+      "captions": [
+        {
+          "kind": "kicker",
+          "at": 0.2,
+          "text": "LEEBKIT MASTERCLASS",
+          "rule": false,
+          "colors": [
+            "accent",
+            "white"
+          ]
+        },
+        {
+          "kind": "title_block",
+          "at": 1.0,
+          "text": "EVERY\nMOVE"
+        },
+        {
+          "kind": "small",
+          "at": 2.4,
+          "text": "ONE ENGINE / FULL RANGE",
+          "colors": [
+            "white"
+          ]
+        }
+      ]
+    },
+    {
+      "fill": "solid",
+      "t": 4.5,
+      "transition": "wipe_left",
+      "captions": [
+        {
+          "kind": "eq_bars",
+          "at": 0.0
+        },
+        {
+          "kind": "slam",
+          "at": 0.3,
+          "text": "STEPS.",
+          "colors": [
+            "accent"
+          ]
+        },
+        {
+          "kind": "kicker",
+          "at": 1.6,
+          "text": "THE EASE NOBODY USES",
+          "rule": false
+        },
+        {
+          "kind": "pump",
+          "at": 2.5,
+          "text": "EASED IN THREES",
+          "ease": "steps",
+          "idle": true,
+          "colors": [
+            "accent",
+            "white"
+          ],
+          "y": 0.62
+        },
+        {
+          "kind": "small",
+          "at": 3.9,
+          "text": "ease: steps",
+          "colors": [
+            "white"
+          ]
+        }
+      ]
+    },
+    {
+      "fill": "solid",
+      "t": 4.5,
+      "transition": "slideL",
+      "captions": [
+        {
+          "kind": "eq_bars",
+          "at": 0.0
+        },
+        {
+          "kind": "maskline",
+          "at": 0.3,
+          "text": "COLOR WAVE",
+          "idle": true,
+          "colors": [
+            "accent",
+            "pink",
+            "blue"
+          ]
+        },
+        {
+          "kind": "split",
+          "at": 1.6,
+          "text": "AMBER PINK BLUE",
+          "idle": true,
+          "colors": [
+            "accent",
+            "pink",
+            "blue"
+          ],
+          "y": 0.45
+        },
+        {
+          "kind": "small",
+          "at": 3.0,
+          "text": "idle: color_wave",
+          "colors": [
+            "white"
+          ]
+        }
+      ],
+      "ov": 1.0
+    },
+    {
+      "fill": "solid",
+      "t": 4.0,
+      "transition": "cut",
+      "captions": [
+        {
+          "kind": "slam_v2",
+          "at": 0.3,
+          "text": "GLITCH.",
+          "fx": "glitch",
+          "colors": [
+            "accent"
+          ]
+        },
+        {
+          "kind": "burst",
+          "at": 1.5,
+          "text": "FX ON DEMAND",
+          "fx": "glitch",
+          "colors": [
+            "white",
+            "accent"
+          ],
+          "y": 0.55
+        },
+        {
+          "kind": "kicker",
+          "at": 2.8,
+          "text": "fx: glitch  —  big-word family",
+          "rule": false,
+          "colors": [
+            "white"
+          ]
+        }
+      ]
+    },
+    {
+      "fill": "solid",
+      "t": 5.0,
+      "transition": "wipe_left",
+      "captions": [
+        {
+          "kind": "eq_bars",
+          "text": "",
+          "at": 0.0,
+          "n": 5
+        },
+        {
+          "kind": "accent_word",
+          "at": 0.2,
+          "text": "RISE",
+          "exit": "rise",
+          "place": "top"
+        },
+        {
+          "kind": "flashpop",
+          "at": 1.9,
+          "text": "WIPE",
+          "exit": "wipe",
+          "place": "middle"
+        },
+        {
+          "kind": "slam_v2",
+          "at": 3.5,
+          "text": "SCALE",
+          "exit": "scale",
+          "colors": [
+            "accent"
+          ],
+          "place": "bottom"
+        },
+        {
+          "kind": "small",
+          "at": 4.4,
+          "text": "exits: rise / wipe / scale",
+          "colors": [
+            "white"
+          ]
+        }
+      ],
+      "ov": 1.0
+    },
+    {
+      "fill": "solid",
+      "t": 4.5,
+      "transition": "slideL",
+      "captions": [
+        {
+          "kind": "eq_bars",
+          "text": "",
+          "at": 0.0,
+          "n": 5
+        },
+        {
+          "kind": "trackin",
+          "at": 0.1,
+          "text": "ELASTIC TRACK-IN",
+          "ease": "elastic"
+        },
+        {
+          "kind": "wipe",
+          "at": 1.0,
+          "text": "EXPO WIPE",
+          "ease": "expo",
+          "exit": "rise"
+        },
+        {
+          "kind": "typewriter",
+          "at": 2.4,
+          "text": "typing never ends",
+          "idle": true
+        },
+        {
+          "kind": "small",
+          "at": 3.8,
+          "text": "ease: elastic / expo",
+          "colors": [
+            "white"
+          ]
+        }
+      ]
+    },
+    {
+      "fill": "solid",
+      "t": 4.0,
+      "transition": "cut",
+      "captions": [
+        {
+          "kind": "eq_bars",
+          "at": 0.0
+        },
+        {
+          "kind": "kicker",
+          "at": 0.15,
+          "text": "BPM LOCKED 117.5",
+          "rule": false,
+          "colors": [
+            "accent"
+          ]
+        },
+        {
+          "kind": "cta",
+          "at": 0.9,
+          "text": "BUILD YOURS",
+          "idle": true
+        },
+        {
+          "kind": "small",
+          "at": 2.0,
+          "text": "github.com/leeblaab/leebkit",
+          "colors": [
+            "white"
+          ]
+        }
+      ]
+    },
+    {
+      "fill": "solid",
+      "t": 3.5,
+      "transition": "wipe_left",
+      "captions": [
+        {
+          "kind": "slam",
+          "at": 0.3,
+          "text": "v1.6",
+          "colors": [
+            "accent"
+          ]
+        },
+        {
+          "kind": "kicker",
+          "at": 1.4,
+          "text": "HARDENED. GATED. READY.",
+          "rule": false
+        },
+        {
+          "kind": "small",
+          "at": 2.5,
+          "text": "smoke 62 / golden 1314 / zero drift",
+          "colors": [
+            "white"
+          ]
+        }
+      ],
+      "ov": 1.0
+    }
+  ],
+  "xf": 0.5
+}
