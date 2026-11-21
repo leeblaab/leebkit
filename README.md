@@ -265,3 +265,7 @@ preset/content packs and future Pro-tier features stay proprietary to LEEBLAAB.
 
 AGPL-3.0-only for the code (`LICENSE`, © 2026 LEEBLAAB). Presets, bundled font credits and
 any commercial content packs remain LEEBLAAB property. Third-party credits: `ATTRIBUTIONS.md`.
+
+## Star history
+
+[![Star History Chart](https://api.star-history.com/svg?repos=leeblaab/leebkit&type=Date)](https://star-history.com/#leeblaab/leebkit&Date)
