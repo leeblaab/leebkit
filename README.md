@@ -3,8 +3,6 @@
 
 **Kinetic promo videos. No cloud. No API. No subscription.**
 
-https://github.com/user-attachments/assets/ccb994d6-3f6b-44f4-b15b-53269c38d2a2
-
 ![LEEBKIT v1.5 promo — looped preview (full voiced MP4 links below)](docs/promo_v15_preview.gif)
 
 Full 47s video with voiceover + music:
@@ -37,7 +35,9 @@ webUI, get an MP4.
 
 **Status: v1.6 — November 2026.** Everything listed below is built and in daily use.
 Full 47s v1.5 release video (voiceover + music, all real photos):
-`https://github.com/leeblaab/leebkit/releases/download/v1.5/release_v15.mp4`
+
+https://github.com/user-attachments/assets/615afa7e-9174-495b-89d9-3cbe689b2c13
+
 (project JSON: `samples/release_v15.json`, reproducible with the one command below).
 v1.5 adds: **caption placement** — `place: top|middle|bottom` or an explicit
 `y:` fraction on kinetic captions (burst/slam_v2/pump/wipe/trackin/kicker/small/cta/
